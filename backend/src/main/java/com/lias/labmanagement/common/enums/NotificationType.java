@@ -1,0 +1,15 @@
+package com.lias.labmanagement.common.enums;
+
+public enum NotificationType {
+    MEMBERSHIP_REQUEST,
+    MEMBERSHIP_DECISION,
+    DOCUMENT_ADDED,
+    EVENT_CREATED,
+    EVENT_REMINDER,
+    PUBLICATION_ADDED,
+    EQUIPMENT_REQUEST,
+    EQUIPMENT_REQUEST_DECISION,
+    MEETING_SCHEDULED,
+    MESSAGE_RECEIVED,
+    SYSTEM
+}
