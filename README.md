@@ -9,7 +9,7 @@
 - **Language:** Java 21
 - **Framework:** Spring Boot 3.x
 - **Security:** Spring Security & JWT (JSON Web Tokens)
-- **Database:** PostgreSQL
+- **Database:** Neon Cloud PostgreSQL (Serverless)
 - **Database Migration:** Flyway
 - **ORM:** Spring Data JPA / Hibernate
 - **API Documentation:** Springdoc OpenAPI v2 (Swagger UI)
@@ -37,19 +37,19 @@
 Ensure you have the following installed on your machine:
 
 * **Java JDK 21** or higher
-* **PostgreSQL** database instance
-* **Maven 3.8+** (or use the included Maven wrapper)
+* **Maven 3.8+** (or use the included Maven wrapper `./mvnw`)
+* **Neon Cloud PostgreSQL Account / Credentials**
 
 ---
 
 ### ⚙️ Database Configuration
 
-1. Create a local PostgreSQL database (e.g., `lias_lab_db`).
-2. Update your credentials in `backend/src/main/resources/application-dev.yml`:
+1. The project uses **Neon Cloud PostgreSQL** for remote database hosting and automated schema management via **Flyway**.
+2. Configure your cloud database credentials in `backend/src/main/resources/application-dev.yml`:
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/lias_lab_db
-    username: your_postgres_user
-    password: your_postgres_password
+    url: jdbc:postgresql://<your-neon-host>.neon.tech/<dbname>?sslmode=require
+    username: <your-neon-username>
+    password: <your-neon-password>
