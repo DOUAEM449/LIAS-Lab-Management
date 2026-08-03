@@ -6,6 +6,7 @@ import com.lias.labmanagement.common.exception.FileStorageException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ import java.util.NoSuchElementException;
  * into a consistent {@link ApiError} JSON payload. No controller in the
  * codebase should ever catch exceptions manually for HTTP translation.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -79,6 +81,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(FileStorageException.class)
     public ResponseEntity<ApiError> handleFileStorage(FileStorageException ex, HttpServletRequest request) {
+        log.error("File storage failure on {} {}", request.getMethod(), request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
@@ -105,6 +108,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request);
     }
 

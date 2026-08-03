@@ -4,6 +4,7 @@ import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.equipment.dto.DistributionRequest;
 import com.lias.labmanagement.equipment.dto.DistributionResponse;
@@ -145,8 +146,10 @@ public class EquipmentService {
     }
 
     private DistributionResponse toDistributionResponse(EquipmentDistribution d) {
-        return new DistributionResponse(d.getId(), d.getEquipment().getId(), d.getEquipment().getName(),
-                d.getMember().getId(), d.getMember().getFirstName() + " " + d.getMember().getLastName(),
+        return new DistributionResponse(d.getId(), d.getEquipment().getId(),
+                SoftDeleteSafe.resolve(d.getEquipment(), Equipment::getName, "Matériel archivé"),
+                d.getMember().getId(),
+                SoftDeleteSafe.resolve(d.getMember(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"),
                 d.getDistributionDate(), d.getQuantity(), d.getReturnedDate());
     }
 }

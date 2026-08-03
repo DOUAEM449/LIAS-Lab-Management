@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Sidebar / brand navy */
+  --color-lias-navy: oklch(22% 0.035 255);
+  --color-lias-navy-light: oklch(32% 0.03 255);
+  --color-lias-navy-text: oklch(78% 0.015 255);
+  --color-lias-navy-text-dim: oklch(70% 0.02 255);
+
+  /* Primary brand blue */
+  --color-lias-blue: oklch(55% 0.09 250);
+  --color-lias-blue-dark: oklch(42% 0.09 250);
+  --color-lias-blue-tint: oklch(92% 0.05 250 / 0.5);
+
+  /* Neutrals */
+  --color-lias-bg: oklch(98% 0.003 250);
+  --color-lias-border: oklch(90% 0.005 250);
+  --color-lias-border-light: oklch(94% 0.004 250);
+  --color-lias-ink: oklch(25% 0.02 250);
+  --color-lias-muted: oklch(50% 0.01 250);
+
+  /* Status colors */
+  --color-lias-success: oklch(52% 0.12 150);
+  --color-lias-success-bg: oklch(94% 0.06 150);
+  --color-lias-success-text: oklch(38% 0.11 150);
+  --color-lias-warning: oklch(50% 0.13 75);
+  --color-lias-warning-bg: oklch(94% 0.06 75);
+  --color-lias-warning-text: oklch(42% 0.12 75);
+  --color-lias-danger: oklch(58% 0.16 25);
+  --color-lias-danger-bg: oklch(94% 0.06 25);
+  --color-lias-danger-text: oklch(45% 0.15 25);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(85% 0.01 250);
+  border-radius: 8px;
+}

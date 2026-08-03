@@ -65,6 +65,9 @@ public class MembershipRequestService {
         if (userRepository.existsByEmailIgnoreCase(submission.email())) {
             throw new ConflictException("An account already exists with this email");
         }
+        if (requestRepository.existsByEmailIgnoreCaseAndStatus(submission.email(), RequestStatus.PENDING)) {
+            throw new BadRequestException("Une demande d'adhésion est déjà en cours pour cet email.");
+        }
 
         MembershipRequest.MembershipRequestBuilder<?, ?> builder = MembershipRequest.builder()
                 .firstName(submission.firstName())

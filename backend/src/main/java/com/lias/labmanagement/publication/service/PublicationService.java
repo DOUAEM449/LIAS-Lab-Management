@@ -6,6 +6,7 @@ import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.governance.entity.Team;
 import com.lias.labmanagement.governance.repository.TeamRepository;
@@ -129,11 +130,18 @@ public class PublicationService {
     private PublicationResponse toResponse(Publication p) {
         List<PublicationResponse.AuthorSummary> authors = authorRepository.findByPublicationId(p.getId()).stream()
                 .sorted(Comparator.comparingInt(PublicationAuthor::getAuthorOrder))
-                .map(a -> new PublicationResponse.AuthorSummary(a.getMember().getId(),
-                        a.getMember().getFirstName() + " " + a.getMember().getLastName()))
+                .map(this::toAuthorSummary)
                 .toList();
+        Team team = p.getTeam();
         return new PublicationResponse(p.getId(), p.getTitle(), p.getAbstractText(), p.getKeywords(), p.getYear(),
-                p.getDoi(), p.getPdfOriginalName(), p.getTeam() != null ? p.getTeam().getId() : null,
-                p.getTeam() != null ? p.getTeam().getName() : null, authors, p.getCreatedAt());
+                p.getDoi(), p.getPdfOriginalName(), team != null ? team.getId() : null,
+                team != null ? SoftDeleteSafe.resolve(team, Team::getName, "Équipe archivée") : null,
+                authors, p.getCreatedAt());
+    }
+
+    private PublicationResponse.AuthorSummary toAuthorSummary(PublicationAuthor a) {
+        Member member = a.getMember();
+        return new PublicationResponse.AuthorSummary(member.getId(),
+                SoftDeleteSafe.resolve(member, m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"));
     }
 }

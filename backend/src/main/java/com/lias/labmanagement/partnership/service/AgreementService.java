@@ -5,6 +5,7 @@ import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.partnership.dto.AgreementRequest;
 import com.lias.labmanagement.partnership.dto.AgreementResponse;
 import com.lias.labmanagement.partnership.entity.Agreement;
@@ -73,7 +74,8 @@ public class AgreementService {
     }
 
     private AgreementResponse toResponse(Agreement a) {
-        return new AgreementResponse(a.getId(), a.getPartner().getId(), a.getPartner().getName(), a.getTitle(),
+        return new AgreementResponse(a.getId(), a.getPartner().getId(),
+                SoftDeleteSafe.resolve(a.getPartner(), Partner::getName, "Partenaire archivé"), a.getTitle(),
                 a.getDescription(), a.getStartDate(), a.getEndDate(), a.getDocumentOriginalName());
     }
 }

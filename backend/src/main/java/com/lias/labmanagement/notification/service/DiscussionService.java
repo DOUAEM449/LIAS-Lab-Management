@@ -3,6 +3,7 @@ package com.lias.labmanagement.notification.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.event.repository.EventRepository;
 import com.lias.labmanagement.governance.repository.TeamRepository;
 import com.lias.labmanagement.members.entity.Member;
@@ -100,12 +101,14 @@ public class DiscussionService {
         return new DiscussionResponse(d.getId(), d.getTitle(), d.getScope(),
                 d.getTeam() != null ? d.getTeam().getId() : null,
                 d.getEvent() != null ? d.getEvent().getId() : null,
-                d.getCreatedByMember().getId(), d.getCreatedByMember().getFirstName() + " " + d.getCreatedByMember().getLastName(),
+                d.getCreatedByMember().getId(),
+                SoftDeleteSafe.resolve(d.getCreatedByMember(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"),
                 d.getCreatedAt());
     }
 
     private MessageResponse toMessageResponse(Message m) {
         return new MessageResponse(m.getId(), m.getDiscussion().getId(), m.getSender().getId(),
-                m.getSender().getFirstName() + " " + m.getSender().getLastName(), m.getContent(), m.getTimestamp());
+                SoftDeleteSafe.resolve(m.getSender(), s -> s.getFirstName() + " " + s.getLastName(), "Membre archivé"),
+                m.getContent(), m.getTimestamp());
     }
 }

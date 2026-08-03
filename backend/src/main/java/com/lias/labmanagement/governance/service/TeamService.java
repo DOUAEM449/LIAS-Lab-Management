@@ -5,6 +5,7 @@ import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ConflictException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.governance.dto.TeamRequest;
 import com.lias.labmanagement.governance.dto.TeamResponse;
 import com.lias.labmanagement.governance.entity.Mandate;
@@ -80,8 +81,11 @@ public class TeamService {
                 .findByRoleAndTeamIdAndActiveTrueAndEndDateIsNull(MandateRoleType.TEAM_LEADER, team.getId())
                 .orElse(null);
         long memberCount = membershipHistoryRepository.findByTeamIdAndEndDateIsNull(team.getId()).size();
-        return mapper.toResponse(team,
-                leaderMandate != null ? leaderMandate.getMember().getFirstName() + " " + leaderMandate.getMember().getLastName() : null,
+        String leaderName = leaderMandate != null
+                ? SoftDeleteSafe.resolve(leaderMandate.getMember(),
+                        m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé")
+                : null;
+        return mapper.toResponse(team, leaderName,
                 leaderMandate != null ? leaderMandate.getMember().getId() : null,
                 memberCount);
     }

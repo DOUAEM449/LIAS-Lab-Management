@@ -30,6 +30,7 @@ C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmana
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\calendar\service\CalendarService.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\config\AdminAccountInitializer.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\config\JpaAuditingConfig.java
+C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\config\MultipartJsonPartConfig.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\config\OpenApiConfig.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\config\SecurityConfig.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\entity\BaseEntity.java
@@ -51,6 +52,7 @@ C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmana
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\storage\FileStorageProperties.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\storage\FileStorageService.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\storage\StoredFile.java
+C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\util\SoftDeleteSafe.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\web\ApiError.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\web\ApiResponse.java
 C:\Users\hp\Downloads\LIAS-Lab-Management\backend\src\main\java\com\lias\labmanagement\common\web\GlobalExceptionHandler.java

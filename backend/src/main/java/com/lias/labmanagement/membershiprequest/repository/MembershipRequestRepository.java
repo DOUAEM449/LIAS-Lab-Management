@@ -15,4 +15,6 @@ public interface MembershipRequestRepository extends JpaRepository<MembershipReq
     long countByStatus(RequestStatus status);
 
     long countByStatusAndDecisionDateBetween(RequestStatus status, Instant start, Instant end);
+
+    boolean existsByEmailIgnoreCaseAndStatus(String email, RequestStatus status);
 }

@@ -1,5 +1,6 @@
 package com.lias.labmanagement.governance.mapper;
 
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.governance.dto.MandateResponse;
 import com.lias.labmanagement.governance.dto.TeamMembershipHistoryResponse;
 import com.lias.labmanagement.governance.dto.TeamResponse;
@@ -17,19 +18,21 @@ public class GovernanceMapper {
     }
 
     public MandateResponse toResponse(Mandate m) {
+        Team team = m.getTeam();
         return new MandateResponse(
                 m.getId(),
                 m.getMember().getId(),
-                m.getMember().getFirstName() + " " + m.getMember().getLastName(),
+                SoftDeleteSafe.resolve(m.getMember(), mem -> mem.getFirstName() + " " + mem.getLastName(), "Membre archivé"),
                 m.getRole(),
-                m.getTeam() != null ? m.getTeam().getId() : null,
-                m.getTeam() != null ? m.getTeam().getName() : null,
+                team != null ? team.getId() : null,
+                team != null ? SoftDeleteSafe.resolve(team, Team::getName, "Équipe archivée") : null,
                 m.getStartDate(), m.getEndDate(), m.isActive(), m.getCreatedAt()
         );
     }
 
     public TeamMembershipHistoryResponse toResponse(TeamMembershipHistory h) {
-        return new TeamMembershipHistoryResponse(h.getId(), h.getTeam().getId(), h.getTeam().getName(),
+        return new TeamMembershipHistoryResponse(h.getId(), h.getTeam().getId(),
+                SoftDeleteSafe.resolve(h.getTeam(), Team::getName, "Équipe archivée"),
                 h.getStartDate(), h.getEndDate(), h.getCreatedAt());
     }
 }

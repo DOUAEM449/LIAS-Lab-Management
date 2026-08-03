@@ -11,6 +11,7 @@ import com.lias.labmanagement.members.dto.MemberResponse;
 import com.lias.labmanagement.members.dto.MemberStatusHistoryResponse;
 import com.lias.labmanagement.members.dto.MemberUpdateRequest;
 import com.lias.labmanagement.members.service.MemberService;
+import com.lias.labmanagement.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,6 +69,13 @@ public class MemberController {
     @Operation(summary = "Get full member profile")
     public ApiResponse<MemberResponse> getById(@PathVariable UUID id) {
         return ApiResponse.of(memberService.getById(id));
+    }
+
+    @GetMapping("/api/v1/members/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get the current authenticated user's own member profile")
+    public ApiResponse<MemberResponse> getMyProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ApiResponse.of(memberService.getByUserId(currentUser.getId()));
     }
 
     @PutMapping("/api/v1/members/{id}")

@@ -1,9 +1,21 @@
 spring:
   datasource:
-    url: jdbc:postgresql://ep-aged-paper-ayw9lmr3.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require
-    username: neondb_owner
-    password: npg_PXlxjfEyt19c
+    url: jdbc:postgresql://${DB_HOST:ep-aged-paper-ayw9lmr3.c-5.us-east-2.aws.neon.tech}:${DB_PORT:5432}/${DB_NAME:neondb}?sslmode=require
+    username: ${DB_USERNAME:neondb_owner}
+    password: ${DB_PASSWORD:npg_PXlxjfEyt19c}
     driver-class-name: org.postgresql.Driver
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: douaamoussaoui2@gmail.com
+    password: ${MAIL_PASSWORD}  # <--- رديها هكا
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   jpa:
     show-sql: true

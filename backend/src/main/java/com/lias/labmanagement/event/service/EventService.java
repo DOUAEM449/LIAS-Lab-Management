@@ -7,6 +7,7 @@ import com.lias.labmanagement.common.exception.ConflictException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.event.dto.EventParticipantResponse;
 import com.lias.labmanagement.event.dto.EventRequest;
@@ -151,7 +152,7 @@ public class EventService {
     private EventResponse toResponse(Event e) {
         List<EventResponse.OrganizerSummary> organizers = organizerRepository.findByEventId(e.getId()).stream()
                 .map(o -> new EventResponse.OrganizerSummary(o.getMember().getId(),
-                        o.getMember().getFirstName() + " " + o.getMember().getLastName()))
+                        SoftDeleteSafe.resolve(o.getMember(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé")))
                 .toList();
         long participantCount = participantRepository.countByEventId(e.getId());
         return new EventResponse(e.getId(), e.getType(), e.getTitle(), e.getDescription(), e.getEditionNumber(),
@@ -160,6 +161,7 @@ public class EventService {
 
     private EventParticipantResponse toParticipantResponse(EventParticipant p) {
         return new EventParticipantResponse(p.getId(), p.getMember().getId(),
-                p.getMember().getFirstName() + " " + p.getMember().getLastName(), p.getRegisteredAt());
+                SoftDeleteSafe.resolve(p.getMember(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"),
+                p.getRegisteredAt());
     }
 }

@@ -60,6 +60,12 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
+    public MemberResponse getByUserId(UUID userId) {
+        return mapper.toResponse(memberRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No member profile linked to this account")));
+    }
+
+    @Transactional(readOnly = true)
     public MemberPublicResponse getPublicById(UUID id) {
         return mapper.toPublicResponse(findMemberOrThrow(id));
     }

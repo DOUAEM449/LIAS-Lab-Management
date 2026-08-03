@@ -5,6 +5,7 @@ import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.EquipmentRequestStatus;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentRequestResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentRequestSubmission;
@@ -75,8 +76,8 @@ public class EquipmentRequestService {
 
     private EquipmentRequestResponse toResponse(EquipmentRequest r) {
         return new EquipmentRequestResponse(r.getId(), r.getRequester().getId(),
-                r.getRequester().getFirstName() + " " + r.getRequester().getLastName(), r.getItemName(),
-                r.getDescription(), r.getQuantity(), r.getStatus(), r.getValidatedBy(), r.getValidationDate(),
-                r.getValidationNote());
+                SoftDeleteSafe.resolve(r.getRequester(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"),
+                r.getItemName(), r.getDescription(), r.getQuantity(), r.getStatus(), r.getValidatedBy(),
+                r.getValidationDate(), r.getValidationNote());
     }
 }

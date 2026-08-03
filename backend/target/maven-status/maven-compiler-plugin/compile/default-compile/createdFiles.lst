@@ -65,6 +65,7 @@ com\lias\labmanagement\members\dto\MemberCreateRequest.class
 com\lias\labmanagement\common\web\PageResponse.class
 com\lias\labmanagement\governance\dto\TeamMembershipHistoryResponse.class
 com\lias\labmanagement\common\enums\EventType.class
+com\lias\labmanagement\common\util\SoftDeleteSafe.class
 com\lias\labmanagement\auth\entity\User.class
 com\lias\labmanagement\common\exception\ConflictException.class
 com\lias\labmanagement\notification\entity\Discussion$DiscussionBuilderImpl.class
