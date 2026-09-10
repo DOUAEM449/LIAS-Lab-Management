@@ -32,6 +32,22 @@ export async function getMyProfile() {
   return res.data.data;
 }
 
+// POST /api/v1/members/me/avatar (multipart)
+export async function uploadMyAvatar(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/members/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data;
+}
+
+// DELETE /api/v1/members/me/avatar -> removes the current user's photo, reverting to the default
+export async function deleteMyAvatar() {
+  const res = await api.delete('/members/me/avatar');
+  return res.data.data;
+}
+
 export async function updateMember(id, payload) {
   const res = await api.put(`/members/${id}`, payload);
   return res.data.data;
@@ -52,6 +68,13 @@ export async function restoreMember(id) {
 
 export async function leaveMember(id, payload) {
   await api.post(`/members/${id}/leave`, payload);
+}
+
+// POST /api/v1/members/{id}/return — reactivate a former/retired member (new affiliation
+// period, status + role resynced, full history kept).
+export async function returnMemberToLab(id, payload) {
+  const res = await api.post(`/members/${id}/return`, payload);
+  return res.data.data;
 }
 
 export async function getMemberStatusHistory(id) {

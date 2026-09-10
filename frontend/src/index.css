@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   LIAS design tokens.
+
+   The laboratory's visual identity — a deep institutional navy for the
+   application shell and a restrained academic blue as the single accent — was
+   already established here and is preserved. This file refines it into a
+   complete token set (surfaces, elevation, focus, motion) so every screen can
+   be built from the same vocabulary instead of ad-hoc utility soup.
+--------------------------------------------------------------------------- */
 @theme {
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -7,20 +16,28 @@
   /* Sidebar / brand navy */
   --color-lias-navy: oklch(22% 0.035 255);
   --color-lias-navy-light: oklch(32% 0.03 255);
+  --color-lias-navy-deep: oklch(17% 0.03 255);
   --color-lias-navy-text: oklch(78% 0.015 255);
   --color-lias-navy-text-dim: oklch(70% 0.02 255);
 
   /* Primary brand blue */
   --color-lias-blue: oklch(55% 0.09 250);
+  --color-lias-blue-hover: oklch(49% 0.095 250);
   --color-lias-blue-dark: oklch(42% 0.09 250);
   --color-lias-blue-tint: oklch(92% 0.05 250 / 0.5);
+  --color-lias-blue-tint-solid: oklch(95% 0.032 250);
 
-  /* Neutrals */
+  /* Neutrals / surfaces */
   --color-lias-bg: oklch(98% 0.003 250);
+  --color-lias-surface: oklch(100% 0 0);
+  --color-lias-surface-muted: oklch(97% 0.004 250);
   --color-lias-border: oklch(90% 0.005 250);
   --color-lias-border-light: oklch(94% 0.004 250);
+  --color-lias-border-strong: oklch(84% 0.008 250);
   --color-lias-ink: oklch(25% 0.02 250);
+  --color-lias-ink-soft: oklch(38% 0.015 250);
   --color-lias-muted: oklch(50% 0.01 250);
+  --color-lias-faint: oklch(64% 0.008 250);
 
   /* Status colors */
   --color-lias-success: oklch(52% 0.12 150);
@@ -32,23 +49,139 @@
   --color-lias-danger: oklch(58% 0.16 25);
   --color-lias-danger-bg: oklch(94% 0.06 25);
   --color-lias-danger-text: oklch(45% 0.15 25);
+  --color-lias-info: oklch(55% 0.09 250);
+  --color-lias-info-bg: oklch(95% 0.04 250);
+  --color-lias-info-text: oklch(42% 0.09 250);
+
+  /* Accent used to mark governance / mandate concepts (see GouvernancePage) */
+  --color-lias-mandate: oklch(52% 0.13 300);
+  --color-lias-mandate-bg: oklch(95% 0.04 300);
+  --color-lias-mandate-text: oklch(42% 0.13 300);
+
+  /* Elevation — deliberately shallow: institutional, not "app-store glossy" */
+  --shadow-card: 0 1px 2px oklch(22% 0.035 255 / 0.04);
+  --shadow-raised: 0 1px 3px oklch(22% 0.035 255 / 0.07), 0 4px 12px oklch(22% 0.035 255 / 0.05);
+  --shadow-overlay: 0 12px 40px oklch(22% 0.035 255 / 0.18);
+
+  --radius-card: 0.75rem;
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* One consistent, visible focus treatment for keyboard users across the app. */
+  :focus-visible {
+    outline: 2px solid var(--color-lias-blue);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  button:focus:not(:focus-visible),
+  a:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(85% 0.01 250);
+    border-radius: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(78% 0.012 250);
+  }
+
+  ::selection {
+    background: var(--color-lias-blue-tint-solid);
+    color: var(--color-lias-navy);
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer utilities {
+  /* Skeleton shimmer — used by <Skeleton /> for loading states. */
+  .lias-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-lias-surface-muted) 0%,
+      oklch(94% 0.005 250) 50%,
+      var(--color-lias-surface-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: lias-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .lias-enter {
+    animation: lias-enter 160ms ease-out;
+  }
+
+  .lias-overlay-enter {
+    animation: lias-fade 140ms ease-out;
+  }
+
+  /* Vertical connector used by the history timelines (member, mandates). */
+  .lias-timeline::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 18px;
+    bottom: -4px;
+    width: 1px;
+    background: var(--color-lias-border);
+  }
+
+  .lias-timeline:last-child::before {
+    display: none;
+  }
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@keyframes lias-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: oklch(85% 0.01 250);
-  border-radius: 8px;
+@keyframes lias-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lias-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,4 +35,17 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
                          Pageable pageable);
 
     Page<Member> findByCurrentStatusNot(MemberStatus status, Pageable pageable);
+
+    /**
+     * Ids of every member whose account is still active — excludes RETIRED (frozen)
+     * and FORMER (deactivated) members (CdC §2.8). Used as the broadcast audience
+     * for laboratory-wide notifications.
+     */
+    @Query("""
+            select m.id from Member m
+            where m.currentStatus not in (
+                com.lias.labmanagement.common.enums.MemberStatus.RETIRED,
+                com.lias.labmanagement.common.enums.MemberStatus.FORMER)
+            """)
+    List<UUID> findActiveMemberIds();
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Loader2, FileText, Upload } from 'lucide-react';
+import { FileText, Upload, Download, ClipboardCheck } from 'lucide-react';
 import Modal from './Modal';
-import { TextField, TextAreaField, FileField } from './FormField';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import { TextField, TextAreaField, FileField, FieldRow } from './FormField';
 import {
   createMeeting,
   updateMeeting,
   listMeetingMinutes,
   uploadMeetingMinutes,
+  downloadMeetingMinutes,
 } from '../services/meetingService';
 
 const EMPTY_FORM = { title: '', meetingDate: '', agenda: '', type: '', location: '' };
@@ -29,6 +32,7 @@ export default function MeetingFormModal({ open, meeting, onClose, onSaved, toas
   const [minutes, setMinutes] = useState([]);
   const [minutesFile, setMinutesFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const isEdit = Boolean(meeting);
 
@@ -86,7 +90,7 @@ export default function MeetingFormModal({ open, meeting, onClose, onSaved, toas
       const refreshed = await listMeetingMinutes(meeting.id);
       setMinutes(refreshed);
       setMinutesFile(null);
-      toast.success('PV téléversé.');
+      toast.success('Procès-verbal archivé.');
       onSaved({ ...meeting, hasMinutes: true });
     } catch (err) {
       toast.error(friendlyError(err, 'Échec du téléversement du PV'));
@@ -95,16 +99,34 @@ export default function MeetingFormModal({ open, meeting, onClose, onSaved, toas
     }
   }
 
+  async function handleDownload(m) {
+    setDownloadingId(m.id);
+    try {
+      await downloadMeetingMinutes(m.id, m.originalFileName);
+    } catch (err) {
+      toast.error(friendlyError(err, 'Échec du téléchargement du PV'));
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   return (
-    <Modal open={open} onClose={onClose} maxWidth="max-w-xl" title={isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      maxWidth="max-w-xl"
+      title={isEdit ? 'Modifier la réunion' : 'Nouvelle réunion'}
+      subtitle={isEdit ? 'Ordre du jour et procès-verbaux archivés' : "Planifiez une réunion interne du laboratoire"}
+    >
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Titre"
+          label="Titre de la réunion"
           required
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="Ex. Conseil de laboratoire — rentrée 2026"
         />
-        <div className="grid grid-cols-2 gap-x-4">
+        <FieldRow>
           <TextField
             label="Date et heure"
             type="datetime-local"
@@ -113,65 +135,97 @@ export default function MeetingFormModal({ open, meeting, onClose, onSaved, toas
             onChange={(e) => setForm({ ...form, meetingDate: e.target.value })}
           />
           <TextField
-            label="Type"
-            placeholder="Conseil, bureau..."
+            label="Type de réunion"
+            placeholder="Conseil, bureau, équipe..."
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
           />
-        </div>
+        </FieldRow>
         <TextField
           label="Lieu"
           value={form.location}
           onChange={(e) => setForm({ ...form, location: e.target.value })}
+          placeholder="Salle, bâtiment, visioconférence..."
         />
         <TextAreaField
           label="Ordre du jour"
+          rows={4}
           value={form.agenda}
           onChange={(e) => setForm({ ...form, agenda: e.target.value })}
+          placeholder="Points à l'ordre du jour..."
         />
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-lias-blue text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-        >
-          {saving && <Loader2 size={15} className="animate-spin" />}
-          {isEdit ? 'Enregistrer' : 'Planifier la réunion'}
-        </button>
+        <Button type="submit" className="w-full" loading={saving}>
+          {isEdit ? 'Enregistrer les modifications' : 'Planifier la réunion'}
+        </Button>
       </form>
 
       {isEdit && (
-        <div className="border-t border-lias-border-light mt-5 pt-4">
-          <div className="text-xs font-semibold text-lias-muted uppercase tracking-wide mb-3">
-            Procès-verbaux
+        <div className="border-t border-lias-border-light mt-6 pt-5">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-lias-faint mb-3 flex items-center gap-1.5">
+            <ClipboardCheck size={12} />
+            Procès-verbaux archivés
           </div>
-          {minutes.length > 0 && (
-            <ul className="list-none p-0 m-0 mb-3 space-y-1.5">
+
+          {minutes.length === 0 ? (
+            <p className="text-[12.5px] text-lias-muted mt-0 mb-4">
+              Aucun procès-verbal n'a encore été archivé pour cette réunion.
+            </p>
+          ) : (
+            <ul className="list-none p-0 m-0 mb-4">
               {minutes.map((m) => (
-                <li key={m.id} className="flex items-center gap-2 text-sm text-lias-ink">
-                  <FileText size={14} className="text-lias-muted" />
-                  {m.originalFileName}
-                  <span className="text-xs text-lias-muted">
-                    ({new Date(m.uploadedAt).toLocaleDateString('fr-FR')})
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 py-2.5 border-b border-lias-border-light last:border-b-0"
+                >
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <FileText size={14} className="text-lias-faint shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] text-lias-ink truncate">{m.originalFileName}</span>
+                      <span className="block text-[11px] text-lias-faint font-mono mt-0.5">
+                        Archivé le {new Date(m.uploadedAt).toLocaleDateString('fr-FR')}
+                      </span>
+                    </span>
                   </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={Download}
+                    loading={downloadingId === m.id}
+                    onClick={() => handleDownload(m)}
+                  >
+                    Télécharger
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
-          <div className="flex items-end gap-2">
+
+          <div className="flex items-start gap-3">
             <div className="flex-1">
-              <FileField label="Ajouter un PV" onChange={(e) => setMinutesFile(e.target.files[0])} />
+              <FileField
+                label="Ajouter un procès-verbal"
+                onChange={(e) => setMinutesFile(e.target.files?.[0] ?? null)}
+              />
             </div>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              icon={Upload}
               onClick={handleUploadMinutes}
-              disabled={!minutesFile || uploading}
-              className="bg-white border border-lias-border rounded-lg px-3 py-2.5 text-sm font-medium cursor-pointer disabled:opacity-50 flex items-center gap-2 mb-3.5"
+              disabled={!minutesFile}
+              loading={uploading}
+              className="mt-6"
             >
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              Téléverser
-            </button>
+              Archiver
+            </Button>
           </div>
+
+          {minutes.length > 0 && (
+            <Badge tone="success" size="sm">
+              {minutes.length} PV conservé(s)
+            </Badge>
+          )}
         </div>
       )}
     </Modal>

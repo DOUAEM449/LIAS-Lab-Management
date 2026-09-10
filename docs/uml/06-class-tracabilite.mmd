@@ -1,0 +1,82 @@
+%% LIAS - Diagramme de classes (4/4) : Tracabilite et pilotage
+%% Notifications, audit, rapport annuel, identite du laboratoire.
+classDiagram
+  class Notification {
+    +NotificationType type
+    +String message
+    +boolean read
+    +String relatedEntityType
+    +UUID relatedEntityId
+  }
+  class AuditLog {
+    +UUID id
+    +UUID actorId
+    +String actorEmail
+    +AuditAction action
+    +String entityType
+    +String entityId
+    +String oldValue
+    +String newValue
+    +String details
+    +String ipAddress
+    +Instant createdAt
+  }
+  class AnnualReport {
+    +int year
+    +Instant generatedDate
+    +String statisticsJson
+    +String pdfPath
+  }
+  class Laboratory {
+    +String name
+    +LocalDate foundingDate
+    +String description
+    +String directorMessage
+  }
+  class PasswordResetToken {
+    +String token
+    +Instant expiresAt
+    +boolean used
+  }
+  class Member
+  class User
+
+  class NotificationType {
+    <<enumeration>>
+    MEMBERSHIP_REQUEST
+    MEMBERSHIP_DECISION
+    DOCUMENT_ADDED
+    EVENT_CREATED
+    EVENT_REMINDER
+    PUBLICATION_ADDED
+    EQUIPMENT_REQUEST
+    EQUIPMENT_REQUEST_DECISION
+    MEETING_SCHEDULED
+    MESSAGE_RECEIVED
+    SYSTEM
+  }
+  class AuditAction {
+    <<enumeration>>
+    CREATE
+    UPDATE
+    DELETE
+    RESTORE
+    APPROVE
+    REJECT
+    LOGIN
+    LOGIN_FAILED
+    LOGOUT
+    PASSWORD_RESET
+    ROLE_CHANGE
+    STATUS_CHANGE
+    FILE_UPLOAD
+    FILE_DOWNLOAD
+  }
+
+  Member "1" --> "0..*" Notification : recipient
+  User "1" --> "0..*" PasswordResetToken
+  Notification ..> NotificationType
+  AuditLog ..> AuditAction
+
+  note for AuditLog "Aucune association JPA vers les entites auditees :\nentityType + entityId sont volontairement faibles\npour tracer toute entite sans couplage."
+  note for Laboratory "Enregistrement unique (singleton logique)\nalimentant le portail public."

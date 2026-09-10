@@ -3,6 +3,7 @@ package com.lias.labmanagement.equipment.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.EquipmentRequestStatus;
+import com.lias.labmanagement.common.enums.NotificationType;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.util.SoftDeleteSafe;
@@ -13,6 +14,7 @@ import com.lias.labmanagement.equipment.entity.EquipmentRequest;
 import com.lias.labmanagement.equipment.repository.EquipmentRequestRepository;
 import com.lias.labmanagement.members.entity.Member;
 import com.lias.labmanagement.members.repository.MemberRepository;
+import com.lias.labmanagement.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,7 @@ public class EquipmentRequestService {
     private final EquipmentRequestRepository requestRepository;
     private final MemberRepository memberRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional
     public EquipmentRequestResponse submit(UUID requesterId, EquipmentRequestSubmission submission) {
@@ -42,6 +45,14 @@ public class EquipmentRequestService {
                 .status(EquipmentRequestStatus.PENDING)
                 .build();
         EquipmentRequest saved = requestRepository.save(request);
+
+        // CdC §2.15: equipment needs are "validées par la direction" — notify whoever
+        // currently holds the Director/Vice-Director mandate that a request is pending.
+        notificationService.notifyGovernance(NotificationType.EQUIPMENT_REQUEST,
+                "Nouvelle demande de matériel \"" + saved.getItemName() + "\" (x" + saved.getQuantity()
+                        + ") soumise par " + requester.getFirstName() + " " + requester.getLastName() + ".",
+                "EquipmentRequest", saved.getId());
+
         auditService.record(AuditAction.CREATE, "EquipmentRequest", saved.getId(), "Equipment request submitted");
         return toResponse(saved);
     }
@@ -70,6 +81,12 @@ public class EquipmentRequestService {
         request.setValidationDate(Instant.now());
         request.setValidationNote(note);
         EquipmentRequest saved = requestRepository.save(request);
+
+        notificationService.notify(request.getRequester().getId(), NotificationType.EQUIPMENT_REQUEST_DECISION,
+                "Votre demande de matériel \"" + request.getItemName() + "\" a été "
+                        + (decision == EquipmentRequestStatus.APPROVED ? "approuvée" : "refusée") + ".",
+                "EquipmentRequest", saved.getId());
+
         auditService.record(AuditAction.UPDATE, "EquipmentRequest", id, "Request " + decision.name().toLowerCase());
         return toResponse(saved);
     }

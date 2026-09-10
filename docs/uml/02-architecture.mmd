@@ -1,0 +1,58 @@
+%% LIAS - Diagramme d architecture / composants
+%% Refletant le code reel : SecurityConfig, WebConfig, pom.xml, docker-compose.yml,
+%% application.yml (Flyway, Hikari, spring-boot-starter-mail).
+flowchart TB
+  classDef front fill:#eef3fb,stroke:#2d5ca0,color:#1c2638
+  classDef api fill:#fff,stroke:#2d5ca0,color:#1c2638
+  classDef sec fill:#f4eefb,stroke:#7a4fb0,color:#1c2638
+  classDef svc fill:#fff,stroke:#bfc8d4,color:#1c2638
+  classDef data fill:#eefaf3,stroke:#2f8f5b,color:#1c2638
+  classDef ext fill:#fdf4e8,stroke:#b07a2f,color:#1c2638
+
+  subgraph CLIENT[Navigateur]
+    SPA["React 19 SPA - Vite 8<br/>pages / components/ui / services<br/>react-router-dom 7"]:::front
+    AX["axios - interceptor<br/>Bearer JWT + gestion 401"]:::front
+  end
+
+  subgraph BACK["Spring Boot 3.3.4 - Java 21"]
+    subgraph SECL[Couche securite]
+      JWTF["JwtAuthenticationFilter<br/>revalide le compte a chaque requete"]:::sec
+      SECC["SecurityConfig<br/>stateless + EnableMethodSecurity"]:::sec
+      UDS["CustomUserDetailsService<br/>gel RETIRED / FORMER"]:::sec
+      JWTS["JwtService - jjwt 0.12.6"]:::sec
+    end
+
+    CTRL["22 REST Controllers - /api/v1/**<br/>PreAuthorize par role"]:::api
+    SVC["28 Services metier<br/>UserRoleSyncService, MandateService,<br/>MemberService, ReportService..."]:::svc
+    AUD["AuditService<br/>REQUIRES_NEW"]:::svc
+    SCHED["AnnualReportScheduler<br/>Scheduled - 1er janvier"]:::svc
+    PDF["AnnualReportPdfGenerator<br/>OpenPDF"]:::svc
+    REPO["30 Repositories<br/>Spring Data JPA"]:::data
+    ORM["Hibernate<br/>SQLRestriction deleted = false"]:::data
+    FS["FileStorageService + WebConfig<br/>/files/** - uploads/"]:::svc
+  end
+
+  subgraph INFRA[Infrastructure]
+    DB[("PostgreSQL<br/>Neon Cloud / Docker")]:::data
+    FLY["Flyway<br/>V1 schema, V2 role history + laboratory"]:::data
+    MAIL["SMTP<br/>spring-boot-starter-mail"]:::ext
+    DISK[("Systeme de fichiers<br/>documents, PV, CV, rapports")]:::ext
+  end
+
+  SPA --> AX
+  AX -->|HTTPS REST JSON| JWTF
+  JWTF --> SECC --> CTRL
+  JWTF --> UDS
+  JWTF --> JWTS
+  CTRL --> SVC
+  SVC --> AUD
+  SVC --> REPO
+  SVC --> FS
+  SVC --> MAIL
+  SCHED --> SVC
+  SVC --> PDF
+  PDF --> FS
+  AUD --> REPO
+  REPO --> ORM --> DB
+  FLY -->|migrations au demarrage| DB
+  FS --> DISK

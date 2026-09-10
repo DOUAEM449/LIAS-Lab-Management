@@ -6,6 +6,7 @@ import com.lias.labmanagement.equipment.dto.DistributionRequest;
 import com.lias.labmanagement.equipment.dto.DistributionResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentUpsertRequest;
+import com.lias.labmanagement.equipment.dto.NonRecipientResponse;
 import com.lias.labmanagement.equipment.service.EquipmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,10 +20,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+// CdC matrix: Doctorants have NO access to internal modules (Equipment, Meetings, Administration).
 @RestController
 @RequestMapping("/api/v1/equipment")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN','DIRECTOR','VICE_DIRECTOR','TEAM_LEADER','PERMANENT_MEMBER','ASSOCIATE_MEMBER')")
 @Tag(name = "Equipment", description = "Laboratory equipment inventory and distribution tracking")
 public class EquipmentController {
 
@@ -87,5 +89,11 @@ public class EquipmentController {
     @Operation(summary = "List equipment currently or previously held by a member")
     public ApiResponse<List<DistributionResponse>> getDistributionsForMember(@PathVariable UUID memberId) {
         return ApiResponse.of(service.getDistributionsForMember(memberId));
+    }
+
+    @GetMapping("/{id}/non-recipients")
+    @Operation(summary = "List active members who have NOT received this equipment item")
+    public ApiResponse<List<NonRecipientResponse>> getNonRecipients(@PathVariable UUID id) {
+        return ApiResponse.of(service.getNonRecipients(id));
     }
 }

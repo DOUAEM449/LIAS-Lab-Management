@@ -21,10 +21,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// CdC matrix: Doctorants have NO access to internal modules (Equipment, Meetings, Administration).
 @RestController
 @RequestMapping("/api/v1/equipment-requests")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN','DIRECTOR','VICE_DIRECTOR','TEAM_LEADER','PERMANENT_MEMBER','ASSOCIATE_MEMBER')")
 @Tag(name = "Equipment Requests", description = "Member requests for new equipment, validated by Director/Vice-Director")
 public class EquipmentRequestController {
 

@@ -1,0 +1,48 @@
+%% LIAS - Diagramme d etats : cycle de vie d un membre
+%% Etats issus de MemberStatus et RequestStatus reels ; transitions issues de
+%% MembershipRequestService.approve/reject, MemberService.changeStatus/leave/returnToLab/delete/restore.
+stateDiagram-v2
+  [*] --> Candidature : depot public<br/>POST /membership-requests/public
+
+  state Candidature {
+    [*] --> PENDING
+    PENDING --> REJECTED : reject() par le directeur
+    PENDING --> APPROVED : approve() par le directeur
+    REJECTED --> [*]
+  }
+
+  APPROVED --> Actif : creation User + Member<br/>1re periode d affiliation
+
+  state Actif {
+    [*] --> PERMANENT
+    PERMANENT --> ASSOCIATE : changeStatus()
+    ASSOCIATE --> PERMANENT : changeStatus()
+    PHD_STUDENT --> PERMANENT : changeStatus()
+    PERMANENT --> PHD_STUDENT : changeStatus()
+    ASSOCIATE --> PHD_STUDENT : changeStatus()
+    PHD_STUDENT --> ASSOCIATE : changeStatus()
+  }
+
+  Actif --> RETIRED : changeStatus(RETIRED)<br/>compte gele + mandats clos
+  Actif --> FORMER : leave() ou changeStatus(FORMER)<br/>compte desactive + mandats clos
+
+  RETIRED --> Actif : returnToLab()<br/>NOUVELLE periode d affiliation
+  FORMER --> Actif : returnToLab()<br/>NOUVELLE periode d affiliation
+
+  Actif --> Archive : delete() - suppression logique
+  RETIRED --> Archive : delete()
+  FORMER --> Archive : delete()
+  Archive --> Actif : restore()
+
+  note right of RETIRED
+    CustomUserDetails.enabled = false
+    Verifie a chaque requete par
+    JwtAuthenticationFilter.
+    Historique integralement conserve.
+  end note
+
+  note right of Actif
+    Chaque changement ecrit une ligne
+    dans member_status_history et
+    declenche UserRoleSyncService.
+  end note

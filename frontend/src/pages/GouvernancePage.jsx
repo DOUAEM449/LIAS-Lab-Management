@@ -1,10 +1,44 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Users2, Plus, AlertCircle, Pencil, Archive, ShieldCheck, Loader2, ArrowRightLeft } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Users2,
+  Plus,
+  Pencil,
+  Archive,
+  ShieldCheck,
+  ArrowRightLeft,
+  Crown,
+  UserCog,
+  Network,
+  CalendarClock,
+  Info,
+  Square,
+} from 'lucide-react';
 import TeamFormModal from '../components/TeamFormModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { TextField, SelectField } from '../components/FormField';
 import { ToastStack, useToasts } from '../components/Toast';
+import {
+  PageHeader,
+  Card,
+  CardHeader,
+  StatTile,
+  Tabs,
+  Button,
+  IconButton,
+  Badge,
+  MandateBadge,
+  Alert,
+  EmptyState,
+  LoadingBlock,
+  Skeleton,
+  Table,
+  THead,
+  TBody,
+  TR,
+  TD,
+  TDPrimary,
+  TDActions,
+} from '../components/ui';
 import {
   listTeams,
   archiveTeam,
@@ -15,19 +49,49 @@ import {
 } from '../services/governanceService';
 import { searchMembers } from '../services/memberService';
 
-const ROLE_LABEL_FR = {
-  DIRECTOR: 'Directeur',
-  VICE_DIRECTOR: 'Vice-directeur',
-  TEAM_LEADER: "Chef d'équipe",
-};
+const MANDATE_ROLE_OPTIONS = [
+  { value: 'DIRECTOR', label: 'Directeur' },
+  { value: 'VICE_DIRECTOR', label: 'Vice-directeur' },
+  { value: 'TEAM_LEADER', label: "Chef d'équipe" },
+];
 
 function friendlyError(err, fallback) {
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
 
+/** One node of the governance chart. */
+function GovernanceNode({ role, mandate, icon: Icon, subtitle, emphasis = false }) {
+  return (
+    <div
+      className={`rounded-card border p-5 text-center transition-colors duration-150
+        ${
+          mandate
+            ? emphasis
+              ? 'border-lias-mandate/40 bg-lias-mandate-bg/60'
+              : 'border-lias-border bg-lias-surface'
+            : 'border-dashed border-lias-border bg-lias-surface-muted/50'
+        }`}
+    >
+      <div
+        className={`w-11 h-11 rounded-full mx-auto flex items-center justify-center mb-3
+          ${mandate ? 'bg-lias-mandate-bg text-lias-mandate-text' : 'bg-lias-surface-muted text-lias-faint'}`}
+      >
+        <Icon size={19} />
+      </div>
+      <MandateBadge role={role} active={Boolean(mandate)} size="sm" />
+      <div className="mt-3 text-[14px] font-semibold text-lias-navy">
+        {mandate ? mandate.memberName : 'Poste vacant'}
+      </div>
+      <div className="text-[11.5px] text-lias-muted mt-1 font-mono">
+        {mandate ? `En mandat depuis le ${new Date(mandate.startDate).toLocaleDateString('fr-FR')}` : subtitle}
+      </div>
+    </div>
+  );
+}
+
 export default function GouvernancePage() {
-  const [tab, setTab] = useState('teams');
+  const [tab, setTab] = useState('structure');
   const toast = useToasts();
 
   const [teams, setTeams] = useState([]);
@@ -42,7 +106,8 @@ export default function GouvernancePage() {
   const [mandatesLoading, setMandatesLoading] = useState(true);
   const [mandatesError, setMandatesError] = useState(null);
   const [members, setMembers] = useState([]);
-  const [endingId, setEndingId] = useState(null);
+  const [endTarget, setEndTarget] = useState(null);
+  const [ending, setEnding] = useState(false);
 
   const [assignForm, setAssignForm] = useState({ memberId: '', role: 'TEAM_LEADER', teamId: '', startDate: '' });
   const [assigning, setAssigning] = useState(false);
@@ -76,15 +141,9 @@ export default function GouvernancePage() {
       .catch(() => {});
   }, [loadTeams, loadMandates]);
 
-  function openCreateTeam() {
-    setEditingTeam(null);
-    setFormOpen(true);
-  }
-
-  function openEditTeam(team) {
-    setEditingTeam(team);
-    setFormOpen(true);
-  }
+  const director = useMemo(() => mandates.find((m) => m.role === 'DIRECTOR') ?? null, [mandates]);
+  const viceDirector = useMemo(() => mandates.find((m) => m.role === 'VICE_DIRECTOR') ?? null, [mandates]);
+  const teamLeaders = useMemo(() => mandates.filter((m) => m.role === 'TEAM_LEADER'), [mandates]);
 
   async function handleArchiveTeam() {
     setArchiving(true);
@@ -111,7 +170,7 @@ export default function GouvernancePage() {
         teamId: assignForm.role === 'TEAM_LEADER' ? assignForm.teamId || undefined : undefined,
         startDate: assignForm.startDate,
       });
-      toast.success('Mandat attribué.');
+      toast.success('Mandat attribué — les permissions correspondantes sont actives immédiatement.');
       setAssignForm({ memberId: '', role: 'TEAM_LEADER', teamId: '', startDate: '' });
       loadMandates();
       loadTeams();
@@ -122,17 +181,18 @@ export default function GouvernancePage() {
     }
   }
 
-  async function handleEndMandate(mandate) {
-    setEndingId(mandate.id);
+  async function handleEndMandate() {
+    setEnding(true);
     try {
-      await endMandate(mandate.id, { endDate: new Date().toISOString().slice(0, 10) });
-      toast.success('Mandat terminé.');
+      await endMandate(endTarget.id, { endDate: new Date().toISOString().slice(0, 10) });
+      toast.success('Mandat clôturé — le rôle effectif du membre a été recalculé.');
+      setEndTarget(null);
       loadMandates();
       loadTeams();
     } catch (err) {
       toast.error(friendlyError(err, 'Échec de la clôture du mandat'));
     } finally {
-      setEndingId(null);
+      setEnding(false);
     }
   }
 
@@ -142,7 +202,7 @@ export default function GouvernancePage() {
     setTransferring(true);
     try {
       await transferMemberTeam(transferForm);
-      toast.success('Membre transféré vers la nouvelle équipe.');
+      toast.success('Membre transféré — la période précédente reste historisée.');
       setTransferForm({ memberId: '', newTeamId: '', effectiveDate: '' });
       loadTeams();
     } catch (err) {
@@ -156,121 +216,265 @@ export default function GouvernancePage() {
     <div>
       <ToastStack toasts={toast.toasts} onDismiss={toast.dismiss} />
 
-      <div className="mb-6">
-        <h1 className="m-0 text-[22px] font-bold text-lias-navy">Gouvernance</h1>
-        <p className="mt-1.5 mb-0 text-[13.5px] text-lias-muted">
-          Équipes de recherche, mandats et responsabilités du laboratoire.
-        </p>
+      <PageHeader
+        eyebrow="Direction & organisation"
+        title="Gouvernance du laboratoire"
+        description="Structure de direction, équipes de recherche et mandats. Un mandat est une responsabilité datée : il accorde les permissions correspondantes pendant sa durée, et les retire à son terme."
+        actions={
+          <Tabs
+            tabs={[
+              { key: 'structure', label: 'Structure', icon: Network },
+              { key: 'teams', label: 'Équipes', icon: Users2 },
+              { key: 'mandates', label: 'Mandats', icon: ShieldCheck },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatTile
+          label="Équipes de recherche"
+          value={teams.length}
+          hint="Chacune pilotée par un chef d'équipe"
+          icon={Users2}
+          loading={teamsLoading}
+        />
+        <StatTile
+          label="Mandats actifs"
+          value={mandates.length}
+          hint="Direction et chefs d'équipe"
+          icon={ShieldCheck}
+          loading={mandatesLoading}
+        />
+        <StatTile
+          label="Direction en exercice"
+          value={director ? 1 : 0}
+          hint={director ? director.memberName : 'Aucun directeur en mandat'}
+          hintTone={director ? 'success' : 'warning'}
+          icon={Crown}
+          loading={mandatesLoading}
+        />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4.5 mb-7">
-        <StatCard label="Équipes" value={teams.length} icon={Users2} loading={teamsLoading} />
-        <StatCard label="Mandats actifs" value={mandates.length} icon={ShieldCheck} loading={mandatesLoading} />
-      </div>
+      {/* ---------------- Structure ---------------- */}
+      {tab === 'structure' && (
+        <>
+          <Alert tone="info" className="mb-5" title="Statut ≠ Rôle ≠ Mandat">
+            Le <strong>statut</strong> dit à quelle catégorie de membres une personne appartient
+            (permanent, associé, doctorant…). Le <strong>mandat</strong> est une responsabilité de
+            gouvernance avec une date de début et de fin. Le <strong>rôle</strong> effectif — celui
+            que lit la sécurité applicative — est <strong>dérivé</strong> des deux : il n'est jamais
+            saisi manuellement, et il disparaît automatiquement à la fin du mandat.
+          </Alert>
 
-      <div className="flex items-center gap-1.5 bg-lias-bg rounded-lg p-1 w-fit mb-5">
-        {[
-          { key: 'teams', label: 'Équipes' },
-          { key: 'mandates', label: 'Mandats' },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 rounded-md text-[12.5px] font-medium cursor-pointer border-none transition-colors ${
-              tab === t.key ? 'bg-white text-lias-navy shadow-sm' : 'bg-transparent text-lias-muted'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          <Card className="mb-5">
+            <CardHeader
+              icon={Network}
+              title="Organigramme de direction"
+              description="Déterminé exclusivement par les mandats actuellement actifs"
+            />
+            <div className="p-5.5">
+              {mandatesLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Skeleton className="h-40 rounded-card" />
+                  <Skeleton className="h-40 rounded-card" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    <GovernanceNode
+                      role="DIRECTOR"
+                      mandate={director}
+                      icon={Crown}
+                      emphasis
+                      subtitle="Aucun mandat de direction en cours"
+                    />
+                    <GovernanceNode
+                      role="VICE_DIRECTOR"
+                      mandate={viceDirector}
+                      icon={UserCog}
+                      subtitle="Aucun vice-directeur en mandat"
+                    />
+                  </div>
 
+                  <div className="mt-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-px flex-1 bg-lias-border" />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-lias-faint">
+                        Chefs d'équipe
+                      </span>
+                      <div className="h-px flex-1 bg-lias-border" />
+                    </div>
+
+                    {teamLeaders.length === 0 ? (
+                      <div className="text-[13px] text-lias-muted text-center py-6 border border-dashed border-lias-border rounded-card">
+                        Aucun chef d'équipe en mandat pour le moment.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {teamLeaders.map((m) => (
+                          <div
+                            key={m.id}
+                            className="border border-lias-border rounded-card p-4 flex items-center gap-3"
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
+                              <Users2 size={16} className="text-lias-blue-dark" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-semibold text-lias-ink truncate">
+                                {m.memberName}
+                              </div>
+                              <div className="text-[11.5px] text-lias-muted truncate">
+                                {m.teamName ?? 'Équipe non précisée'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ---------------- Équipes ---------------- */}
       {tab === 'teams' && (
         <>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={openCreateTeam}
-              className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Nouvelle équipe
-            </button>
-          </div>
-
           {teamsError && (
-            <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-              <AlertCircle size={16} />
+            <Alert tone="danger" className="mb-5">
               {teamsError}
-            </div>
+            </Alert>
           )}
 
-          <div className="bg-white border border-lias-border rounded-xl overflow-hidden mb-7">
+          <Card className="mb-5">
+            <CardHeader
+              icon={Users2}
+              title="Équipes de recherche"
+              description="Le responsable d'une équipe est déterminé par son mandat TEAM_LEADER actif."
+              actions={
+                <Button
+                  icon={Plus}
+                  size="sm"
+                  onClick={() => {
+                    setEditingTeam(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  Nouvelle équipe
+                </Button>
+              }
+            />
+
             {teamsLoading ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Chargement...</div>
+              <LoadingBlock label="Chargement des équipes..." />
             ) : teams.length === 0 ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Aucune équipe.</div>
+              <EmptyState
+                icon={Users2}
+                title="Aucune équipe de recherche"
+                description="Structurez le laboratoire en créant sa première équipe de recherche."
+                action={
+                  <Button
+                    icon={Plus}
+                    onClick={() => {
+                      setEditingTeam(null);
+                      setFormOpen(true);
+                    }}
+                  >
+                    Créer une équipe
+                  </Button>
+                }
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="bg-lias-bg">
-                      {['Équipe', 'Responsable', 'Membres', ''].map((h, i) => (
-                        <th
-                          key={h + i}
-                          className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                            i === 3 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                          }`}
-                        >
-                          {i === 3 ? 'Actions' : h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teams.map((t) => (
-                      <tr key={t.id} className="border-t border-lias-border-light">
-                        <td className="px-5.5 py-3.5">
-                          <div className="text-[13px] font-medium text-lias-ink">{t.name}</div>
-                          {t.description && <div className="text-[12px] text-lias-muted">{t.description}</div>}
-                        </td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{t.currentLeaderName || '—'}</td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{t.memberCount}</td>
-                        <td className="px-5.5 py-3.5 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => openEditTeam(t)}
-                              className="w-8 h-8 rounded-lg border border-lias-border bg-white cursor-pointer flex items-center justify-center text-lias-muted hover:text-lias-blue-dark"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => setArchiveTarget(t)}
-                              className="w-8 h-8 rounded-lg border border-rose-200 bg-white cursor-pointer flex items-center justify-center text-rose-600 hover:bg-rose-50"
-                            >
-                              <Archive size={14} />
-                            </button>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-lias-border-light">
+                {teams.map((t) => (
+                  <div key={t.id} className="bg-lias-surface p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="m-0 text-[14.5px] font-semibold text-lias-navy">{t.name}</h3>
+                        <p className="mt-1.5 mb-0 text-[12.5px] text-lias-muted leading-relaxed line-clamp-2">
+                          {t.description || 'Aucune description renseignée.'}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <IconButton
+                          icon={Pencil}
+                          label="Modifier"
+                          onClick={() => {
+                            setEditingTeam(t);
+                            setFormOpen(true);
+                          }}
+                        />
+                        <IconButton
+                          icon={Archive}
+                          label="Archiver"
+                          variant="danger"
+                          onClick={() => setArchiveTarget(t)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-4 border-t border-lias-border-light">
+                      <div>
+                        <div className="text-[10.5px] font-semibold uppercase tracking-wide text-lias-faint mb-1">
+                          Responsable
+                        </div>
+                        {t.currentLeaderName ? (
+                          <span className="flex items-center gap-1.5 text-[12.5px] text-lias-ink">
+                            <MandateBadge role="TEAM_LEADER" size="sm" />
+                            {t.currentLeaderName}
+                          </span>
+                        ) : (
+                          <Badge tone="warning" size="sm">
+                            Aucun chef d'équipe
+                          </Badge>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[10.5px] font-semibold uppercase tracking-wide text-lias-faint mb-1">
+                          Membres
+                        </div>
+                        <span className="text-[12.5px] font-semibold text-lias-navy tabular-nums">
+                          {t.memberCount}
+                        </span>
+                      </div>
+                      {t.creationDate && (
+                        <div>
+                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-lias-faint mb-1">
+                            Créée le
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <span className="text-[12.5px] text-lias-muted font-mono">
+                            {new Date(t.creationDate).toLocaleDateString('fr-FR')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="bg-white border border-lias-border rounded-xl p-5.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-lias-navy mb-4">
-              <ArrowRightLeft size={16} />
+          <Card padded>
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold text-lias-navy mb-1.5">
+              <ArrowRightLeft size={15} className="text-lias-blue-dark" />
               Transférer un membre vers une autre équipe
             </div>
-            <form onSubmit={handleTransfer} className="grid grid-cols-1 sm:grid-cols-4 gap-x-4 items-end">
+            <p className="text-[12.5px] text-lias-muted mt-0 mb-4">
+              L'appartenance précédente est clôturée et conservée : l'historique d'équipe reste complet.
+            </p>
+            <form onSubmit={handleTransfer} className="grid grid-cols-1 sm:grid-cols-4 gap-x-4 items-start">
               <SelectField
                 label="Membre"
+                required
                 value={transferForm.memberId}
                 onChange={(e) => setTransferForm({ ...transferForm, memberId: e.target.value })}
               >
-                <option value="">—</option>
+                <option value="">— Sélectionner —</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.firstName} {m.lastName}
@@ -279,10 +483,11 @@ export default function GouvernancePage() {
               </SelectField>
               <SelectField
                 label="Nouvelle équipe"
+                required
                 value={transferForm.newTeamId}
                 onChange={(e) => setTransferForm({ ...transferForm, newTeamId: e.target.value })}
               >
-                <option value="">—</option>
+                <option value="">— Sélectionner —</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -292,33 +497,39 @@ export default function GouvernancePage() {
               <TextField
                 label="Date d'effet"
                 type="date"
+                required
                 value={transferForm.effectiveDate}
                 onChange={(e) => setTransferForm({ ...transferForm, effectiveDate: e.target.value })}
               />
-              <button
-                type="submit"
-                disabled={transferring}
-                className="bg-white border border-lias-border text-lias-ink rounded-lg py-2.5 px-4 text-sm font-medium cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 mb-3.5"
-              >
-                {transferring && <Loader2 size={14} className="animate-spin" />}
+              <Button type="submit" variant="secondary" icon={ArrowRightLeft} loading={transferring} className="mt-6">
                 Transférer
-              </button>
+              </Button>
             </form>
-          </div>
+          </Card>
         </>
       )}
 
+      {/* ---------------- Mandats ---------------- */}
       {tab === 'mandates' && (
         <>
-          <div className="bg-white border border-lias-border rounded-xl p-5.5 mb-7">
-            <div className="text-sm font-semibold text-lias-navy mb-4">Attribuer un mandat</div>
-            <form onSubmit={handleAssignMandate} className="grid grid-cols-1 sm:grid-cols-4 gap-x-4 items-end">
+          <Card className="mb-5" padded>
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold text-lias-navy mb-1.5">
+              <ShieldCheck size={15} className="text-lias-blue-dark" />
+              Attribuer un mandat
+            </div>
+            <p className="text-[12.5px] text-lias-muted mt-0 mb-4 leading-relaxed">
+              Attribuer un mandat de Directeur ou de Vice-directeur clôture automatiquement celui du
+              titulaire précédent : il ne peut y avoir qu'un seul titulaire actif à la fois. Les permissions
+              suivent immédiatement.
+            </p>
+            <form onSubmit={handleAssignMandate} className="grid grid-cols-1 sm:grid-cols-4 gap-x-4 items-start">
               <SelectField
                 label="Membre"
+                required
                 value={assignForm.memberId}
                 onChange={(e) => setAssignForm({ ...assignForm, memberId: e.target.value })}
               >
-                <option value="">—</option>
+                <option value="">— Sélectionner —</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.firstName} {m.lastName}
@@ -326,99 +537,108 @@ export default function GouvernancePage() {
                 ))}
               </SelectField>
               <SelectField
-                label="Rôle"
+                label="Responsabilité"
+                required
                 value={assignForm.role}
                 onChange={(e) => setAssignForm({ ...assignForm, role: e.target.value })}
               >
-                <option value="DIRECTOR">Directeur</option>
-                <option value="VICE_DIRECTOR">Vice-directeur</option>
-                <option value="TEAM_LEADER">Chef d'équipe</option>
+                {MANDATE_ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
               </SelectField>
-              {assignForm.role === 'TEAM_LEADER' && (
+              {assignForm.role === 'TEAM_LEADER' ? (
                 <SelectField
                   label="Équipe"
+                  required
                   value={assignForm.teamId}
                   onChange={(e) => setAssignForm({ ...assignForm, teamId: e.target.value })}
                 >
-                  <option value="">—</option>
+                  <option value="">— Sélectionner —</option>
                   {teams.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
                     </option>
                   ))}
                 </SelectField>
+              ) : (
+                <div className="hidden sm:block" />
               )}
               <TextField
                 label="Date de début"
                 type="date"
+                required
                 value={assignForm.startDate}
                 onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
               />
-              <button
-                type="submit"
-                disabled={assigning}
-                className="bg-lias-blue text-white border-none rounded-lg py-2.5 px-4 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mb-3.5"
-              >
-                {assigning && <Loader2 size={14} className="animate-spin" />}
-                Attribuer
-              </button>
+              <Button type="submit" icon={Plus} loading={assigning} className="sm:col-start-4 mt-1">
+                Attribuer le mandat
+              </Button>
             </form>
-          </div>
+          </Card>
 
           {mandatesError && (
-            <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-              <AlertCircle size={16} />
+            <Alert tone="danger" className="mb-5">
               {mandatesError}
-            </div>
+            </Alert>
           )}
 
-          <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
+          <Card>
+            <CardHeader
+              icon={CalendarClock}
+              title="Mandats actifs"
+              description="Seuls les mandats en cours sont listés ; l'historique complet est visible sur la fiche de chaque membre."
+            />
             {mandatesLoading ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Chargement...</div>
+              <LoadingBlock label="Chargement des mandats..." />
             ) : mandates.length === 0 ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Aucun mandat actif.</div>
+              <EmptyState
+                icon={ShieldCheck}
+                title="Aucun mandat actif"
+                description="Aucune responsabilité de gouvernance n'est actuellement attribuée."
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="bg-lias-bg">
-                      {['Membre', 'Rôle', 'Équipe', 'Depuis', ''].map((h, i) => (
-                        <th
-                          key={h + i}
-                          className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                            i === 4 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                          }`}
-                        >
-                          {i === 4 ? 'Actions' : h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mandates.map((m) => (
-                      <tr key={m.id} className="border-t border-lias-border-light">
-                        <td className="px-5.5 py-3.5 text-[13px] font-medium text-lias-ink">{m.memberName}</td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">
-                          {ROLE_LABEL_FR[m.role] || m.role}
-                        </td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{m.teamName || '—'}</td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted font-mono">{m.startDate}</td>
-                        <td className="px-5.5 py-3.5 text-right">
-                          <button
-                            onClick={() => handleEndMandate(m)}
-                            disabled={endingId === m.id}
-                            className="bg-white border border-lias-border text-lias-ink rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ml-auto"
-                          >
-                            {endingId === m.id && <Loader2 size={12} className="animate-spin" />}
-                            Terminer
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table minWidth="min-w-[720px]">
+                <THead
+                  columns={[
+                    'Membre',
+                    'Responsabilité',
+                    'Équipe',
+                    'Début du mandat',
+                    { label: 'Actions', align: 'right' },
+                  ]}
+                />
+                <TBody>
+                  {mandates.map((m) => (
+                    <TR key={m.id}>
+                      <TDPrimary title={m.memberName} />
+                      <TD>
+                        <MandateBadge role={m.role} />
+                      </TD>
+                      <TD className="text-lias-muted">{m.teamName || '—'}</TD>
+                      <TD className="text-lias-muted font-mono text-[12.5px]">
+                        {new Date(m.startDate).toLocaleDateString('fr-FR')}
+                      </TD>
+                      <TDActions>
+                        <Button size="sm" variant="secondary" icon={Square} onClick={() => setEndTarget(m)}>
+                          Terminer
+                        </Button>
+                      </TDActions>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             )}
+          </Card>
+
+          <div className="mt-4 flex items-start gap-2 text-[12px] text-lias-muted">
+            <Info size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Clôturer un mandat ne le supprime pas : la période est conservée avec sa date de fin, et le
+              rôle effectif du membre est immédiatement recalculé à partir de son statut et de ses éventuels
+              autres mandats.
+            </span>
           </div>
         </>
       )}
@@ -434,11 +654,22 @@ export default function GouvernancePage() {
       <ConfirmDialog
         open={Boolean(archiveTarget)}
         title="Archiver cette équipe"
-        message={`Voulez-vous vraiment archiver l'équipe "${archiveTarget?.name}" ?`}
+        message={`L'équipe « ${archiveTarget?.name} » sera archivée (suppression logique). Publications et historiques d'appartenance restent conservés.`}
         confirmLabel="Archiver"
         loading={archiving}
         onConfirm={handleArchiveTeam}
         onCancel={() => setArchiveTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(endTarget)}
+        title="Terminer ce mandat"
+        message={`Le mandat de ${endTarget?.memberName} prendra fin aujourd'hui. La période sera conservée dans l'historique et les permissions associées seront retirées immédiatement.`}
+        confirmLabel="Terminer le mandat"
+        tone="warning"
+        loading={ending}
+        onConfirm={handleEndMandate}
+        onCancel={() => setEndTarget(null)}
       />
     </div>
   );

@@ -15,11 +15,15 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
             select p from Publication p
             where (:year is null or p.year = :year)
               and (:teamId is null or p.team.id = :teamId)
+              and (:authorId is null or exists (
+                    select 1 from PublicationAuthor pa
+                    where pa.publication = p and pa.member.id = :authorId))
               and (:search is null or :search = ''
                    or lower(p.title) like lower(concat('%', :search, '%'))
                    or lower(p.keywords) like lower(concat('%', :search, '%')))
             """)
     Page<Publication> search(@Param("year") Integer year, @Param("teamId") UUID teamId,
+                              @Param("authorId") UUID authorId,
                               @Param("search") String search, Pageable pageable);
 
     long countByYear(int year);

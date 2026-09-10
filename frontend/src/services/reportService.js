@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadFile } from '../utils/download';
 
 export async function listReports() {
   const res = await api.get('/reports');
@@ -17,4 +18,9 @@ export async function generateReport(year) {
 
 export async function deleteReport(id) {
   await api.delete(`/reports/${id}`);
+}
+
+/** CdC §2.11 — export of the annual activity report as a PDF document. */
+export function downloadReportPdf(year) {
+  return downloadFile(`/reports/${year}/pdf`, `rapport-activite-${year}.pdf`);
 }

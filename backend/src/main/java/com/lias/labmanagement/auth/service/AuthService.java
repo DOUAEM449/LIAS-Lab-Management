@@ -14,12 +14,14 @@ import com.lias.labmanagement.common.exception.UnauthorizedException;
 import com.lias.labmanagement.common.mail.MailService;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.security.CustomUserDetails;
+import com.lias.labmanagement.security.CustomUserDetailsService;
 import com.lias.labmanagement.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final AuditService auditService;
+    private final CustomUserDetailsService userDetailsService;
 
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
@@ -58,6 +61,10 @@ public class AuthService {
             String accessToken = jwtService.generateAccessToken(principal);
             String refreshToken = jwtService.generateRefreshToken(principal);
 
+            // Publish the authenticated principal before auditing: the login request
+            // arrives anonymous, so without this the LOGIN row would be attributed to
+            // "system" instead of naming who actually signed in.
+            SecurityContextHolder.getContext().setAuthentication(authentication);
             auditService.record(AuditAction.LOGIN, "User", user.getId(), "Successful login");
 
             return AuthResponse.of(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
@@ -81,9 +88,14 @@ public class AuthService {
         User user = userRepository.findByEmailIgnoreCaseAndDeletedFalse(email)
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
-        CustomUserDetails principal = new CustomUserDetails(user);
+        CustomUserDetails principal = (CustomUserDetails) userDetailsService.loadUserByUsername(email);
         if (!jwtService.isTokenValid(refreshToken, principal)) {
             throw new UnauthorizedException("Refresh token expired or invalid");
+        }
+        // Re-checked here too: a member frozen/deactivated after their refresh token was
+        // issued must not be able to mint a fresh access token.
+        if (!principal.isEnabled()) {
+            throw new UnauthorizedException("Your account has been frozen or disabled");
         }
 
         String newAccessToken = jwtService.generateAccessToken(principal);

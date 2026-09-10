@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Users2 } from 'lucide-react';
 import Modal from './Modal';
-import { TextField, TextAreaField, SelectField, FileField } from './FormField';
+import Button from './ui/Button';
+import { TextField, TextAreaField, SelectField, FileField, FieldRow } from './FormField';
 import { createPublication, updatePublication, uploadPublicationPdf } from '../services/publicationService';
 import { searchMembers } from '../services/memberService';
 import { listTeams } from '../services/governanceService';
@@ -107,23 +108,27 @@ export default function PublicationFormModal({ open, publication, onClose, onSav
       onClose={onClose}
       maxWidth="max-w-xl"
       title={isEdit ? 'Modifier la publication' : 'Nouvelle publication'}
+      subtitle="Référencement d'un travail scientifique du laboratoire"
     >
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Titre"
+          label="Titre de la publication"
           required
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
         />
         <TextAreaField
           label="Résumé"
+          rows={4}
           value={form.abstractText}
           onChange={(e) => setForm({ ...form, abstractText: e.target.value })}
+          placeholder="Abstract de la publication"
         />
-        <div className="grid grid-cols-2 gap-x-4">
+        <FieldRow>
           <TextField
-            label="Année"
+            label="Année de publication"
             type="number"
+            min={1950}
             required
             value={form.year}
             onChange={(e) => setForm({ ...form, year: e.target.value })}
@@ -132,15 +137,21 @@ export default function PublicationFormModal({ open, publication, onClose, onSav
             label="DOI"
             value={form.doi}
             onChange={(e) => setForm({ ...form, doi: e.target.value })}
+            placeholder="10.xxxx/xxxxx"
           />
-        </div>
+        </FieldRow>
         <TextField
           label="Mots-clés"
-          placeholder="séparés par des virgules"
+          placeholder="apprentissage automatique, systèmes distribués..."
           value={form.keywords}
           onChange={(e) => setForm({ ...form, keywords: e.target.value })}
+          hint="Séparés par des virgules — utilisés par la recherche globale."
         />
-        <SelectField label="Équipe" value={form.teamId} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
+        <SelectField
+          label="Équipe de rattachement"
+          value={form.teamId}
+          onChange={(e) => setForm({ ...form, teamId: e.target.value })}
+        >
           <option value="">— Aucune —</option>
           {teams.map((t) => (
             <option key={t.id} value={t.id}>
@@ -149,34 +160,54 @@ export default function PublicationFormModal({ open, publication, onClose, onSav
           ))}
         </SelectField>
 
-        <label className="block mb-3.5">
-          <span className="block text-xs font-medium text-lias-muted mb-1.5">
-            Auteurs <span className="text-lias-danger-text">*</span>
+        <div className="block mb-4">
+          <span className="block text-[12px] font-semibold text-lias-ink-soft mb-1.5">
+            <span className="inline-flex items-center gap-1.5">
+              <Users2 size={12} />
+              Auteurs <span className="text-lias-danger-text">*</span>
+            </span>
           </span>
-          <div className="border border-lias-border rounded-lg max-h-40 overflow-y-auto p-2">
-            {members.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 py-1 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.authorMemberIds.includes(m.id)}
-                  onChange={() => toggleAuthor(m.id)}
-                />
-                {m.firstName} {m.lastName}
-              </label>
-            ))}
+          <div className="border border-lias-border rounded-lg max-h-40 overflow-y-auto p-2 bg-lias-surface">
+            {members.length === 0 ? (
+              <p className="text-[12.5px] text-lias-muted m-0 p-2">Aucun membre disponible.</p>
+            ) : (
+              members.map((m) => (
+                <label
+                  key={m.id}
+                  className="flex items-center gap-2.5 py-1.5 px-2 text-[13px] cursor-pointer rounded
+                    hover:bg-lias-surface-muted transition-colors duration-150"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.authorMemberIds.includes(m.id)}
+                    onChange={() => toggleAuthor(m.id)}
+                    className="accent-lias-blue"
+                  />
+                  {m.firstName} {m.lastName}
+                </label>
+              ))
+            )}
           </div>
-        </label>
+          <span className="block text-[11.5px] text-lias-muted mt-1.5">
+            L'ordre de sélection détermine l'ordre des auteurs.
+          </span>
+        </div>
 
-        <FileField label="PDF" accept="application/pdf" onChange={(e) => setPdfFile(e.target.files[0])} />
+        <FileField
+          label="Document PDF"
+          accept="application/pdf"
+          onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+          hint="Optionnel — déposez le texte intégral de la publication."
+        />
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-lias-blue text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-        >
-          {saving && <Loader2 size={15} className="animate-spin" />}
-          {isEdit ? 'Enregistrer' : 'Créer la publication'}
-        </button>
+        <div className="flex gap-3 mt-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" loading={saving}>
+            {isEdit ? 'Enregistrer' : 'Créer la publication'}
+          </Button>
+        </div>
       </form>
     </Modal>
   );

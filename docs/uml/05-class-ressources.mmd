@@ -1,0 +1,90 @@
+%% LIAS - Diagramme de classes (3/4) : Ressources
+%% Documents versionnes, materiel et partenariats.
+classDiagram
+  class DocumentEntity {
+    +String title
+    +DocumentCategory category
+    +String tags
+    +String filePath
+    +String originalFileName
+    +String contentType
+    +long sizeBytes
+    +UUID relatedEventId
+  }
+  class DocumentVersion {
+    +int versionNumber
+    +String filePath
+    +String originalFileName
+    +UUID uploadedBy
+    +Instant uploadedAt
+  }
+
+  class Equipment {
+    +String name
+    +String description
+    +String category
+    +LocalDate arrivalDate
+    +int quantity
+    +int availableQuantity
+  }
+  class EquipmentDistribution {
+    +LocalDate distributionDate
+    +int quantity
+    +LocalDate returnedDate
+  }
+  class EquipmentRequest {
+    +String itemName
+    +String description
+    +int quantity
+    +EquipmentRequestStatus status
+    +UUID validatedBy
+    +Instant validationDate
+    +String validationNote
+  }
+
+  class Partner {
+    +String name
+    +String type
+    +String country
+    +String contactInfo
+    +String logoPath
+  }
+  class Agreement {
+    +String title
+    +String description
+    +LocalDate startDate
+    +LocalDate endDate
+    +String documentPath
+  }
+
+  class Member
+
+  class DocumentCategory {
+    <<enumeration>>
+    FUNDING_REQUEST
+    PROGRAM
+    CERTIFICATE
+    REPORT
+    ADMINISTRATIVE
+    AGREEMENT
+    MEETING_MINUTES
+    PUBLICATION
+    OTHER
+  }
+  class EquipmentRequestStatus {
+    <<enumeration>>
+    PENDING
+    APPROVED
+    REJECTED
+    FULFILLED
+  }
+
+  DocumentEntity "1" --> "1..*" DocumentVersion : historisation
+  Equipment "1" --> "0..*" EquipmentDistribution
+  Member "1" --> "0..*" EquipmentDistribution : beneficiaire
+  Member "1" --> "0..*" EquipmentRequest : demandeur
+  Partner "1" --> "0..*" Agreement
+  DocumentEntity ..> DocumentCategory
+  EquipmentRequest ..> EquipmentRequestStatus
+
+  note for Equipment "availableQuantity diminue a la distribution\net remonte au retour (returnedDate)."

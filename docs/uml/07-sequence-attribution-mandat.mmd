@@ -1,0 +1,48 @@
+%% LIAS - Diagramme de sequence : attribution d un mandat (STATUT != ROLE != MANDAT)
+%% Trace exacte de MandateService.assign() + UserRoleSyncService.applyRole().
+sequenceDiagram
+  autonumber
+  actor DIR as Directeur / Admin
+  participant UI as GouvernancePage (React)
+  participant CTL as MandateController<br/>PreAuthorize SYSTEM_ADMIN, DIRECTOR
+  participant MS as MandateService
+  participant MR as MandateRepository
+  participant SYNC as UserRoleSyncService
+  participant URH as UserRoleHistoryRepository
+  participant UR as UserRepository
+  participant AUD as AuditService
+
+  DIR->>UI: Attribuer DIRECTOR a B (date de debut)
+  UI->>CTL: POST /api/v1/mandates
+  CTL->>MS: assign(request)
+
+  Note over MS,MR: 1. Un seul titulaire actif par role
+  MS->>MR: findByRoleAndActiveTrueAndEndDateIsNull(DIRECTOR)
+  MR-->>MS: mandat actif de A
+
+  MS->>MR: save(mandat A : endDate = startDate, active = false)
+  Note right of MR: le mandat de A n est jamais supprime,<br/>il est seulement clos
+
+  MS->>SYNC: syncForMember(A, MANDATE_CHANGE)
+  SYNC->>MR: findByMemberIdAndActiveTrueAndEndDateIsNull(A)
+  MR-->>SYNC: aucun mandat actif
+  Note over SYNC: computeEffectiveRole(A)<br/>= role derive du STATUT de A<br/>(ex. PERMANENT_MEMBER)
+  SYNC->>URH: cloture la ligne ouverte + ouvre la nouvelle
+  SYNC->>UR: save(A.user.role = PERMANENT_MEMBER)
+  Note right of UR: A perd immediatement<br/>les permissions de direction
+
+  Note over MS,MR: 2. Ouverture du mandat de B
+  MS->>MR: save(nouveau mandat B : DIRECTOR, active = true)
+  MS->>SYNC: syncForMember(B, MANDATE_CHANGE)
+  SYNC->>MR: findByMemberIdAndActiveTrueAndEndDateIsNull(B)
+  MR-->>SYNC: mandat DIRECTOR actif
+  Note over SYNC: RETIRED / FORMER primerait ici,<br/>sinon le mandat le plus fort gagne :<br/>DIRECTOR > VICE_DIRECTOR > TEAM_LEADER
+  SYNC->>URH: nouvelle ligne (role = DIRECTOR, source = MANDATE_CHANGE)
+  SYNC->>UR: save(B.user.role = DIRECTOR)
+
+  MS->>AUD: record(ROLE_CHANGE, "Mandate", id, details)
+  MS-->>CTL: MandateResponse
+  CTL-->>UI: 200 OK
+  UI-->>DIR: B est directeur ; le mandat de A reste dans l historique
+
+  Note over DIR,AUD: STATUT (MemberStatus) : inchange pour A et B<br/>MANDAT (Mandate) : clos pour A, ouvert pour B<br/>ROLE (RoleName) : recalcule, jamais saisi

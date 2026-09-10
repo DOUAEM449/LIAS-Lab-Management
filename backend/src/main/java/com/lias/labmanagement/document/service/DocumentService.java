@@ -3,7 +3,9 @@ package com.lias.labmanagement.document.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.DocumentCategory;
+import com.lias.labmanagement.common.enums.NotificationType;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.storage.FileDownload;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
 import com.lias.labmanagement.common.web.PageResponse;
@@ -14,8 +16,12 @@ import com.lias.labmanagement.document.entity.DocumentEntity;
 import com.lias.labmanagement.document.entity.DocumentVersion;
 import com.lias.labmanagement.document.repository.DocumentRepository;
 import com.lias.labmanagement.document.repository.DocumentVersionRepository;
+import com.lias.labmanagement.event.repository.EventOrganizerRepository;
+import com.lias.labmanagement.notification.service.NotificationService;
 import com.lias.labmanagement.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -24,6 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +44,8 @@ public class DocumentService {
     private final DocumentVersionRepository versionRepository;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
+    private final EventOrganizerRepository eventOrganizerRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<DocumentResponse> search(DocumentCategory category, String query, Pageable pageable) {
@@ -71,6 +81,20 @@ public class DocumentService {
                 .uploadedBy(currentUserId())
                 .uploadedAt(Instant.now())
                 .build());
+
+        // CdC §2.20 lists "Ajouts de documents" as a notification trigger. A document
+        // attached to an event goes to that event's organizers; every archived document
+        // is additionally signalled to the governance, which owns the documentary archive
+        // (CdC §2.10). Kept deliberately narrow so the inbox stays meaningful.
+        if (saved.getRelatedEventId() != null) {
+            eventOrganizerRepository.findByEventId(saved.getRelatedEventId()).forEach(organizer ->
+                    notificationService.notify(organizer.getMember().getId(), NotificationType.DOCUMENT_ADDED,
+                            "Un nouveau document a été ajouté à votre événement : " + saved.getTitle(),
+                            "Document", saved.getId()));
+        }
+        notificationService.notifyGovernance(NotificationType.DOCUMENT_ADDED,
+                "Nouveau document archivé : " + saved.getTitle() + " (" + saved.getCategory() + ").",
+                "Document", saved.getId());
 
         auditService.record(AuditAction.CREATE, "Document", saved.getId(), "Document uploaded: " + saved.getTitle());
         return toResponse(saved);
@@ -111,6 +135,43 @@ public class DocumentService {
         DocumentEntity saved = documentRepository.save(document);
         auditService.record(AuditAction.UPDATE, "Document", id, "Metadata updated");
         return toResponse(saved);
+    }
+
+    /**
+     * Streams the current file of a document (CdC §2.10 — "Téléchargement").
+     * Every download is audited, so the archive keeps a trace of who read what.
+     */
+    @Transactional
+    public FileDownload download(UUID id) {
+        DocumentEntity document = findOrThrow(id);
+        Resource resource = resolveExisting(document.getFilePath(), document.getTitle());
+        auditService.record(AuditAction.FILE_DOWNLOAD, "Document", id,
+                "Document downloaded: " + document.getTitle());
+        return new FileDownload(
+                document.getOriginalFileName() != null ? document.getOriginalFileName() : document.getTitle(),
+                document.getContentType(), resource);
+    }
+
+    /** Streams one specific historical version of a document (CdC §2.10 — "Historisation"). */
+    @Transactional
+    public FileDownload downloadVersion(UUID versionId) {
+        DocumentVersion version = versionRepository.findById(versionId)
+                .orElseThrow(() -> ResourceNotFoundException.of("DocumentVersion", versionId));
+        Resource resource = resolveExisting(version.getFilePath(), version.getOriginalFileName());
+        auditService.record(AuditAction.FILE_DOWNLOAD, "DocumentVersion", versionId,
+                "Document version v" + version.getVersionNumber() + " downloaded");
+        return new FileDownload(version.getOriginalFileName(), null, resource);
+    }
+
+    private Resource resolveExisting(String relativePath, String label) {
+        if (relativePath == null) {
+            throw new ResourceNotFoundException("No file stored for " + label);
+        }
+        Path path = fileStorageService.resolve(relativePath);
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("Stored file is missing for " + label);
+        }
+        return new FileSystemResource(path);
     }
 
     @Transactional(readOnly = true)

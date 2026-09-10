@@ -3,6 +3,7 @@ package com.lias.labmanagement.meeting.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.storage.FileDownload;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
 import com.lias.labmanagement.common.web.PageResponse;
@@ -15,6 +16,7 @@ import com.lias.labmanagement.meeting.repository.MeetingMinutesRepository;
 import com.lias.labmanagement.meeting.repository.MeetingRepository;
 import com.lias.labmanagement.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -23,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -101,6 +105,23 @@ public class MeetingService {
     public List<MeetingMinutesResponse> getMinutes(UUID meetingId) {
         return minutesRepository.findByMeetingIdOrderByUploadedAtDesc(meetingId).stream()
                 .map(this::toMinutesResponse).toList();
+    }
+
+    /**
+     * Streams a stored procès-verbal (CdC §2.17 — the PV archive is only useful if
+     * it can be read back). Served through the authenticated API rather than the
+     * static {@code /files/**} space, which is public only for {@code public/}.
+     */
+    @Transactional
+    public FileDownload downloadMinutes(UUID minutesId) {
+        MeetingMinutes minutes = minutesRepository.findById(minutesId)
+                .orElseThrow(() -> ResourceNotFoundException.of("MeetingMinutes", minutesId));
+        Path path = fileStorageService.resolve(minutes.getFilePath());
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("Stored file is missing for this procès-verbal");
+        }
+        auditService.record(AuditAction.FILE_DOWNLOAD, "MeetingMinutes", minutesId, "Minutes downloaded");
+        return new FileDownload(minutes.getOriginalFileName(), null, new FileSystemResource(path));
     }
 
     private UUID currentUserId() {

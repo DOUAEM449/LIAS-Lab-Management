@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import Modal from './Modal';
+import Button from './ui/Button';
 import { listMessages, postMessage } from '../services/discussionService';
 
 function friendlyError(err, fallback) {
@@ -45,26 +46,35 @@ export default function DiscussionThreadModal({ discussion, onClose, toast }) {
     }
   }
 
+  const scopeLabel =
+    {
+      GLOBAL: 'Discussion générale du laboratoire',
+      TEAM: `Discussion d'équipe${discussion.teamName ? ` — ${discussion.teamName}` : ''}`,
+      EVENT: `Discussion d'événement${discussion.eventTitle ? ` — ${discussion.eventTitle}` : ''}`,
+    }[discussion.scope] ?? 'Discussion';
+
   return (
-    <Modal open={Boolean(discussion)} onClose={onClose} title={discussion.title} subtitle="Discussion globale">
-      <div className="h-80 overflow-y-auto flex flex-col gap-3 mb-3 pr-1">
+    <Modal open={Boolean(discussion)} onClose={onClose} title={discussion.title} subtitle={scopeLabel}>
+      <div className="h-80 overflow-y-auto flex flex-col gap-2.5 mb-4 pr-1">
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-lias-muted gap-2">
             <Loader2 size={16} className="animate-spin" />
-            <span className="text-sm">Chargement...</span>
+            <span className="text-[13px]">Chargement...</span>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-lias-muted">
-            Aucun message. Soyez le premier à écrire.
+          <div className="flex-1 flex items-center justify-center text-[13px] text-lias-muted text-center px-6">
+            Aucun message dans cette discussion. Soyez le premier à écrire.
           </div>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className="bg-lias-bg rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-semibold text-lias-ink">{m.senderName}</span>
-                <span className="text-lias-muted">{new Date(m.timestamp).toLocaleString('fr-FR')}</span>
+            <div key={m.id} className="bg-lias-surface-muted border border-lias-border-light rounded-lg px-3.5 py-2.5">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <span className="text-[12.5px] font-semibold text-lias-ink">{m.senderName}</span>
+                <span className="text-[11px] text-lias-faint font-mono shrink-0">
+                  {new Date(m.timestamp).toLocaleString('fr-FR')}
+                </span>
               </div>
-              <div className="text-sm text-lias-ink">{m.content}</div>
+              <div className="text-[13px] text-lias-ink leading-relaxed whitespace-pre-wrap">{m.content}</div>
             </div>
           ))
         )}
@@ -77,15 +87,10 @@ export default function DiscussionThreadModal({ discussion, onClose, toast }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Écrire un message..."
-          className="flex-1 px-3 py-2.5 border border-lias-border rounded-lg text-sm outline-none focus:border-lias-blue"
+          className="flex-1 px-3 py-2.5 border border-lias-border rounded-lg text-[13.5px] outline-none
+            bg-lias-surface hover:border-lias-border-strong focus:border-lias-blue transition-colors duration-150"
         />
-        <button
-          type="submit"
-          disabled={sending || !content.trim()}
-          className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 flex items-center gap-2"
-        >
-          {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-        </button>
+        <Button type="submit" icon={Send} loading={sending} disabled={!content.trim()} aria-label="Envoyer" />
       </form>
     </Modal>
   );

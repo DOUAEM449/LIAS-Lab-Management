@@ -24,6 +24,9 @@ api.interceptors.response.use(
       localStorage.removeItem('lias_access_token');
       localStorage.removeItem('lias_refresh_token');
       if (window.location.pathname !== '/login') {
+        // Surfaced by LoginPage on the next render — covers both an expired
+        // session and an account frozen/disabled (RETIRED/FORMER) mid-session.
+        sessionStorage.setItem('lias_session_message', 'Votre compte a été gelé ou désactivé, ou votre session a expiré.');
         window.location.href = '/login';
       }
     }

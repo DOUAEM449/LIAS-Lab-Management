@@ -1,0 +1,65 @@
+%% LIAS - Diagramme de cas d'utilisation
+%% Genere a partir des @PreAuthorize reels des controllers (backend/.../controller/*.java)
+%% et du guard de routes frontend (src/utils/roles.js + App.jsx).
+flowchart LR
+  classDef actor fill:#1c2638,stroke:#1c2638,color:#fff,rx:4,ry:4
+  classDef uc fill:#eef3fb,stroke:#2d5ca0,color:#1c2638,rx:14,ry:14
+  classDef sys fill:#fff,stroke:#bfc8d4,color:#5a6472
+
+  V([Visiteur]):::actor
+  M([Membre]):::actor
+  TL([Chef d equipe]):::actor
+  VD([Vice-directeur]):::actor
+  D([Directeur]):::actor
+  SA([Administrateur systeme]):::actor
+
+  subgraph PUB[Portail public - sans authentification]
+    U1(Consulter le laboratoire):::uc
+    U2(Consulter equipes et publications):::uc
+    U3(Consulter les evenements):::uc
+    U4(Deposer une candidature):::uc
+  end
+
+  subgraph INT[Espace interne - authentifie]
+    U5(S authentifier / reinitialiser son mot de passe):::uc
+    U6(Gerer son profil):::uc
+    U7(Consulter les membres):::uc
+    U8(Gerer les publications):::uc
+    U9(Consulter le calendrier):::uc
+    U10(Participer aux discussions):::uc
+    U11(S inscrire a un evenement):::uc
+    U12(Demander du materiel):::uc
+    U13(Archiver / telecharger des documents):::uc
+    U14(Consulter les PV de reunion):::uc
+  end
+
+  subgraph GOV[Gouvernance]
+    U15(Creer evenements et reunions):::uc
+    U16(Deposer un proces-verbal):::uc
+    U17(Valider les demandes de materiel):::uc
+    U18(Gerer le statut des membres):::uc
+    U19(Gerer partenaires et conventions):::uc
+    U20(Generer le rapport d activite):::uc
+    U21(Consulter le journal d audit):::uc
+    U22(Statuer sur les demandes d adhesion):::uc
+    U23(Attribuer / terminer un mandat):::uc
+    U24(Gerer les equipes de recherche):::uc
+    U25(Gerer l inventaire materiel):::uc
+  end
+
+  subgraph ADM[Administration technique]
+    U26(Gerer les comptes et roles):::uc
+    U27(Parametrer l identite du laboratoire):::uc
+  end
+
+  V --> U1 & U2 & U3 & U4
+  M --> U5 & U6 & U7 & U8 & U9 & U10 & U11 & U12 & U13 & U14
+  TL --> U15 & U16
+  VD --> U17 & U18 & U19 & U20 & U21 & U25
+  D --> U22 & U23 & U24
+  SA --> U26 & U27
+
+  M -.herite.-> V
+  TL -.herite.-> M
+  VD -.herite.-> TL
+  D -.herite.-> VD

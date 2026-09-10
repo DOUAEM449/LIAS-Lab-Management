@@ -30,3 +30,14 @@ export function isAuthenticated() {
 export async function changePassword(currentPassword, newPassword) {
   await api.post('/auth/change-password', { currentPassword, newPassword });
 }
+
+// POST /api/v1/auth/forgot-password — always resolves the same way whether
+// or not the email is registered (backend avoids user enumeration).
+export async function forgotPassword(email) {
+  await api.post('/auth/forgot-password', { email });
+}
+
+// POST /api/v1/auth/reset-password
+export async function resetPassword(token, newPassword) {
+  await api.post('/auth/reset-password', { token, newPassword });
+}

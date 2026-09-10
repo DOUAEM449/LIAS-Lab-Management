@@ -4,7 +4,9 @@ import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.util.SoftDeleteSafe;
+import com.lias.labmanagement.event.entity.Event;
 import com.lias.labmanagement.event.repository.EventRepository;
+import com.lias.labmanagement.governance.entity.Team;
 import com.lias.labmanagement.governance.repository.TeamRepository;
 import com.lias.labmanagement.members.entity.Member;
 import com.lias.labmanagement.members.repository.MemberRepository;
@@ -100,7 +102,11 @@ public class DiscussionService {
     private DiscussionResponse toResponse(Discussion d) {
         return new DiscussionResponse(d.getId(), d.getTitle(), d.getScope(),
                 d.getTeam() != null ? d.getTeam().getId() : null,
+                d.getTeam() != null
+                        ? SoftDeleteSafe.resolve(d.getTeam(), Team::getName, "Équipe archivée") : null,
                 d.getEvent() != null ? d.getEvent().getId() : null,
+                d.getEvent() != null
+                        ? SoftDeleteSafe.resolve(d.getEvent(), Event::getTitle, "Événement archivé") : null,
                 d.getCreatedByMember().getId(),
                 SoftDeleteSafe.resolve(d.getCreatedByMember(), m -> m.getFirstName() + " " + m.getLastName(), "Membre archivé"),
                 d.getCreatedAt());

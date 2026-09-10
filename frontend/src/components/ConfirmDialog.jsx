@@ -1,30 +1,44 @@
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import Modal from './Modal';
+import Button from './ui/Button';
 
-export default function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmer', loading, onConfirm, onCancel }) {
+export default function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = 'Confirmer',
+  cancelLabel = 'Annuler',
+  tone = 'danger',
+  loading,
+  onConfirm,
+  onCancel,
+}) {
   return (
-    <Modal open={open} title={title} onClose={onCancel} maxWidth="max-w-sm">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-full bg-lias-danger-bg flex items-center justify-center shrink-0">
-          <AlertTriangle size={18} className="text-lias-danger-text" />
+    <Modal open={open} title={title} onClose={onCancel} maxWidth="max-w-md">
+      <div className="flex items-start gap-3.5">
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
+            ${tone === 'danger' ? 'bg-lias-danger-bg' : 'bg-lias-warning-bg'}`}
+        >
+          <AlertTriangle
+            size={18}
+            className={tone === 'danger' ? 'text-lias-danger-text' : 'text-lias-warning-text'}
+          />
         </div>
-        <p className="text-sm text-lias-ink m-0">{message}</p>
+        <p className="text-[13.5px] text-lias-ink m-0 leading-relaxed pt-2">{message}</p>
       </div>
-      <div className="flex gap-3 mt-5">
-        <button
-          onClick={onCancel}
-          className="flex-1 bg-white border border-lias-border rounded-lg py-2.5 text-sm font-medium cursor-pointer text-lias-ink"
-        >
-          Annuler
-        </button>
-        <button
+      <div className="flex gap-3 mt-6">
+        <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={loading}>
+          {cancelLabel}
+        </Button>
+        <Button
+          variant={tone === 'danger' ? 'danger-solid' : 'primary'}
+          className="flex-1"
           onClick={onConfirm}
-          disabled={loading}
-          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+          loading={loading}
         >
-          {loading && <Loader2 size={15} className="animate-spin" />}
           {confirmLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

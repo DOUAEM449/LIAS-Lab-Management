@@ -18,6 +18,11 @@ export const ROLE_LABEL_FR = {
 // class-/method-level restricted to these three on the backend.
 export const MANAGEMENT_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
 
+// Deciding a membership request (approve/reject) — the backend restricts this to
+// DIRECTOR alone (MembershipRequestController), even though SYSTEM_ADMIN and
+// VICE_DIRECTOR can view the list. The decision buttons must follow that.
+export const MEMBERSHIP_DECISION_ROLES = ['DIRECTOR'];
+
 // Equipment inventory CRUD (EquipmentController class-level PreAuthorize).
 export const EQUIPMENT_ADMIN_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
 
@@ -27,6 +32,41 @@ export const EQUIPMENT_DECISION_ROLES = ['DIRECTOR', 'VICE_DIRECTOR'];
 
 // Creating events/meetings (EventController / MeetingController).
 export const EVENT_MEETING_CREATE_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR', 'TEAM_LEADER'];
+
+// "Modules internes" per CdC matrix (§2.2.C): Equipment and Meetings/PV are
+// entirely off-limits to Doctorants (and, transitively, to frozen/disabled
+// accounts, which never reach the dashboard at all). Mirrors the backend
+// class-level @PreAuthorize on EquipmentController/EquipmentRequestController/MeetingController.
+export const INTERNAL_MODULE_ROLES = [
+  'SYSTEM_ADMIN',
+  'DIRECTOR',
+  'VICE_DIRECTOR',
+  'TEAM_LEADER',
+  'PERMANENT_MEMBER',
+  'ASSOCIATE_MEMBER',
+];
+
+// Archiving a member / changing another member's status — CdC: visible only
+// to "ADMIN ou DIRECTEUR EN MANDAT" (mirrors MemberController's archive
+// restriction, the strictest of the two member-admin endpoints).
+export const MEMBER_ADMIN_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR'];
+
+// Editing another member's profile (not archiving/status) — backend also
+// allows VICE_DIRECTOR here (MemberService.updateProfile PROFILE_ADMIN_ROLES).
+export const MEMBER_PROFILE_EDIT_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
+
+// Consulting the audit trail (AuditLogController) — SYSTEM_ADMIN + governance.
+export const AUDIT_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
+
+// Deleting a document (DocumentController's method-level @PreAuthorize). Viewing,
+// uploading and editing metadata are open to every INTERNAL_MODULE_ROLES holder,
+// which is exactly the class-level rule on the same controller.
+export const DOCUMENT_DELETE_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
+
+// Technical account administration (UserAdministrationController) — SYSTEM_ADMIN only.
+// Kept separate from MANAGEMENT_ROLES on purpose: SYSTEM_ADMIN = administration
+// technique, DIRECTOR/VICE_DIRECTOR = gouvernance métier (CdC §2.5/§5.1 vs §5.2).
+export const SYSTEM_ADMIN_ROLES = ['SYSTEM_ADMIN'];
 
 export function hasRole(user, roles) {
   return Boolean(user?.role) && roles.includes(user.role);

@@ -45,7 +45,7 @@ public class GlobalSearchService {
         memberRepository.search(null, null, query, page).forEach(m ->
                 results.add(new GlobalSearchResult("MEMBER", m.getId(), m.getFirstName() + " " + m.getLastName(), m.getEmail())));
 
-        publicationRepository.search(null, null, query, page).forEach(p ->
+        publicationRepository.search(null, null, null, query, page).forEach(p ->
                 results.add(new GlobalSearchResult("PUBLICATION", p.getId(), p.getTitle(), "Year " + p.getYear())));
 
         eventRepository.search(null, query, page).forEach(e ->

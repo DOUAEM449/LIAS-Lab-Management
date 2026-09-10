@@ -1,5 +1,6 @@
 package com.lias.labmanagement.meeting.controller;
 
+import com.lias.labmanagement.common.storage.FileDownload;
 import com.lias.labmanagement.common.web.ApiResponse;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.meeting.dto.MeetingMinutesResponse;
@@ -10,9 +11,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,10 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
+// CdC matrix: Doctorants have NO access to internal modules (Equipment, Meetings/PV, Administration).
 @RestController
 @RequestMapping("/api/v1/meetings")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN','DIRECTOR','VICE_DIRECTOR','TEAM_LEADER','PERMANENT_MEMBER','ASSOCIATE_MEMBER')")
 @Tag(name = "Meetings", description = "Internal laboratory meetings with archived minutes")
 public class MeetingController {
 
@@ -74,5 +80,16 @@ public class MeetingController {
     @Operation(summary = "List the minutes documents for a meeting")
     public ApiResponse<List<MeetingMinutesResponse>> getMinutes(@PathVariable UUID id) {
         return ApiResponse.of(service.getMinutes(id));
+    }
+
+    @GetMapping("/minutes/{minutesId}/download")
+    @Operation(summary = "Download an archived procès-verbal")
+    public ResponseEntity<Resource> downloadMinutes(@PathVariable UUID minutesId) {
+        FileDownload download = service.downloadMinutes(minutesId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(download.fileName()).build().toString())
+                .body(download.resource());
     }
 }

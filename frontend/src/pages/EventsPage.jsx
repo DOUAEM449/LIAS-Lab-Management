@@ -1,27 +1,49 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Calendar, Plus, Search, AlertCircle, Pencil, Trash2, MapPin, Users } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Calendar,
+  Plus,
+  Pencil,
+  Trash2,
+  MapPin,
+  Users,
+  CalendarClock,
+  CalendarCheck,
+  UserPlus,
+  Presentation,
+} from 'lucide-react';
 import EventFormModal from '../components/EventFormModal';
+import EventParticipantsModal from '../components/EventParticipantsModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { ToastStack, useToasts } from '../components/Toast';
-import { searchEvents, deleteEvent } from '../services/eventService';
+import {
+  PageHeader,
+  Card,
+  Toolbar,
+  SearchInput,
+  StatTile,
+  Button,
+  IconButton,
+  Badge,
+  Alert,
+  EmptyState,
+  Skeleton,
+} from '../components/ui';
+import { searchEvents, deleteEvent, registerForEvent } from '../services/eventService';
 import { getMyProfile } from '../services/memberService';
-import { isManagement } from '../utils/roles';
+import { EVENT_MEETING_CREATE_ROLES, MANAGEMENT_ROLES, hasRole } from '../utils/roles';
 
 const TYPE_LABEL_FR = { CONFERENCE: 'Conférence', WORKSHOP: 'Workshop', SEMINAR: 'Séminaire' };
-const TYPE_BADGE = {
-  CONFERENCE: 'bg-blue-100 text-blue-700',
-  WORKSHOP: 'bg-amber-100 text-amber-700',
-  SEMINAR: 'bg-violet-100 text-violet-700',
-};
+const TYPE_TONE = { CONFERENCE: 'info', WORKSHOP: 'warning', SEMINAR: 'mandate' };
 
 function friendlyError(err, fallback) {
+  if (err.response?.status === 409) return 'Vous êtes déjà inscrit(e) à cet événement.';
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
 
 export default function EventsPage({ user }) {
-  const canCreate = isManagement(user) || user?.role === 'TEAM_LEADER';
+  const canCreate = hasRole(user, EVENT_MEETING_CREATE_ROLES);
+  const canDelete = hasRole(user, MANAGEMENT_ROLES);
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +51,14 @@ export default function EventsPage({ user }) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [when, setWhen] = useState('all');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [participantsTarget, setParticipantsTarget] = useState(null);
+  const [registeringId, setRegisteringId] = useState(null);
   const [currentMemberId, setCurrentMemberId] = useState(null);
 
   const toast = useToasts();
@@ -46,7 +71,7 @@ export default function EventsPage({ user }) {
   const loadEvents = useCallback(() => {
     setLoading(true);
     setError(null);
-    searchEvents({ query: debouncedSearch || undefined, type: typeFilter || undefined })
+    searchEvents({ query: debouncedSearch || undefined, type: typeFilter || undefined, size: 60 })
       .then((res) => setEvents(res.content))
       .catch((err) => setError(friendlyError(err, 'Échec du chargement des événements')))
       .finally(() => setLoading(false));
@@ -57,31 +82,39 @@ export default function EventsPage({ user }) {
   }, [loadEvents]);
 
   useEffect(() => {
+    // Technical accounts have no Member profile (`user.status` null) — registration
+    // is simply hidden for them, and the lookup is skipped to avoid a 404.
+    if (!user?.status) {
+      setCurrentMemberId(null);
+      return;
+    }
     getMyProfile()
-      .then((p) => setCurrentMemberId(p.id))
-      .catch(() => {});
-  }, []);
+      .then((prof) => setCurrentMemberId(prof.id))
+      .catch(() => setCurrentMemberId(null));
+  }, [user]);
 
-  const upcomingCount = events.filter((e) => new Date(e.startDate) > new Date()).length;
-  const thisYearCount = events.filter(
-    (e) => new Date(e.startDate).getFullYear() === new Date().getFullYear()
-  ).length;
+  const now = new Date();
+  const upcoming = useMemo(() => events.filter((e) => new Date(e.startDate) >= now), [events]); // eslint-disable-line react-hooks/exhaustive-deps
+  const thisYear = useMemo(
+    () => events.filter((e) => new Date(e.startDate).getFullYear() === now.getFullYear()),
+    [events] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(event) {
-    setEditing(event);
-    setFormOpen(true);
-  }
+  const visible = useMemo(() => {
+    const list =
+      when === 'upcoming'
+        ? events.filter((e) => new Date(e.startDate) >= now)
+        : when === 'past'
+          ? events.filter((e) => new Date(e.startDate) < now)
+          : events;
+    return [...list].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+  }, [events, when]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete() {
     setDeleting(true);
     try {
       await deleteEvent(deleteTarget.id);
-      toast.success('Événement supprimé.');
+      toast.success('Événement archivé.');
       setDeleteTarget(null);
       loadEvents();
     } catch (err) {
@@ -91,141 +124,245 @@ export default function EventsPage({ user }) {
     }
   }
 
+  async function handleRegister(event) {
+    if (!currentMemberId) return;
+    setRegisteringId(event.id);
+    try {
+      await registerForEvent(event.id, currentMemberId);
+      toast.success(`Inscription confirmée pour « ${event.title} ».`);
+      loadEvents();
+    } catch (err) {
+      toast.error(friendlyError(err, "Échec de l'inscription"));
+    } finally {
+      setRegisteringId(null);
+    }
+  }
+
   return (
     <div>
       <ToastStack toasts={toast.toasts} onDismiss={toast.dismiss} />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="m-0 text-[22px] font-bold text-lias-navy">Événements</h1>
-          <p className="mt-1.5 mb-0 text-[13.5px] text-lias-muted">
-            Conférences, workshops et séminaires organisés par le laboratoire.
-          </p>
-        </div>
-        {canCreate && (
-          <button
-            onClick={openCreate}
-            className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 shrink-0"
-          >
-            <Plus size={16} />
-            Nouvel événement
-          </button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Activité scientifique"
+        title="Événements scientifiques"
+        description="Conférences, workshops et séminaires organisés ou accueillis par le laboratoire. Chaque édition est archivée avec ses organisateurs et ses participants."
+        actions={
+          canCreate && (
+            <Button
+              icon={Plus}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              Nouvel événement
+            </Button>
+          )
+        }
+      />
 
       {error && (
-        <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-          <AlertCircle size={16} />
+        <Alert tone="danger" className="mb-5">
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4.5 mb-7">
-        <StatCard label="Total Événements" value={events.length} icon={Calendar} loading={loading} />
-        <StatCard label="À venir" value={upcomingCount} icon={Calendar} loading={loading} />
-        <StatCard label="Cette année" value={thisYearCount} icon={Calendar} loading={loading} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatTile label="Événements enregistrés" value={events.length} icon={Calendar} loading={loading} />
+        <StatTile
+          label="À venir"
+          value={upcoming.length}
+          hint={upcoming.length > 0 ? 'Prochainement au laboratoire' : 'Aucun événement programmé'}
+          hintTone={upcoming.length > 0 ? 'success' : 'muted'}
+          icon={CalendarClock}
+          loading={loading}
+        />
+        <StatTile label="Cette année" value={thisYear.length} icon={CalendarCheck} loading={loading} />
       </div>
 
-      <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5.5 py-4 border-b border-lias-border-light">
-          <div className="flex items-center gap-2.5 bg-lias-bg border border-lias-border rounded-lg px-3 py-2 w-full sm:w-72">
-            <Search size={15} className="text-lias-muted shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un événement..."
-              className="border-none outline-none bg-transparent text-[13px] w-full text-lias-ink"
-            />
-          </div>
+      <Card className="mb-5">
+        <Toolbar>
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un événement..."
+            className="w-full sm:w-72"
+          />
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] outline-none"
+            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] outline-none bg-lias-surface
+              cursor-pointer hover:border-lias-border-strong focus:border-lias-blue transition-colors duration-150"
           >
             <option value="">Tous les types</option>
             <option value="CONFERENCE">Conférence</option>
             <option value="WORKSHOP">Workshop</option>
             <option value="SEMINAR">Séminaire</option>
           </select>
-        </div>
-
-        {loading ? (
-          <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Chargement...</div>
-        ) : events.length === 0 ? (
-          <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Aucun événement.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[820px]">
-              <thead>
-                <tr className="bg-lias-bg">
-                  {['Événement', 'Type', 'Date', 'Lieu', 'Participants', ''].map((h, i) => (
-                    <th
-                      key={h + i}
-                      className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                        i === 5 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                      }`}
-                    >
-                      {i === 5 ? 'Actions' : h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((e) => (
-                  <tr
-                    key={e.id}
-                    onClick={() => openEdit(e)}
-                    className="border-t border-lias-border-light cursor-pointer hover:bg-lias-bg/60"
-                  >
-                    <td className="px-5.5 py-3.5 text-[13px] font-medium text-lias-ink">{e.title}</td>
-                    <td className="px-5.5 py-3.5">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${TYPE_BADGE[e.type]}`}>
-                        {TYPE_LABEL_FR[e.type] || e.type}
-                      </span>
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted font-mono">
-                      {new Date(e.startDate).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">
-                      {e.location ? (
-                        <span className="flex items-center gap-1.5">
-                          <MapPin size={12} /> {e.location}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">
-                      <span className="flex items-center gap-1.5">
-                        <Users size={12} /> {e.participantCount}
-                      </span>
-                    </td>
-                    <td className="px-5.5 py-3.5 text-right" onClick={(ev) => ev.stopPropagation()}>
-                      {canCreate && (
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => openEdit(e)}
-                            className="w-8 h-8 rounded-lg border border-lias-border bg-white cursor-pointer flex items-center justify-center text-lias-muted hover:text-lias-blue-dark"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(e)}
-                            className="w-8 h-8 rounded-lg border border-rose-200 bg-white cursor-pointer flex items-center justify-center text-rose-600 hover:bg-rose-50"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <select
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] outline-none bg-lias-surface
+              cursor-pointer hover:border-lias-border-strong focus:border-lias-blue transition-colors duration-150"
+          >
+            <option value="all">Toutes les périodes</option>
+            <option value="upcoming">À venir</option>
+            <option value="past">Passés</option>
+          </select>
+          <div className="sm:ml-auto text-[12.5px] text-lias-muted">
+            {loading ? '—' : `${visible.length} événement(s)`}
           </div>
-        )}
-      </div>
+        </Toolbar>
+      </Card>
+
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-card" />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Calendar}
+            title="Aucun événement"
+            description={
+              debouncedSearch || typeFilter || when !== 'all'
+                ? 'Aucun événement ne correspond à ces critères.'
+                : "Le laboratoire n'a pas encore enregistré d'événement scientifique."
+            }
+            action={
+              canCreate && !debouncedSearch ? (
+                <Button
+                  icon={Plus}
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  Créer un événement
+                </Button>
+              ) : null
+            }
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {visible.map((e) => {
+            const start = new Date(e.startDate);
+            const isPast = start < now;
+            return (
+              <Card key={e.id} className="p-5 flex flex-col">
+                <div className="flex items-start gap-5">
+                  <div
+                    className={`w-16 shrink-0 rounded-lg py-3 text-center border
+                      ${isPast ? 'bg-lias-surface-muted border-lias-border-light' : 'bg-lias-blue-tint-solid border-transparent'}`}
+                  >
+                    <div className="text-[10.5px] uppercase font-semibold tracking-wide text-lias-muted">
+                      {start.toLocaleDateString('fr-FR', { month: 'short' })}
+                    </div>
+                    <div className="text-[22px] font-bold text-lias-navy leading-none mt-1 tabular-nums">
+                      {start.getDate()}
+                    </div>
+                    <div className="text-[10.5px] text-lias-faint font-mono mt-1">{start.getFullYear()}</div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Badge tone={TYPE_TONE[e.type] ?? 'info'} size="sm">
+                        {TYPE_LABEL_FR[e.type] || e.type}
+                      </Badge>
+                      {e.editionNumber && (
+                        <Badge tone="outline" size="sm">
+                          {e.editionNumber}ᵉ édition
+                        </Badge>
+                      )}
+                      {isPast && (
+                        <Badge tone="neutral" size="sm">
+                          Archivé
+                        </Badge>
+                      )}
+                    </div>
+
+                    <h3 className="m-0 text-[15px] font-semibold text-lias-navy leading-snug">{e.title}</h3>
+                    {e.description && (
+                      <p className="mt-1.5 mb-0 text-[12.5px] text-lias-muted leading-relaxed line-clamp-2">
+                        {e.description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-[12px] text-lias-muted">
+                      <span className="flex items-center gap-1.5 font-mono">
+                        <CalendarClock size={12} />
+                        {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {e.location && (
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <MapPin size={12} className="shrink-0" />
+                          <span className="truncate">{e.location}</span>
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5">
+                        <Users size={12} />
+                        {e.participantCount} participant(s)
+                      </span>
+                    </div>
+
+                    {e.organizers?.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2.5 text-[12px] text-lias-muted min-w-0">
+                        <Presentation size={12} className="shrink-0" />
+                        <span className="truncate">
+                          Organisé par {e.organizers.map((o) => o.fullName).join(', ')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-lias-border-light">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" icon={Users} onClick={() => setParticipantsTarget(e)}>
+                      Participants
+                    </Button>
+                    {currentMemberId && !isPast && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={UserPlus}
+                        loading={registeringId === e.id}
+                        onClick={() => handleRegister(e)}
+                      >
+                        S'inscrire
+                      </Button>
+                    )}
+                  </div>
+
+                  {canCreate && (
+                    <div className="flex gap-2">
+                      <IconButton
+                        icon={Pencil}
+                        label="Modifier"
+                        onClick={() => {
+                          setEditing(e);
+                          setFormOpen(true);
+                        }}
+                      />
+                      {canDelete && (
+                        <IconButton
+                          icon={Trash2}
+                          label="Archiver"
+                          variant="danger"
+                          onClick={() => setDeleteTarget(e)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <EventFormModal
         open={formOpen}
@@ -236,11 +373,17 @@ export default function EventsPage({ user }) {
         currentMemberId={currentMemberId}
       />
 
+      <EventParticipantsModal
+        event={participantsTarget}
+        onClose={() => setParticipantsTarget(null)}
+        toast={toast}
+      />
+
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Supprimer l'événement"
-        message={`Voulez-vous vraiment supprimer "${deleteTarget?.title}" ?`}
-        confirmLabel="Supprimer"
+        title="Archiver l'événement"
+        message={`« ${deleteTarget?.title} » sera archivé (suppression logique). Participants, organisateurs et documents associés restent conservés.`}
+        confirmLabel="Archiver"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
