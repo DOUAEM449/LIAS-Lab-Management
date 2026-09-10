@@ -16,10 +16,15 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+
+import jakarta.validation.ConstraintViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -116,6 +121,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Malformed request body", request);
+    }
+
+    /**
+     * A missing required query parameter, a query/path value that cannot be bound to its target type
+     * (a bad UUID, an unknown enum constant, a non-numeric {@code {year}}...), a missing multipart part
+     * or a violated {@code @Validated} parameter constraint are all client mistakes: answer 400, not the
+     * catch-all 500 that {@link #handleGeneric} would otherwise return.
+     */
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestPartException.class,
+            ConstraintViolationException.class
+    })
+    public ResponseEntity<ApiError> handleBadRequestParam(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid or missing request parameter", request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
