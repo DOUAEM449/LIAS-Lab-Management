@@ -1,10 +1,46 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Package, Plus, AlertCircle, Pencil, Trash2, Loader2, ClipboardList } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Package,
+  Plus,
+  Pencil,
+  Trash2,
+  ClipboardList,
+  Users,
+  Send,
+  PackageCheck,
+  Boxes,
+  Check,
+  X,
+} from 'lucide-react';
 import EquipmentFormModal from '../components/EquipmentFormModal';
+import EquipmentDistributionModal from '../components/EquipmentDistributionModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { TextField, TextAreaField } from '../components/FormField';
 import { ToastStack, useToasts } from '../components/Toast';
+import {
+  PageHeader,
+  Card,
+  CardHeader,
+  Toolbar,
+  SearchInput,
+  StatTile,
+  Tabs,
+  Button,
+  IconButton,
+  Badge,
+  RequestStatusBadge,
+  Alert,
+  EmptyState,
+  LoadingBlock,
+  TableSkeleton,
+  Table,
+  THead,
+  TBody,
+  TR,
+  TD,
+  TDPrimary,
+  TDActions,
+} from '../components/ui';
 import {
   searchEquipment,
   deleteEquipment,
@@ -16,18 +52,29 @@ import {
 } from '../services/equipmentService';
 import { EQUIPMENT_ADMIN_ROLES, EQUIPMENT_DECISION_ROLES, hasRole } from '../utils/roles';
 
-const STATUS_BADGE = {
-  PENDING: 'bg-lias-warning-bg text-lias-warning-text',
-  APPROVED: 'bg-lias-success-bg text-lias-success-text',
-  REJECTED: 'bg-lias-danger-bg text-lias-danger-text',
-  FULFILLED: 'bg-blue-100 text-blue-700',
-};
-const STATUS_LABEL_FR = { PENDING: 'En attente', APPROVED: 'Approuvée', REJECTED: 'Refusée', FULFILLED: 'Fournie' };
-
 function friendlyError(err, fallback) {
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
+
+/**
+ * Availability is derived strictly from the two quantities the backend keeps
+ * (`quantity` and `availableQuantity`) — no invented lifecycle states.
+ */
+function availabilityOf(item) {
+  if (item.quantity === 0) return { tone: 'neutral', label: 'Non renseigné', ratio: 0 };
+  const ratio = item.availableQuantity / item.quantity;
+  if (item.availableQuantity === 0) return { tone: 'danger', label: 'Épuisé', ratio };
+  if (ratio < 1) return { tone: 'warning', label: 'Partiellement distribué', ratio };
+  return { tone: 'success', label: 'Entièrement disponible', ratio };
+}
+
+const BAR_COLOR = {
+  success: 'bg-lias-success',
+  warning: 'bg-lias-warning',
+  danger: 'bg-lias-danger',
+  neutral: 'bg-lias-border-strong',
+};
 
 export default function EquipmentPage({ user }) {
   const canManageInventory = hasRole(user, EQUIPMENT_ADMIN_ROLES);
@@ -39,10 +86,13 @@ export default function EquipmentPage({ user }) {
   const [equipment, setEquipment] = useState([]);
   const [equipLoading, setEquipLoading] = useState(true);
   const [equipError, setEquipError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [distributionTarget, setDistributionTarget] = useState(null);
 
   const [myRequests, setMyRequests] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -52,24 +102,26 @@ export default function EquipmentPage({ user }) {
   const [submittingReq, setSubmittingReq] = useState(false);
   const [decidingId, setDecidingId] = useState(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const loadEquipment = useCallback(() => {
     setEquipLoading(true);
     setEquipError(null);
-    searchEquipment()
+    searchEquipment({ query: debouncedSearch || undefined })
       .then((res) => setEquipment(res.content))
       .catch((err) => setEquipError(friendlyError(err, 'Échec du chargement du matériel')))
       .finally(() => setEquipLoading(false));
-  }, []);
+  }, [debouncedSearch]);
 
   const loadRequests = useCallback(() => {
     setRequestsLoading(true);
     setRequestsError(null);
-    // Technical accounts (SYSTEM_ADMIN, or a DIRECTOR/VICE_DIRECTOR created
-    // directly via user administration rather than an approved membership
-    // request) have no linked Member profile, so "mine" 404s for them. Load
-    // "mine" and "pending" independently so one failing doesn't blank out
-    // the other — a management user with no member profile should still see
-    // the pending-requests panel.
+    // Technical accounts (SYSTEM_ADMIN, or a DIRECTOR/VICE_DIRECTOR created directly
+    // via user administration) have no linked Member profile, so "mine" 404s for them.
+    // Load both independently so one failing doesn't blank out the other.
     const tasks = [
       listMyEquipmentRequests()
         .then((res) => setMyRequests(res.content))
@@ -93,21 +145,18 @@ export default function EquipmentPage({ user }) {
     loadRequests();
   }, [loadRequests]);
 
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item) {
-    setEditing(item);
-    setFormOpen(true);
-  }
+  const stats = useMemo(() => {
+    const totalUnits = equipment.reduce((s, e) => s + (e.quantity ?? 0), 0);
+    const availableUnits = equipment.reduce((s, e) => s + (e.availableQuantity ?? 0), 0);
+    const outOfStock = equipment.filter((e) => e.quantity > 0 && e.availableQuantity === 0).length;
+    return { totalUnits, availableUnits, distributed: totalUnits - availableUnits, outOfStock };
+  }, [equipment]);
 
   async function handleDelete() {
     setDeleting(true);
     try {
       await deleteEquipment(deleteTarget.id);
-      toast.success('Matériel supprimé.');
+      toast.success('Matériel archivé.');
       setDeleteTarget(null);
       loadEquipment();
     } catch (err) {
@@ -128,7 +177,7 @@ export default function EquipmentPage({ user }) {
         quantity: Number(reqForm.quantity),
       });
       setReqForm({ itemName: '', description: '', quantity: 1 });
-      toast.success('Demande soumise.');
+      toast.success('Demande soumise — la direction en a été notifiée.');
       loadRequests();
     } catch (err) {
       toast.error(friendlyError(err, 'Échec de la soumission de la demande'));
@@ -151,131 +200,202 @@ export default function EquipmentPage({ user }) {
     }
   }
 
+  const tabs = [
+    ...(canManageInventory ? [{ key: 'inventory', label: 'Inventaire', icon: Boxes }] : []),
+    {
+      key: 'requests',
+      label: 'Demandes',
+      icon: ClipboardList,
+      count: canDecideRequests ? pendingRequests.length : 0,
+    },
+  ];
+
   return (
     <div>
       <ToastStack toasts={toast.toasts} onDismiss={toast.dismiss} />
 
-      <div className="mb-6">
-        <h1 className="m-0 text-[22px] font-bold text-lias-navy">Gestion du Matériel</h1>
-        <p className="mt-1.5 mb-0 text-[13.5px] text-lias-muted">
-          Inventaire du laboratoire et demandes de matériel des membres.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Ressources matérielles"
+        title="Gestion du matériel"
+        description="Inventaire, arrivages, distribution équitable aux membres et suivi des demandes soumises à la direction."
+        actions={<Tabs tabs={tabs} active={tab} onChange={setTab} />}
+      />
 
-      <div className="flex items-center gap-1.5 bg-lias-bg rounded-lg p-1 w-fit mb-5">
-        {canManageInventory && (
-          <button
-            onClick={() => setTab('inventory')}
-            className={`px-4 py-1.5 rounded-md text-[12.5px] font-medium cursor-pointer border-none transition-colors ${
-              tab === 'inventory' ? 'bg-white text-lias-navy shadow-sm' : 'bg-transparent text-lias-muted'
-            }`}
-          >
-            Inventaire
-          </button>
-        )}
-        <button
-          onClick={() => setTab('requests')}
-          className={`px-4 py-1.5 rounded-md text-[12.5px] font-medium cursor-pointer border-none transition-colors ${
-            tab === 'requests' ? 'bg-white text-lias-navy shadow-sm' : 'bg-transparent text-lias-muted'
-          }`}
-        >
-          Demandes de matériel
-        </button>
-      </div>
-
+      {/* ------------------------- Inventaire ------------------------- */}
       {tab === 'inventory' && canManageInventory && (
         <>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={openCreate}
-              className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Ajouter du matériel
-            </button>
-          </div>
-
           {equipError && (
-            <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-              <AlertCircle size={16} />
+            <Alert tone="danger" className="mb-5">
               {equipError}
-            </div>
+            </Alert>
           )}
 
-          <div className="mb-7 max-w-xs">
-            <StatCard label="Références en stock" value={equipment.length} icon={Package} loading={equipLoading} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <StatTile
+              label="Références en inventaire"
+              value={equipment.length}
+              icon={Package}
+              loading={equipLoading}
+            />
+            <StatTile
+              label="Unités disponibles"
+              value={stats.availableUnits}
+              hint={`sur ${stats.totalUnits} au total`}
+              icon={PackageCheck}
+              loading={equipLoading}
+            />
+            <StatTile
+              label="Unités distribuées"
+              value={stats.distributed}
+              hint="Actuellement chez des membres"
+              icon={Users}
+              loading={equipLoading}
+            />
+            <StatTile
+              label="Références épuisées"
+              value={stats.outOfStock}
+              hint={stats.outOfStock > 0 ? 'Stock entièrement distribué' : 'Aucune rupture'}
+              hintTone={stats.outOfStock > 0 ? 'warning' : 'success'}
+              icon={Boxes}
+              loading={equipLoading}
+            />
           </div>
 
-          <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
-            {equipLoading ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Chargement...</div>
-            ) : equipment.length === 0 ? (
-              <div className="px-5.5 py-8 text-center text-sm text-lias-muted">Aucun matériel enregistré.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="bg-lias-bg">
-                      {['Nom', 'Catégorie', 'Disponible / Total', ''].map((h, i) => (
-                        <th
-                          key={h + i}
-                          className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                            i === 3 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                          }`}
-                        >
-                          {i === 3 ? 'Actions' : h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {equipment.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => openEdit(item)}
-                        className="border-t border-lias-border-light cursor-pointer hover:bg-lias-bg/60"
-                      >
-                        <td className="px-5.5 py-3.5 text-[13px] font-medium text-lias-ink">{item.name}</td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{item.category || '—'}</td>
-                        <td className="px-5.5 py-3.5 text-[13px] text-lias-muted font-mono">
-                          {item.availableQuantity} / {item.quantity}
-                        </td>
-                        <td className="px-5.5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => openEdit(item)}
-                              className="w-8 h-8 rounded-lg border border-lias-border bg-white cursor-pointer flex items-center justify-center text-lias-muted hover:text-lias-blue-dark"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(item)}
-                              className="w-8 h-8 rounded-lg border border-rose-200 bg-white cursor-pointer flex items-center justify-center text-rose-600 hover:bg-rose-50"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <Card>
+            <Toolbar>
+              <SearchInput
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher un matériel..."
+                className="w-full sm:w-72"
+              />
+              <div className="sm:ml-auto">
+                <Button
+                  icon={Plus}
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  Ajouter du matériel
+                </Button>
               </div>
+            </Toolbar>
+
+            {equipLoading ? (
+              <TableSkeleton rows={5} columns={4} />
+            ) : equipment.length === 0 ? (
+              <EmptyState
+                icon={Package}
+                title="Aucun matériel enregistré"
+                description={
+                  debouncedSearch
+                    ? 'Aucun matériel ne correspond à cette recherche.'
+                    : "Enregistrez les arrivages du laboratoire pour suivre leur distribution."
+                }
+                action={
+                  !debouncedSearch ? (
+                    <Button
+                      icon={Plus}
+                      onClick={() => {
+                        setEditing(null);
+                        setFormOpen(true);
+                      }}
+                    >
+                      Ajouter du matériel
+                    </Button>
+                  ) : null
+                }
+              />
+            ) : (
+              <Table minWidth="min-w-[860px]">
+                <THead
+                  columns={[
+                    'Matériel',
+                    'Catégorie',
+                    'Arrivage',
+                    'Disponibilité',
+                    { label: 'Actions', align: 'right' },
+                  ]}
+                />
+                <TBody>
+                  {equipment.map((item) => {
+                    const availability = availabilityOf(item);
+                    return (
+                      <TR key={item.id}>
+                        <TDPrimary title={item.name} subtitle={item.description} />
+                        <TD className="text-lias-muted">{item.category || '—'}</TD>
+                        <TD className="text-lias-muted font-mono text-[12.5px]">
+                          {item.arrivalDate ? new Date(item.arrivalDate).toLocaleDateString('fr-FR') : '—'}
+                        </TD>
+                        <TD>
+                          <div className="min-w-[170px]">
+                            <div className="flex items-center justify-between gap-3 mb-1.5">
+                              <Badge tone={availability.tone} size="sm">
+                                {availability.label}
+                              </Badge>
+                              <span className="text-[12px] font-mono font-semibold text-lias-navy tabular-nums">
+                                {item.availableQuantity}/{item.quantity}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-lias-surface-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-[width] duration-300 ${BAR_COLOR[availability.tone]}`}
+                                style={{ width: `${Math.round(availability.ratio * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </TD>
+                        <TDActions>
+                          <IconButton
+                            icon={Users}
+                            label="Registre de distribution"
+                            onClick={() => setDistributionTarget(item)}
+                          />
+                          <IconButton
+                            icon={Pencil}
+                            label="Modifier"
+                            onClick={() => {
+                              setEditing(item);
+                              setFormOpen(true);
+                            }}
+                          />
+                          <IconButton
+                            icon={Trash2}
+                            label="Archiver"
+                            variant="danger"
+                            onClick={() => setDeleteTarget(item)}
+                          />
+                        </TDActions>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
             )}
-          </div>
+          </Card>
         </>
       )}
 
+      {/* ------------------------- Demandes ------------------------- */}
       {tab === 'requests' && (
         <>
-          <div className="bg-white border border-lias-border rounded-xl p-5.5 mb-7">
-            <div className="text-sm font-semibold text-lias-navy mb-4">Soumettre une demande de matériel</div>
+          <Card className="mb-5" padded>
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold text-lias-navy mb-1.5">
+              <Send size={15} className="text-lias-blue-dark" />
+              Soumettre une demande de matériel
+            </div>
+            <p className="text-[12.5px] text-lias-muted mt-0 mb-4">
+              Votre demande est transmise à la direction, qui l'accepte ou la refuse (CdC §2.15).
+            </p>
             <form onSubmit={handleSubmitRequest} className="grid grid-cols-1 sm:grid-cols-3 gap-x-4">
               <TextField
                 label="Article souhaité"
                 required
                 value={reqForm.itemName}
                 onChange={(e) => setReqForm({ ...reqForm, itemName: e.target.value })}
+                placeholder="Ex. Station de calcul GPU"
               />
               <TextField
                 label="Quantité"
@@ -285,103 +405,128 @@ export default function EquipmentPage({ user }) {
                 onChange={(e) => setReqForm({ ...reqForm, quantity: e.target.value })}
               />
               <TextAreaField
-                label="Description / justification"
+                label="Justification"
                 rows={1}
                 value={reqForm.description}
                 onChange={(e) => setReqForm({ ...reqForm, description: e.target.value })}
+                placeholder="Usage prévu, projet concerné..."
               />
-              <button
+              <Button
                 type="submit"
-                disabled={submittingReq || !reqForm.itemName}
-                className="col-span-full bg-lias-blue text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+                icon={Send}
+                className="sm:col-start-3"
+                loading={submittingReq}
+                disabled={!reqForm.itemName}
               >
-                {submittingReq && <Loader2 size={14} className="animate-spin" />}
                 Envoyer la demande
-              </button>
+              </Button>
             </form>
-          </div>
+          </Card>
 
           {requestsError && (
-            <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-              <AlertCircle size={16} />
+            <Alert tone="danger" className="mb-5">
               {requestsError}
-            </div>
+            </Alert>
           )}
 
           {canDecideRequests && (
-            <div className="bg-white border border-lias-border rounded-xl overflow-hidden mb-7">
-              <div className="flex items-center gap-2 px-5.5 py-4 border-b border-lias-border-light text-sm font-semibold text-lias-navy">
-                <ClipboardList size={16} />
-                Demandes en attente de validation
-              </div>
+            <Card className="mb-5">
+              <CardHeader
+                icon={ClipboardList}
+                title="Demandes en attente de validation"
+                description="Seuls le directeur et le vice-directeur peuvent décider (CdC §2.15)."
+              />
               {requestsLoading ? (
-                <div className="px-5.5 py-6 text-center text-sm text-lias-muted">Chargement...</div>
+                <LoadingBlock label="Chargement des demandes..." />
               ) : pendingRequests.length === 0 ? (
-                <div className="px-5.5 py-6 text-center text-sm text-lias-muted">Aucune demande en attente.</div>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="Aucune demande en attente"
+                  description="Toutes les demandes de matériel ont été traitées."
+                />
               ) : (
                 <ul className="list-none p-0 m-0">
                   {pendingRequests.map((r) => (
                     <li
                       key={r.id}
-                      className="flex items-center justify-between px-5.5 py-3.5 border-t border-lias-border-light"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5.5 py-4
+                        border-b border-lias-border-light last:border-b-0"
                     >
-                      <div>
-                        <div className="text-[13px] font-medium text-lias-ink">
-                          {r.itemName} ({r.quantity}) — {r.requesterName}
+                      <div className="min-w-0">
+                        <div className="text-[13.5px] font-medium text-lias-ink">
+                          {r.itemName}{' '}
+                          <span className="text-lias-muted font-normal">× {r.quantity}</span>
                         </div>
-                        {r.description && <div className="text-[12px] text-lias-muted">{r.description}</div>}
+                        <div className="text-[12px] text-lias-muted mt-0.5">
+                          Demandé par {r.requesterName}
+                        </div>
+                        {r.description && (
+                          <p className="text-[12.5px] text-lias-muted mt-1.5 mb-0 leading-snug">{r.description}</p>
+                        )}
                       </div>
-                      <div className="flex gap-2">
-                        <button
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          icon={Check}
+                          loading={decidingId === r.id}
                           onClick={() => handleDecide(r.id, 'approve')}
-                          disabled={decidingId === r.id}
-                          className="bg-lias-success text-white border-none rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
                         >
                           Approuver
-                        </button>
-                        <button
-                          onClick={() => handleDecide(r.id, 'reject')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          icon={X}
                           disabled={decidingId === r.id}
-                          className="bg-white text-lias-danger-text border border-lias-danger-bg rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
+                          onClick={() => handleDecide(r.id, 'reject')}
                         >
                           Refuser
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
-            </div>
+            </Card>
           )}
 
-          <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
-            <div className="px-5.5 py-4 border-b border-lias-border-light text-sm font-semibold text-lias-navy">
-              Mes demandes
-            </div>
+          <Card>
+            <CardHeader icon={Package} title="Mes demandes" description="Historique de vos demandes et de leurs décisions." />
             {requestsLoading ? (
-              <div className="px-5.5 py-6 text-center text-sm text-lias-muted">Chargement...</div>
+              <LoadingBlock label="Chargement..." />
             ) : myRequests.length === 0 ? (
-              <div className="px-5.5 py-6 text-center text-sm text-lias-muted">
-                Vous n'avez soumis aucune demande.
-              </div>
+              <EmptyState
+                icon={Package}
+                title="Aucune demande soumise"
+                description="Utilisez le formulaire ci-dessus pour demander du matériel au laboratoire."
+              />
             ) : (
-              <ul className="list-none p-0 m-0">
-                {myRequests.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex items-center justify-between px-5.5 py-3.5 border-t border-lias-border-light"
-                  >
-                    <div className="text-[13px] text-lias-ink">
-                      {r.itemName} ({r.quantity})
-                    </div>
-                    <span className={`inline-block px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${STATUS_BADGE[r.status]}`}>
-                      {STATUS_LABEL_FR[r.status]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <Table minWidth="min-w-[640px]">
+                <THead
+                  columns={['Article', 'Quantité', 'État', { label: 'Décision', align: 'right' }]}
+                />
+                <TBody>
+                  {myRequests.map((r) => (
+                    <TR key={r.id}>
+                      <TDPrimary title={r.itemName} subtitle={r.description} />
+                      <TD className="text-lias-muted font-mono">{r.quantity}</TD>
+                      <TD>
+                        <RequestStatusBadge status={r.status} size="sm" />
+                      </TD>
+                      <TD align="right" className="text-lias-muted text-[12.5px]">
+                        {r.validationDate
+                          ? new Date(r.validationDate).toLocaleDateString('fr-FR')
+                          : 'En attente'}
+                        {r.validationNote && (
+                          <div className="text-[11.5px] text-lias-faint mt-0.5">{r.validationNote}</div>
+                        )}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             )}
-          </div>
+          </Card>
         </>
       )}
 
@@ -393,11 +538,19 @@ export default function EquipmentPage({ user }) {
         toast={toast}
       />
 
+      <EquipmentDistributionModal
+        equipment={distributionTarget}
+        canDistribute={canManageInventory}
+        onClose={() => setDistributionTarget(null)}
+        onChanged={loadEquipment}
+        toast={toast}
+      />
+
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Supprimer le matériel"
-        message={`Voulez-vous vraiment supprimer "${deleteTarget?.name}" ?`}
-        confirmLabel="Supprimer"
+        title="Archiver ce matériel"
+        message={`« ${deleteTarget?.name} » sera archivé (suppression logique). L'historique des distributions est conservé.`}
+        confirmLabel="Archiver"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

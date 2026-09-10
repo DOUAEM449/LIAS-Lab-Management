@@ -5,7 +5,9 @@ import com.lias.labmanagement.auth.entity.User;
 import com.lias.labmanagement.auth.repository.UserRepository;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.MemberStatus;
+import com.lias.labmanagement.common.enums.NotificationType;
 import com.lias.labmanagement.common.enums.RequestStatus;
+import com.lias.labmanagement.common.enums.RoleChangeSource;
 import com.lias.labmanagement.common.enums.RoleName;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ConflictException;
@@ -14,6 +16,7 @@ import com.lias.labmanagement.common.mail.MailService;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
 import com.lias.labmanagement.common.web.PageResponse;
+import com.lias.labmanagement.governance.service.UserRoleSyncService;
 import com.lias.labmanagement.membershiprequest.dto.MembershipRequestResponse;
 import com.lias.labmanagement.membershiprequest.dto.MembershipRequestSubmission;
 import com.lias.labmanagement.membershiprequest.entity.MembershipRequest;
@@ -24,6 +27,7 @@ import com.lias.labmanagement.members.entity.MemberStatusHistory;
 import com.lias.labmanagement.members.repository.AffiliationHistoryRepository;
 import com.lias.labmanagement.members.repository.MemberRepository;
 import com.lias.labmanagement.members.repository.MemberStatusHistoryRepository;
+import com.lias.labmanagement.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +63,8 @@ public class MembershipRequestService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final AuditService auditService;
+    private final UserRoleSyncService userRoleSyncService;
+    private final NotificationService notificationService;
 
     @Transactional
     public MembershipRequestResponse submit(MembershipRequestSubmission submission, MultipartFile cv) {
@@ -88,6 +94,14 @@ public class MembershipRequestService {
         }
 
         MembershipRequest saved = requestRepository.save(request);
+
+        // CdC §2.6/§2.20: the application is decided by the acting Director — tell the
+        // governance in-app that something is waiting for their validation.
+        notificationService.notifyGovernance(NotificationType.MEMBERSHIP_REQUEST,
+                "Nouvelle demande d'adhésion de " + saved.getFirstName() + " " + saved.getLastName()
+                        + " (" + saved.getRequestedStatus() + ") à valider.",
+                "MembershipRequest", saved.getId());
+
         auditService.record(AuditAction.CREATE, "MembershipRequest", saved.getId(), "New membership application submitted");
         return toResponse(saved);
     }
@@ -137,6 +151,9 @@ public class MembershipRequestService {
                 .currentStatus(request.getRequestedStatus())
                 .build();
         Member savedMember = memberRepository.save(member);
+        // Records the very first row of this account's role history (P0.1) — from
+        // this point on, UserRoleSyncService is the single place that ever changes User.role.
+        userRoleSyncService.syncForMember(savedMember, RoleChangeSource.STATUS_CHANGE);
 
         statusHistoryRepository.save(MemberStatusHistory.builder()
                 .member(savedMember)
@@ -164,6 +181,10 @@ public class MembershipRequestService {
                         + "\nTemporary password: " + temporaryPassword
                         + "\n\nYou will be asked to change this password on first login.");
 
+        notificationService.notify(savedMember.getId(), NotificationType.MEMBERSHIP_DECISION,
+                "Votre demande d'adhésion a été approuvée. Bienvenue au LIAS !",
+                "MembershipRequest", saved.getId());
+
         auditService.record(AuditAction.APPROVE, "MembershipRequest", id,
                 "Approved, account created for member " + savedMember.getId());
         return toResponse(saved);
@@ -182,6 +203,8 @@ public class MembershipRequestService {
         request.setDecisionNote(decisionNote);
         MembershipRequest saved = requestRepository.save(request);
 
+        // No in-app Notification here: a rejected applicant never gets a User/Member
+        // account, so there is no recipient to notify in-app — email is the only channel.
         mailService.send(request.getEmail(), "LIAS Laboratory - Membership Application Update",
                 "We regret to inform you that your membership application was not approved."
                         + (decisionNote != null ? "\n\nReason: " + decisionNote : ""));

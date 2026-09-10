@@ -1,16 +1,8 @@
-import { Loader2 } from 'lucide-react';
-
-const STATUS_STYLE = {
-  PENDING: 'bg-lias-warning-bg text-lias-warning-text',
-  APPROVED: 'bg-lias-success-bg text-lias-success-text',
-  REJECTED: 'bg-lias-danger-bg text-lias-danger-text',
-};
-
-const STATUS_LABEL_FR = {
-  PENDING: 'En attente',
-  APPROVED: 'Acceptée',
-  REJECTED: 'Refusée',
-};
+import { Check, X, UserPlus } from 'lucide-react';
+import { Table, THead, TBody, TR, TD, TDActions } from './ui/DataTable';
+import { RequestStatusBadge } from './ui/Badge';
+import Button from './ui/Button';
+import { TableSkeleton, EmptyState } from './ui/Feedback';
 
 // Deterministic pseudo-random hue per person so avatar colors stay stable
 // across re-renders without needing a color field from the backend.
@@ -24,102 +16,97 @@ function initialsOf(firstName, lastName) {
   return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
 }
 
-export default function RequestsTable({ requests, loading, actionLoadingId, onApprove, onReject }) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-lias-muted gap-2">
-        <Loader2 size={18} className="animate-spin" />
-        <span className="text-sm">Chargement des demandes...</span>
-      </div>
-    );
-  }
+export default function RequestsTable({ requests, loading, actionLoadingId, canDecide = true, onApprove, onReject, onRowClick }) {
+  if (loading) return <TableSkeleton rows={4} columns={5} />;
 
   if (requests.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16 text-lias-muted text-sm">
-        Aucune demande d'adhésion en attente.
-      </div>
+      <EmptyState
+        icon={UserPlus}
+        title="Aucune demande en attente"
+        description="Les nouvelles candidatures soumises depuis le portail public apparaîtront ici pour validation."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse min-w-[760px]">
-        <thead>
-          <tr className="bg-lias-bg">
-            {['Photo', 'Nom / Prénom', "Établissement d'origine", 'Date', 'Statut', ''].map(
-              (h, i) => (
-                <th
-                  key={h + i}
-                  className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                    i === 0 ? 'px-5 text-left' : i === 5 ? 'px-5 text-right' : 'px-3 text-left'
-                  }`}
-                >
-                  {i === 5 ? 'Actions' : h}
-                </th>
-              )
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map((r) => {
-            const fullName = `${r.firstName} ${r.lastName}`;
-            const hue = avatarHue(fullName);
-            const isPending = r.status === 'PENDING';
-            const isActing = actionLoadingId === r.id;
+    <Table minWidth="min-w-[780px]">
+      <THead
+        columns={[
+          'Candidat',
+          "Établissement d'origine",
+          'Statut demandé',
+          'Soumise le',
+          'État',
+          { label: 'Décision', align: 'right' },
+        ]}
+      />
+      <TBody>
+        {requests.map((r) => {
+          const fullName = `${r.firstName} ${r.lastName}`;
+          const isPending = r.status === 'PENDING';
+          const isActing = actionLoadingId === r.id;
 
-            return (
-              <tr key={r.id} className="border-t border-lias-border-light">
-                <td className="px-5 py-3.5">
+          return (
+            <TR key={r.id} onClick={onRowClick ? () => onRowClick(r) : undefined}>
+              <TD>
+                <div className="flex items-center gap-3">
                   <div
-                    className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                    style={{ background: `oklch(60% 0.1 ${hue})` }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11.5px] font-semibold shrink-0"
+                    style={{ background: `oklch(58% 0.1 ${avatarHue(fullName)})` }}
+                    aria-hidden="true"
                   >
                     {initialsOf(r.firstName, r.lastName)}
                   </div>
-                </td>
-                <td className="px-3 py-3.5 text-[13px] font-medium text-lias-ink">{fullName}</td>
-                <td className="px-3 py-3.5 text-[13px] text-lias-muted">
-                  {r.homeInstitution || '—'}
-                </td>
-                <td className="px-3 py-3.5 text-[13px] text-lias-muted font-mono">
-                  {new Date(r.submittedAt).toLocaleDateString('fr-FR')}
-                </td>
-                <td className="px-3 py-3.5">
-                  <span
-                    className={`inline-block px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${STATUS_STYLE[r.status]}`}
-                  >
-                    {STATUS_LABEL_FR[r.status]}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                  {isPending ? (
-                    <div className="flex gap-2 justify-end">
-                      <button
-                        onClick={() => onApprove(r.id)}
-                        disabled={isActing}
-                        className="bg-lias-success text-white border-none rounded-[7px] px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                      >
-                        {isActing && <Loader2 size={12} className="animate-spin" />}
-                        Accepter
-                      </button>
-                      <button
-                        onClick={() => onReject(r.id)}
-                        disabled={isActing}
-                        className="bg-white text-lias-danger-text border border-lias-danger-bg rounded-[7px] px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Refuser
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-lias-muted">—</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-lias-ink truncate">{fullName}</div>
+                    <div className="text-[11.5px] text-lias-muted truncate">{r.email}</div>
+                  </div>
+                </div>
+              </TD>
+              <TD className="text-lias-muted">{r.homeInstitution || '—'}</TD>
+              <TD className="text-lias-muted">{r.requestedStatus}</TD>
+              <TD className="text-lias-muted font-mono text-[12.5px]">
+                {new Date(r.submittedAt).toLocaleDateString('fr-FR')}
+              </TD>
+              <TD>
+                <RequestStatusBadge status={r.status} size="sm" />
+              </TD>
+              <TDActions>
+                {isPending && canDecide ? (
+                  <>
+                    <Button
+                      size="sm"
+                      icon={Check}
+                      loading={isActing}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApprove(r.id);
+                      }}
+                    >
+                      Accepter
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={X}
+                      disabled={isActing}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReject(r.id);
+                      }}
+                    >
+                      Refuser
+                    </Button>
+                  </>
+                ) : (
+                  <span className="text-[12px] text-lias-faint">{isPending ? 'En attente' : 'Décidée'}</span>
+                )}
+              </TDActions>
+            </TR>
+          );
+        })}
+      </TBody>
+    </Table>
   );
 }

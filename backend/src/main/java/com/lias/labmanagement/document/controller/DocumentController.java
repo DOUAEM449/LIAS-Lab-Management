@@ -1,6 +1,7 @@
 package com.lias.labmanagement.document.controller;
 
 import com.lias.labmanagement.common.enums.DocumentCategory;
+import com.lias.labmanagement.common.storage.FileDownload;
 import com.lias.labmanagement.common.web.ApiResponse;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.document.dto.DocumentMetadataRequest;
@@ -11,9 +12,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,7 +29,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/documents")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
+// CdC §2.2.C: the documentary archive is an internal module — doctorants are
+// limited to publications and have no access to it. Enforced here on the server,
+// and mirrored (never replaced) by INTERNAL_MODULE_ROLES on the frontend.
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN','DIRECTOR','VICE_DIRECTOR','TEAM_LEADER','PERMANENT_MEMBER','ASSOCIATE_MEMBER')")
 @Tag(name = "Documents", description = "Centralized document repository with full version history")
 public class DocumentController {
 
@@ -62,6 +70,29 @@ public class DocumentController {
     @Operation(summary = "List all versions of a document")
     public ApiResponse<List<DocumentVersionResponse>> getVersions(@PathVariable UUID id) {
         return ApiResponse.of(service.getVersions(id));
+    }
+
+    @GetMapping("/{id}/download")
+    @Operation(summary = "Download the current file of a document")
+    public ResponseEntity<Resource> download(@PathVariable UUID id) {
+        return streamed(service.download(id));
+    }
+
+    @GetMapping("/versions/{versionId}/download")
+    @Operation(summary = "Download one specific historical version of a document")
+    public ResponseEntity<Resource> downloadVersion(@PathVariable UUID versionId) {
+        return streamed(service.downloadVersion(versionId));
+    }
+
+    private ResponseEntity<Resource> streamed(FileDownload download) {
+        MediaType type = download.contentType() != null
+                ? MediaType.parseMediaType(download.contentType())
+                : MediaType.APPLICATION_OCTET_STREAM;
+        return ResponseEntity.ok()
+                .contentType(type)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(download.fileName()).build().toString())
+                .body(download.resource());
     }
 
     @PutMapping("/{id}")

@@ -68,6 +68,11 @@ app:
   file-storage:
     base-dir: ${FILE_STORAGE_DIR:./uploads}
     max-size-mb: 25
+  reports:
+    # CdC 2.11 - automatic yearly generation of the activity report.
+    # Runs on 1 January at 02:00 and closes the previous (now final) calendar year.
+    annual-cron: ${REPORTS_ANNUAL_CRON:0 0 2 1 1 *}
+    annual-zone: ${REPORTS_ANNUAL_ZONE:Africa/Casablanca}
   frontend:
     base-url: ${FRONTEND_URL:http://localhost:5173}
   mail:

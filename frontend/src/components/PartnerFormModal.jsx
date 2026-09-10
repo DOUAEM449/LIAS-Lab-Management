@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Upload, FileText, Trash2, Plus } from 'lucide-react';
+import { Upload, FileText, Trash2, Plus, FileSignature } from 'lucide-react';
 import Modal from './Modal';
-import { TextField, FileField } from './FormField';
+import Button, { IconButton } from './ui/Button';
+import Badge from './ui/Badge';
+import { TextField, TextAreaField, FileField, FieldRow } from './FormField';
 import {
   createPartner,
   updatePartner,
@@ -20,6 +22,7 @@ function friendlyError(err, fallback) {
   return err.response?.data?.message || fallback;
 }
 
+/** Partner record plus its conventions and archived contractual documents (CdC §2.16). */
 export default function PartnerFormModal({ open, partner, onClose, onSaved, toast }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -29,6 +32,7 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
   const [agreementForm, setAgreementForm] = useState(EMPTY_AGREEMENT);
   const [addingAgreement, setAddingAgreement] = useState(false);
   const [agreementDocFiles, setAgreementDocFiles] = useState({});
+  const [uploadingDocId, setUploadingDocId] = useState(null);
 
   const isEdit = Boolean(partner);
 
@@ -70,7 +74,7 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
       if (logoFile) {
         saved = await uploadPartnerLogo(saved.id, logoFile);
       }
-      toast.success(isEdit ? 'Partenaire mis à jour.' : 'Partenaire créé.');
+      toast.success(isEdit ? 'Partenaire mis à jour.' : 'Partenaire enregistré.');
       onSaved(saved);
       onClose();
     } catch (err) {
@@ -92,8 +96,7 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
         startDate: agreementForm.startDate || undefined,
         endDate: agreementForm.endDate || undefined,
       });
-      const refreshed = await listAgreementsByPartner(partner.id);
-      setAgreements(refreshed);
+      setAgreements(await listAgreementsByPartner(partner.id));
       setAgreementForm(EMPTY_AGREEMENT);
       toast.success('Convention ajoutée.');
     } catch (err) {
@@ -107,7 +110,7 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
     try {
       await deleteAgreement(agreementId);
       setAgreements((prev) => prev.filter((a) => a.id !== agreementId));
-      toast.success('Convention supprimée.');
+      toast.success('Convention archivée.');
     } catch (err) {
       toast.error(friendlyError(err, 'Échec de la suppression'));
     }
@@ -116,14 +119,16 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
   async function handleUploadAgreementDoc(agreementId) {
     const file = agreementDocFiles[agreementId];
     if (!file) return;
+    setUploadingDocId(agreementId);
     try {
       await uploadAgreementDocument(agreementId, file);
-      const refreshed = await listAgreementsByPartner(partner.id);
-      setAgreements(refreshed);
+      setAgreements(await listAgreementsByPartner(partner.id));
       setAgreementDocFiles((prev) => ({ ...prev, [agreementId]: null }));
-      toast.success('Document téléversé.');
+      toast.success('Document contractuel archivé.');
     } catch (err) {
       toast.error(friendlyError(err, 'Échec du téléversement'));
+    } finally {
+      setUploadingDocId(null);
     }
   }
 
@@ -132,19 +137,21 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
       open={open}
       onClose={onClose}
       maxWidth="max-w-xl"
-      title={isEdit ? 'Modifier le partenaire' : 'Nouveau partenaire'}
+      title={isEdit ? 'Fiche du partenaire' : 'Nouveau partenaire'}
+      subtitle={isEdit ? 'Coordonnées, conventions et documents contractuels' : 'Collaboration académique ou industrielle'}
     >
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Nom"
+          label="Nom du partenaire"
           required
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Université, entreprise, institution..."
         />
-        <div className="grid grid-cols-2 gap-x-4">
+        <FieldRow>
           <TextField
-            label="Type"
-            placeholder="Industriel, académique..."
+            label="Type de partenaire"
+            placeholder="Académique, industriel, institutionnel..."
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
           />
@@ -153,109 +160,136 @@ export default function PartnerFormModal({ open, partner, onClose, onSaved, toas
             value={form.country}
             onChange={(e) => setForm({ ...form, country: e.target.value })}
           />
-        </div>
-        <TextField
-          label="Contact"
+        </FieldRow>
+        <TextAreaField
+          label="Coordonnées de contact"
+          rows={2}
           value={form.contactInfo}
           onChange={(e) => setForm({ ...form, contactInfo: e.target.value })}
+          placeholder="Personne référente, email, téléphone..."
         />
-        <FileField label="Logo" accept="image/*" onChange={(e) => setLogoFile(e.target.files[0])} />
+        <FileField
+          label="Logo du partenaire"
+          accept="image/*"
+          onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+        />
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-lias-blue text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-        >
-          {saving && <Loader2 size={15} className="animate-spin" />}
-          {isEdit ? 'Enregistrer' : 'Créer le partenaire'}
-        </button>
+        <div className="flex gap-3 mt-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+            Fermer
+          </Button>
+          <Button type="submit" className="flex-1" loading={saving}>
+            {isEdit ? 'Enregistrer' : 'Créer le partenaire'}
+          </Button>
+        </div>
       </form>
 
       {isEdit && (
-        <div className="border-t border-lias-border-light mt-5 pt-4">
-          <div className="text-xs font-semibold text-lias-muted uppercase tracking-wide mb-3">
-            Conventions & accords
+        <div className="border-t border-lias-border-light mt-6 pt-5">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-lias-faint flex items-center gap-1.5">
+              <FileSignature size={12} />
+              Conventions & accords
+            </span>
+            <Badge tone={agreements.length > 0 ? 'success' : 'neutral'} size="sm">
+              {agreements.length}
+            </Badge>
           </div>
 
           {agreements.length > 0 && (
-            <ul className="list-none p-0 m-0 mb-4 space-y-3">
+            <ul className="list-none p-0 m-0 mb-5 flex flex-col gap-2.5">
               {agreements.map((a) => (
-                <li key={a.id} className="border border-lias-border-light rounded-lg p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-medium text-lias-ink">{a.title}</div>
+                <li key={a.id} className="border border-lias-border-light rounded-lg p-3.5 bg-lias-surface-muted/40">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-lias-ink">{a.title}</div>
+                      {a.description && (
+                        <p className="text-[12px] text-lias-muted mt-1 mb-0 leading-snug">{a.description}</p>
+                      )}
                       {(a.startDate || a.endDate) && (
-                        <div className="text-xs text-lias-muted mt-0.5">
+                        <div className="text-[11.5px] text-lias-faint font-mono mt-1.5">
                           {a.startDate || '?'} → {a.endDate || 'en cours'}
                         </div>
                       )}
+
                       {a.documentOriginalName ? (
-                        <div className="flex items-center gap-1.5 text-xs text-lias-ink mt-1">
-                          <FileText size={12} /> {a.documentOriginalName}
+                        <div className="flex items-center gap-1.5 text-[12px] text-lias-ink mt-2.5">
+                          <FileText size={12} className="text-lias-faint" />
+                          {a.documentOriginalName}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-3">
                           <input
                             type="file"
                             onChange={(e) =>
-                              setAgreementDocFiles((prev) => ({ ...prev, [a.id]: e.target.files[0] }))
+                              setAgreementDocFiles((prev) => ({ ...prev, [a.id]: e.target.files?.[0] ?? null }))
                             }
-                            className="text-xs"
+                            className="text-[11.5px] max-w-[190px]
+                              file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px]
+                              file:font-semibold file:bg-lias-blue-tint-solid file:text-lias-blue-dark file:cursor-pointer"
                           />
-                          <button
+                          <Button
                             type="button"
+                            size="sm"
+                            variant="secondary"
+                            icon={Upload}
+                            disabled={!agreementDocFiles[a.id]}
+                            loading={uploadingDocId === a.id}
                             onClick={() => handleUploadAgreementDoc(a.id)}
-                            className="text-xs bg-white border border-lias-border rounded px-2 py-1 cursor-pointer flex items-center gap-1"
                           >
-                            <Upload size={11} /> Téléverser
-                          </button>
+                            Archiver
+                          </Button>
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={Trash2}
+                      label="Archiver la convention"
+                      variant="danger"
                       onClick={() => handleDeleteAgreement(a.id)}
-                      className="text-rose-600 bg-transparent border-none cursor-pointer p-1"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    />
                   </div>
                 </li>
               ))}
             </ul>
           )}
 
-          <form onSubmit={handleAddAgreement} className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-            <TextField
-              label="Titre de la convention"
-              value={agreementForm.title}
-              onChange={(e) => setAgreementForm({ ...agreementForm, title: e.target.value })}
-            />
-            <TextField
-              label="Description"
-              value={agreementForm.description}
-              onChange={(e) => setAgreementForm({ ...agreementForm, description: e.target.value })}
-            />
-            <TextField
-              label="Date de début"
-              type="date"
-              value={agreementForm.startDate}
-              onChange={(e) => setAgreementForm({ ...agreementForm, startDate: e.target.value })}
-            />
-            <TextField
-              label="Date de fin"
-              type="date"
-              value={agreementForm.endDate}
-              onChange={(e) => setAgreementForm({ ...agreementForm, endDate: e.target.value })}
-            />
-            <button
+          <form onSubmit={handleAddAgreement}>
+            <FieldRow>
+              <TextField
+                label="Titre de la convention"
+                value={agreementForm.title}
+                onChange={(e) => setAgreementForm({ ...agreementForm, title: e.target.value })}
+                placeholder="Ex. Accord-cadre de recherche"
+              />
+              <TextField
+                label="Description"
+                value={agreementForm.description}
+                onChange={(e) => setAgreementForm({ ...agreementForm, description: e.target.value })}
+              />
+              <TextField
+                label="Date de début"
+                type="date"
+                value={agreementForm.startDate}
+                onChange={(e) => setAgreementForm({ ...agreementForm, startDate: e.target.value })}
+              />
+              <TextField
+                label="Date de fin"
+                type="date"
+                value={agreementForm.endDate}
+                onChange={(e) => setAgreementForm({ ...agreementForm, endDate: e.target.value })}
+              />
+            </FieldRow>
+            <Button
               type="submit"
-              disabled={addingAgreement || !agreementForm.title}
-              className="col-span-full bg-white border border-lias-border text-lias-ink rounded-lg py-2 text-sm font-medium cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              variant="secondary"
+              icon={Plus}
+              className="w-full"
+              loading={addingAgreement}
+              disabled={!agreementForm.title}
             >
-              {addingAgreement ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               Ajouter la convention
-            </button>
+            </Button>
           </form>
         </div>
       )}

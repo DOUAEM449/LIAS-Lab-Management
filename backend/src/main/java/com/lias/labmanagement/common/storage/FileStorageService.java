@@ -62,6 +62,30 @@ public class FileStorageService {
         return new StoredFile(storedFileName, originalFileName, file.getContentType(), file.getSize(), relativePath);
     }
 
+    /**
+     * Stores bytes produced by the application itself (rather than uploaded by a
+     * user) using the same date-partitioned layout — e.g. the generated annual
+     * report PDF. {@code fileName} is used as-is, so callers control the name.
+     */
+    public StoredFile storeBytes(byte[] content, String category, String fileName, String contentType) {
+        if (content == null || content.length == 0) {
+            throw new FileStorageException("Generated file content must not be empty");
+        }
+
+        String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String relativePath = Paths.get(category, datePath, fileName).toString().replace("\\", "/");
+        Path targetPath = Paths.get(properties.getBaseDir()).resolve(relativePath).normalize();
+
+        try {
+            Files.createDirectories(targetPath.getParent());
+            Files.write(targetPath, content);
+        } catch (IOException e) {
+            throw new FileStorageException("Failed to store generated file: " + fileName, e);
+        }
+
+        return new StoredFile(fileName, fileName, contentType, content.length, relativePath);
+    }
+
     public Path resolve(String relativePath) {
         return Paths.get(properties.getBaseDir()).resolve(relativePath).normalize();
     }

@@ -10,6 +10,7 @@ import com.lias.labmanagement.equipment.dto.DistributionRequest;
 import com.lias.labmanagement.equipment.dto.DistributionResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentResponse;
 import com.lias.labmanagement.equipment.dto.EquipmentUpsertRequest;
+import com.lias.labmanagement.equipment.dto.NonRecipientResponse;
 import com.lias.labmanagement.equipment.entity.Equipment;
 import com.lias.labmanagement.equipment.entity.EquipmentDistribution;
 import com.lias.labmanagement.equipment.repository.EquipmentDistributionRepository;
@@ -134,6 +135,15 @@ public class EquipmentService {
     @Transactional(readOnly = true)
     public List<DistributionResponse> getDistributionsForMember(UUID memberId) {
         return distributionRepository.findByMemberId(memberId).stream().map(this::toDistributionResponse).toList();
+    }
+
+    /** CdC §2.15 — "qui n'a pas reçu" this equipment item, among active members. */
+    @Transactional(readOnly = true)
+    public List<NonRecipientResponse> getNonRecipients(UUID equipmentId) {
+        findOrThrow(equipmentId); // 404 if the equipment itself doesn't exist
+        return distributionRepository.findMembersWithoutDistribution(equipmentId).stream()
+                .map(m -> new NonRecipientResponse(m.getId(), m.getFirstName() + " " + m.getLastName()))
+                .toList();
     }
 
     private Equipment findOrThrow(UUID id) {

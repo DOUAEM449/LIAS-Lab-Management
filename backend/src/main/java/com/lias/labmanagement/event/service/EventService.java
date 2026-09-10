@@ -3,6 +3,7 @@ package com.lias.labmanagement.event.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.EventType;
+import com.lias.labmanagement.common.enums.NotificationType;
 import com.lias.labmanagement.common.exception.ConflictException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.storage.FileStorageService;
@@ -20,6 +21,7 @@ import com.lias.labmanagement.event.repository.EventParticipantRepository;
 import com.lias.labmanagement.event.repository.EventRepository;
 import com.lias.labmanagement.members.entity.Member;
 import com.lias.labmanagement.members.repository.MemberRepository;
+import com.lias.labmanagement.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +43,7 @@ public class EventService {
     private final MemberRepository memberRepository;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<EventResponse> search(EventType type, String query, Pageable pageable) {
@@ -72,6 +75,24 @@ public class EventService {
                 .build();
         Event saved = eventRepository.save(event);
         replaceOrganizers(saved, request.organizerMemberIds());
+
+        // CdC §2.20 lists "Événements" as a notification trigger: a new scientific event
+        // concerns the whole laboratory, so every active member is informed. The assigned
+        // organizers get a more specific notice about their own responsibility instead.
+        List<UUID> organizerIds = request.organizerMemberIds() != null ? request.organizerMemberIds() : List.of();
+        organizerIds.forEach(memberId ->
+                notificationService.notify(memberId, NotificationType.EVENT_CREATED,
+                        "Vous avez été désigné organisateur de l'événement \"" + saved.getTitle() + "\".",
+                        "Event", saved.getId()));
+
+        memberRepository.findActiveMemberIds().stream()
+                .filter(id -> !organizerIds.contains(id))
+                .forEach(id -> notificationService.notify(id, NotificationType.EVENT_CREATED,
+                        "Nouvel événement : " + saved.getTitle() + " ("
+                                + saved.getType() + ") le "
+                                + saved.getStartDate().toLocalDate() + ".",
+                        "Event", saved.getId()));
+
         auditService.record(AuditAction.CREATE, "Event", saved.getId(), "Event created: " + saved.getTitle());
         return toResponse(saved);
     }

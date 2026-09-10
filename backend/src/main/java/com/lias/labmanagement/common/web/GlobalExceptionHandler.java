@@ -18,6 +18,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
@@ -32,6 +33,15 @@ import java.util.NoSuchElementException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * A request for a static file that is not on disk (typically an avatar whose
+     * file is missing) — answer 404, not the catch-all 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Resource not found", request);
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
@@ -63,8 +73,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, "Invalid email or password", request);
     }
 
+    /**
+     * A {@code @PreAuthorize} denial reaches here as an {@link AccessDeniedException}. When it
+     * happens on an <em>unauthenticated</em> request (anonymous principal) the correct answer is
+     * 401, not 403 — otherwise a caller with no token gets an inconsistent status depending on
+     * whether the filter chain or method security rejected first.
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean anonymous = auth == null
+                || auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken
+                || !auth.isAuthenticated();
+        if (anonymous) {
+            return build(HttpStatus.UNAUTHORIZED, "Authentication is required to access this resource", request);
+        }
         return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request);
     }
 

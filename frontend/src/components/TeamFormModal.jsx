@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import Modal from './Modal';
+import Button from './ui/Button';
 import { TextField, TextAreaField } from './FormField';
 import { createTeam, updateTeam } from '../services/governanceService';
 
 const EMPTY_FORM = { name: '', description: '', creationDate: '' };
 
 function friendlyError(err, fallback) {
+  if (err.response?.status === 409) return 'Une équipe portant ce nom existe déjà.';
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
@@ -48,18 +49,27 @@ export default function TeamFormModal({ open, team, onClose, onSaved, toast }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Modifier l'équipe" : 'Nouvelle équipe'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Modifier l'équipe" : 'Nouvelle équipe de recherche'}
+      subtitle="Le responsable de l'équipe se désigne par un mandat, depuis l'onglet Mandats."
+    >
       <form onSubmit={handleSubmit}>
         <TextField
           label="Nom de l'équipe"
           required
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Ex. Systèmes Intelligents & Données"
         />
         <TextAreaField
-          label="Description"
+          label="Description scientifique"
+          rows={4}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="Thématiques de recherche, positionnement, projets phares..."
+          hint="Ce texte est affiché sur le portail public du laboratoire."
         />
         <TextField
           label="Date de création"
@@ -67,14 +77,15 @@ export default function TeamFormModal({ open, team, onClose, onSaved, toast }) {
           value={form.creationDate}
           onChange={(e) => setForm({ ...form, creationDate: e.target.value })}
         />
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-lias-blue text-white border-none rounded-lg py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-        >
-          {saving && <Loader2 size={15} className="animate-spin" />}
-          {isEdit ? 'Enregistrer' : "Créer l'équipe"}
-        </button>
+
+        <div className="flex gap-3 mt-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" loading={saving}>
+            {isEdit ? 'Enregistrer' : "Créer l'équipe"}
+          </Button>
+        </div>
       </form>
     </Modal>
   );

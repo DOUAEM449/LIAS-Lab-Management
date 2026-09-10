@@ -1,11 +1,16 @@
 package com.lias.labmanagement.report.controller;
 
+import com.lias.labmanagement.common.storage.FileDownload;
 import com.lias.labmanagement.common.web.ApiResponse;
 import com.lias.labmanagement.report.dto.AnnualReportResponse;
 import com.lias.labmanagement.report.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,6 +42,17 @@ public class ReportController {
     @Operation(summary = "Generate the annual report for a given year")
     public ApiResponse<AnnualReportResponse> generate(@PathVariable int year) {
         return ApiResponse.of(service.generate(year), "Annual report generated");
+    }
+
+    @GetMapping("/{year}/pdf")
+    @Operation(summary = "Download the annual activity report as a PDF document")
+    public ResponseEntity<Resource> downloadPdf(@PathVariable int year) {
+        FileDownload download = service.download(year);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + download.fileName() + "\"")
+                .body(download.resource());
     }
 
     @DeleteMapping("/{id}")

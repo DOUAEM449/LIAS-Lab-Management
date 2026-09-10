@@ -1,33 +1,48 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Plus, Search, AlertCircle, Pencil, Trash2, FileText } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import {
+  BookOpen,
+  Plus,
+  Pencil,
+  Trash2,
+  FileText,
+  CalendarRange,
+  Users2,
+  Download,
+} from 'lucide-react';
 import PublicationFormModal from '../components/PublicationFormModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { ToastStack, useToasts } from '../components/Toast';
+import {
+  PageHeader,
+  Card,
+  Toolbar,
+  SearchInput,
+  StatTile,
+  Button,
+  IconButton,
+  Badge,
+  Alert,
+  EmptyState,
+  TableSkeleton,
+  BarChart,
+} from '../components/ui';
 import { searchPublications, deletePublication } from '../services/publicationService';
+import { listTeams } from '../services/governanceService';
+import { MANAGEMENT_ROLES, hasRole } from '../utils/roles';
 
 function friendlyError(err, fallback) {
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
 
-function TableSkeleton() {
-  return (
-    <div className="px-5.5 py-2">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 py-4 border-b border-lias-border-light last:border-b-0">
-          <div className="flex-1 space-y-2">
-            <div className="h-3 w-64 bg-lias-bg rounded animate-pulse" />
-            <div className="h-2.5 w-40 bg-lias-bg rounded animate-pulse" />
-          </div>
-          <div className="h-3 w-14 bg-lias-bg rounded animate-pulse" />
-        </div>
-      ))}
-    </div>
-  );
-}
+/**
+ * CdC §2.12 — gestion des publications.
+ * Ajout par les membres et les doctorants, consultation globale, classement par
+ * auteur, année et équipe.
+ */
+export default function PublicationsPage({ user }) {
+  const canDelete = hasRole(user, MANAGEMENT_ROLES);
 
-export default function PublicationsPage() {
   const [publications, setPublications] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -36,6 +51,8 @@ export default function PublicationsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
+  const [teams, setTeams] = useState([]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -49,14 +66,21 @@ export default function PublicationsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    listTeams()
+      .then(setTeams)
+      .catch(() => setTeams([]));
+  }, []);
+
   const loadPublications = useCallback(() => {
     setLoading(true);
     setError(null);
     searchPublications({
       query: debouncedSearch || undefined,
       year: yearFilter ? Number(yearFilter) : undefined,
+      teamId: teamFilter || undefined,
       page: 0,
-      size: 50,
+      size: 100,
       sort: 'year,desc',
     })
       .then((res) => {
@@ -65,36 +89,36 @@ export default function PublicationsPage() {
       })
       .catch((err) => setError(friendlyError(err, 'Échec du chargement des publications')))
       .finally(() => setLoading(false));
-  }, [debouncedSearch, yearFilter]);
+  }, [debouncedSearch, yearFilter, teamFilter]);
 
   useEffect(() => {
     loadPublications();
   }, [loadPublications]);
 
-  const thisYearCount = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return publications.filter((p) => p.year === currentYear).length;
-  }, [publications]);
+  const currentYear = new Date().getFullYear();
 
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
+  const stats = useMemo(() => {
+    const thisYear = publications.filter((p) => p.year === currentYear).length;
+    const authors = new Set();
+    publications.forEach((p) => p.authors?.forEach((a) => authors.add(a.memberId)));
+    const withPdf = publications.filter((p) => p.pdfOriginalName).length;
+    return { thisYear, authorCount: authors.size, withPdf };
+  }, [publications, currentYear]);
 
-  function openEdit(pub) {
-    setEditing(pub);
-    setFormOpen(true);
-  }
-
-  function handleSaved() {
-    loadPublications();
-  }
+  // Five-year distribution from the rows actually loaded — no fabricated series.
+  const series = useMemo(() => {
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i);
+    return years.map((y) => ({
+      label: String(y),
+      value: publications.filter((p) => p.year === y).length,
+    }));
+  }, [publications, currentYear]);
 
   async function handleDelete() {
     setDeleting(true);
     try {
       await deletePublication(deleteTarget.id);
-      toast.success('Publication supprimée.');
+      toast.success('Publication archivée.');
       setDeleteTarget(null);
       loadPublications();
     } catch (err) {
@@ -108,127 +132,193 @@ export default function PublicationsPage() {
     <div>
       <ToastStack toasts={toast.toasts} onDismiss={toast.dismiss} />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="m-0 text-[22px] font-bold text-lias-navy">Publications Scientifiques</h1>
-          <p className="mt-1.5 mb-0 text-[13.5px] text-lias-muted">
-            Gérez les publications du laboratoire : création, auteurs, PDF.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 shrink-0"
-        >
-          <Plus size={16} />
-          Nouvelle publication
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Production scientifique"
+        title="Publications"
+        description="Répertoire des travaux publiés par les membres et doctorants du laboratoire, classés par auteur, année et équipe de recherche."
+        actions={
+          <Button
+            icon={Plus}
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            Nouvelle publication
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-          <AlertCircle size={16} />
+        <Alert tone="danger" className="mb-5">
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4.5 mb-7">
-        <StatCard label="Total Publications" value={totalElements} icon={BookOpen} loading={loading} />
-        <StatCard label="Cette année" value={thisYearCount} icon={FileText} loading={loading} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <StatTile label="Publications" value={totalElements} icon={BookOpen} loading={loading} />
+        <StatTile label={`Publiées en ${currentYear}`} value={stats.thisYear} icon={CalendarRange} loading={loading} />
+        <StatTile label="Auteurs distincts" value={stats.authorCount} icon={Users2} loading={loading} />
+        <StatTile
+          label="Avec PDF déposé"
+          value={stats.withPdf}
+          hint={
+            publications.length > 0
+              ? `${Math.round((stats.withPdf / publications.length) * 100)}% du corpus`
+              : undefined
+          }
+          icon={FileText}
+          loading={loading}
+        />
       </div>
 
-      <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5.5 py-4 border-b border-lias-border-light">
-          <div className="flex items-center gap-2.5 bg-lias-bg border border-lias-border rounded-lg px-3 py-2 w-full sm:w-72">
-            <Search size={15} className="text-lias-muted shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par titre, mots-clés..."
-              className="border-none outline-none bg-transparent text-[13px] w-full text-lias-ink"
-            />
-          </div>
+      <Card className="mb-5">
+        <div className="px-5.5 py-4 border-b border-lias-border-light">
+          <h2 className="m-0 text-[14.5px] font-semibold text-lias-navy">Répartition sur cinq ans</h2>
+          <p className="m-0 mt-1 text-[12.5px] text-lias-muted">
+            Nombre de publications par année, sur les résultats affichés.
+          </p>
+        </div>
+        <div className="px-5.5 py-5">
+          <BarChart data={series} height={130} emptyLabel="Aucune publication sur les cinq dernières années" />
+        </div>
+      </Card>
+
+      <Card>
+        <Toolbar>
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par titre, mots-clés, DOI..."
+            className="w-full sm:w-80"
+          />
+          <select
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] outline-none bg-lias-surface
+              cursor-pointer hover:border-lias-border-strong focus:border-lias-blue transition-colors duration-150"
+          >
+            <option value="">Toutes les équipes</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
           <input
             type="number"
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
             placeholder="Année"
-            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] w-full sm:w-28 outline-none"
+            className="border border-lias-border rounded-lg px-3 py-2 text-[13px] w-full sm:w-28 outline-none
+              bg-lias-surface hover:border-lias-border-strong focus:border-lias-blue transition-colors duration-150"
           />
-        </div>
+          <div className="sm:ml-auto text-[12.5px] text-lias-muted">
+            {loading ? '—' : `${publications.length} résultat(s)`}
+          </div>
+        </Toolbar>
 
         {loading ? (
-          <TableSkeleton />
+          <TableSkeleton rows={5} columns={3} />
         ) : publications.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-lias-muted text-sm">
-            Aucune publication ne correspond à ces critères.
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            title="Aucune publication"
+            description={
+              debouncedSearch || yearFilter || teamFilter
+                ? 'Aucune publication ne correspond à ces critères.'
+                : "Le répertoire est vide. Ajoutez la première publication du laboratoire."
+            }
+            action={
+              !debouncedSearch && !yearFilter && !teamFilter ? (
+                <Button
+                  icon={Plus}
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  Ajouter une publication
+                </Button>
+              ) : null
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[820px]">
-              <thead>
-                <tr className="bg-lias-bg">
-                  {['Titre', 'Auteurs', 'Équipe', 'Année', ''].map((h, i) => (
-                    <th
-                      key={h + i}
-                      className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                        i === 4 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                      }`}
-                    >
-                      {i === 4 ? 'Actions' : h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {publications.map((p) => (
-                  <tr key={p.id} className="border-t border-lias-border-light">
-                    <td className="px-5.5 py-3.5">
-                      <div className="text-[13px] font-medium text-lias-ink">{p.title}</div>
-                      {p.doi && <div className="text-[11.5px] text-lias-muted font-mono">{p.doi}</div>}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">
-                      {p.authors?.map((a) => a.fullName).join(', ') || '—'}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{p.teamName || '—'}</td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted font-mono">{p.year}</td>
-                    <td className="px-5.5 py-3.5 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="w-8 h-8 rounded-lg border border-lias-border bg-white cursor-pointer flex items-center justify-center text-lias-muted hover:text-lias-blue-dark"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(p)}
-                          className="w-8 h-8 rounded-lg border border-rose-200 bg-white cursor-pointer flex items-center justify-center text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          /* Academic reference list rather than a raw grid — closer to how a
+             laboratory actually presents its bibliography. */
+          <ul className="list-none p-0 m-0">
+            {publications.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-start gap-4 px-5.5 py-4 border-b border-lias-border-light last:border-b-0
+                  hover:bg-lias-surface-muted/50 transition-colors duration-150"
+              >
+                <div className="w-11 shrink-0 text-center pt-0.5">
+                  <div className="text-[15px] font-bold text-lias-blue-dark font-mono leading-none">{p.year}</div>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="m-0 text-[13.5px] font-semibold text-lias-ink leading-snug">{p.title}</h3>
+                  <p className="mt-1 mb-0 text-[12.5px] text-lias-muted">
+                    {p.authors?.map((a) => a.fullName).join(', ') || 'Auteurs non spécifiés'}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {p.teamName && (
+                      <Badge tone="info" size="sm">
+                        {p.teamName}
+                      </Badge>
+                    )}
+                    {p.pdfOriginalName && (
+                      <Badge tone="success" icon={Download} size="sm">
+                        PDF
+                      </Badge>
+                    )}
+                    {p.doi && (
+                      <span className="text-[11.5px] text-lias-faint font-mono truncate">DOI : {p.doi}</span>
+                    )}
+                    {p.keywords && (
+                      <span className="text-[11.5px] text-lias-faint truncate">{p.keywords}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 shrink-0">
+                  <IconButton
+                    icon={Pencil}
+                    label="Modifier"
+                    onClick={() => {
+                      setEditing(p);
+                      setFormOpen(true);
+                    }}
+                  />
+                  {canDelete && (
+                    <IconButton
+                      icon={Trash2}
+                      label="Archiver"
+                      variant="danger"
+                      onClick={() => setDeleteTarget(p)}
+                    />
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </Card>
 
       <PublicationFormModal
         open={formOpen}
         publication={editing}
         onClose={() => setFormOpen(false)}
-        onSaved={handleSaved}
+        onSaved={loadPublications}
         toast={toast}
       />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Supprimer la publication"
-        message={`Voulez-vous vraiment supprimer "${deleteTarget?.title}" ?`}
-        confirmLabel="Supprimer"
+        title="Archiver la publication"
+        message={`« ${deleteTarget?.title} » sera archivée (suppression logique). Le lien avec ses auteurs est conservé.`}
+        confirmLabel="Archiver"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

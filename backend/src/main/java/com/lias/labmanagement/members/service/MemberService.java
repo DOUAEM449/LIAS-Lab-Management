@@ -3,8 +3,12 @@ package com.lias.labmanagement.members.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.MemberStatus;
+import com.lias.labmanagement.common.enums.RoleChangeSource;
+import com.lias.labmanagement.common.enums.RoleName;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.storage.FileStorageService;
+import com.lias.labmanagement.common.storage.StoredFile;
 import com.lias.labmanagement.common.web.PageResponse;
 import com.lias.labmanagement.members.dto.AffiliationHistoryResponse;
 import com.lias.labmanagement.members.dto.ChangeStatusRequest;
@@ -21,31 +25,44 @@ import com.lias.labmanagement.members.mapper.MemberMapper;
 import com.lias.labmanagement.members.repository.AffiliationHistoryRepository;
 import com.lias.labmanagement.members.repository.MemberRepository;
 import com.lias.labmanagement.members.repository.MemberStatusHistoryRepository;
+import com.lias.labmanagement.governance.service.MandateService;
+import com.lias.labmanagement.governance.service.UserRoleSyncService;
+import com.lias.labmanagement.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class MemberService {
 
+    private static final Set<String> ALLOWED_AVATAR_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+
     private final MemberRepository memberRepository;
     private final MemberStatusHistoryRepository statusHistoryRepository;
     private final AffiliationHistoryRepository affiliationHistoryRepository;
     private final MemberMapper mapper;
     private final AuditService auditService;
+    private final FileStorageService fileStorageService;
+    private final MandateService mandateService;
+    private final UserRoleSyncService userRoleSyncService;
 
     @Transactional(readOnly = true)
-    public PageResponse<MemberResponse> search(MemberStatus status, UUID teamId, String search, Pageable pageable) {
+    public PageResponse<MemberResponse> search(MemberStatus status, UUID teamId, String search, Pageable pageable,
+                                                CustomUserDetails currentUser) {
         Page<Member> page = memberRepository.search(status, teamId, search, pageable);
-        return PageResponse.from(page, page.getContent().stream().map(mapper::toResponse).toList());
+        return PageResponse.from(page, page.getContent().stream()
+                .map(m -> redactBirthDateIfNotAuthorized(m, mapper.toResponse(m), currentUser)).toList());
     }
 
     @Transactional(readOnly = true)
@@ -54,9 +71,29 @@ public class MemberService {
         return PageResponse.from(page, page.getContent().stream().map(mapper::toPublicResponse).toList());
     }
 
+    /**
+     * CdC §4.2: birth date is confidential — visible only to the member themselves, or to
+     * SYSTEM_ADMIN/DIRECTOR/VICE_DIRECTOR. Redacted (nulled) for everyone else.
+     */
     @Transactional(readOnly = true)
-    public MemberResponse getById(UUID id) {
-        return mapper.toResponse(findMemberOrThrow(id));
+    public MemberResponse getById(UUID id, CustomUserDetails currentUser) {
+        Member member = findMemberOrThrow(id);
+        return redactBirthDateIfNotAuthorized(member, mapper.toResponse(member), currentUser);
+    }
+
+    private MemberResponse redactBirthDateIfNotAuthorized(Member member, MemberResponse response, CustomUserDetails currentUser) {
+        if (response.birthDate() == null || currentUser == null) {
+            return response;
+        }
+        boolean isSelf = member.getUser() != null && member.getUser().getId().equals(currentUser.getId());
+        boolean isAuthorized = isSelf || PROFILE_ADMIN_ROLES.contains(currentUser.getRole());
+        if (isAuthorized) {
+            return response;
+        }
+        return new MemberResponse(response.id(), response.firstName(), response.lastName(), response.email(),
+                response.photoUrl(), null, response.hireDate(), response.firstAffiliationDate(),
+                response.homeInstitution(), response.homeLaboratory(), response.biography(), response.researchInterests(),
+                response.currentStatus(), response.currentTeamId(), response.currentTeamName(), response.version());
     }
 
     @Transactional(readOnly = true)
@@ -65,14 +102,64 @@ public class MemberService {
                 .orElseThrow(() -> new ResourceNotFoundException("No member profile linked to this account")));
     }
 
+    /** Stored under "public/avatars" so the result lands under the already-public /files/public/** URL space. */
+    @Transactional
+    public MemberResponse uploadAvatar(UUID userId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Uploaded file must not be empty");
+        }
+        if (!ALLOWED_AVATAR_TYPES.contains(file.getContentType())) {
+            throw new BadRequestException("Avatar must be a JPEG, PNG or WEBP image");
+        }
+        Member member = memberRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No member profile linked to this account"));
+
+        StoredFile stored = fileStorageService.store(file, "public/avatars");
+        member.setPhotoUrl("/files/" + stored.relativePath());
+        Member saved = memberRepository.save(member);
+        auditService.record(AuditAction.UPDATE, "Member", saved.getId(), "Avatar updated");
+        return mapper.toResponse(saved);
+    }
+
+    /** Removes the current user's avatar, reverting their profile to the default (no photo). */
+    @Transactional
+    public MemberResponse deleteAvatar(UUID userId) {
+        Member member = memberRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No member profile linked to this account"));
+
+        String previousPhoto = member.getPhotoUrl();
+        member.setPhotoUrl(null);
+        Member saved = memberRepository.save(member);
+
+        if (previousPhoto != null && previousPhoto.startsWith("/files/")) {
+            fileStorageService.delete(previousPhoto.substring("/files/".length()));
+        }
+
+        auditService.record(AuditAction.UPDATE, "Member", saved.getId(), "Avatar removed");
+        return mapper.toResponse(saved);
+    }
+
     @Transactional(readOnly = true)
     public MemberPublicResponse getPublicById(UUID id) {
         return mapper.toPublicResponse(findMemberOrThrow(id));
     }
 
+    private static final Set<RoleName> PROFILE_ADMIN_ROLES =
+            Set.of(RoleName.SYSTEM_ADMIN, RoleName.DIRECTOR, RoleName.VICE_DIRECTOR);
+
+    /**
+     * A member may only edit their own profile. SYSTEM_ADMIN, DIRECTOR and
+     * VICE_DIRECTOR (director in active mandate) may edit any profile.
+     * CdC: "Un membre peut modifier QUE son propre profil."
+     */
     @Transactional
-    public MemberResponse updateProfile(UUID id, MemberUpdateRequest request) {
+    public MemberResponse updateProfile(UUID id, MemberUpdateRequest request, CustomUserDetails currentUser) {
         Member member = findMemberOrThrow(id);
+        boolean isSelf = member.getUser() != null && member.getUser().getId().equals(currentUser.getId());
+        boolean isProfileAdmin = PROFILE_ADMIN_ROLES.contains(currentUser.getRole());
+        if (!isSelf && !isProfileAdmin) {
+            throw new AccessDeniedException("You can only edit your own profile");
+        }
         String oldSnapshot = member.getFirstName() + " " + member.getLastName();
 
         member.setFirstName(request.firstName());
@@ -136,6 +223,14 @@ public class MemberService {
         member.setCurrentStatus(request.newStatus());
         Member saved = memberRepository.save(member);
 
+        // A member frozen (RETIRED) or deactivated (FORMER) must not keep dangling
+        // "active" governance mandates, then recompute their effective role either way
+        // (P0.1/P0.2 — Statut change can also promote/demote independently of Mandate).
+        if (request.newStatus() == MemberStatus.RETIRED || request.newStatus() == MemberStatus.FORMER) {
+            mandateService.endAllActiveMandatesForMember(id, request.effectiveDate());
+        }
+        userRoleSyncService.syncForMember(saved, RoleChangeSource.STATUS_CHANGE);
+
         auditService.record(AuditAction.STATUS_CHANGE, "Member", id, oldStatus, request.newStatus(),
                 "Status changed: " + request.reason());
         return mapper.toResponse(saved);
@@ -163,10 +258,30 @@ public class MemberService {
         affiliationHistoryRepository.save(active);
 
         Member member = findMemberOrThrow(memberId);
-        member.setCurrentStatus(MemberStatus.FORMER);
-        memberRepository.save(member);
+        MemberStatus oldStatus = member.getCurrentStatus();
 
-        auditService.record(AuditAction.STATUS_CHANGE, "Member", memberId,
+        statusHistoryRepository.findByMemberIdOrderByStartDateDesc(memberId).stream()
+                .filter(h -> h.getEndDate() == null)
+                .findFirst()
+                .ifPresent(current -> {
+                    current.setEndDate(request.leaveDate());
+                    statusHistoryRepository.save(current);
+                });
+        statusHistoryRepository.save(MemberStatusHistory.builder()
+                .member(member)
+                .status(MemberStatus.FORMER)
+                .startDate(request.leaveDate())
+                .reason("Member left the laboratory: " + request.reason())
+                .createdAt(Instant.now())
+                .build());
+
+        member.setCurrentStatus(MemberStatus.FORMER);
+        Member saved = memberRepository.save(member);
+
+        mandateService.endAllActiveMandatesForMember(memberId, request.leaveDate());
+        userRoleSyncService.syncForMember(saved, RoleChangeSource.STATUS_CHANGE);
+
+        auditService.record(AuditAction.STATUS_CHANGE, "Member", memberId, oldStatus, MemberStatus.FORMER,
                 "Member left the laboratory: " + request.reason());
     }
 
@@ -182,8 +297,27 @@ public class MemberService {
                 .build();
         affiliationHistoryRepository.save(newPeriod);
 
+        // Close the FORMER/RETIRED status period and reopen a fresh one, symmetrically
+        // with how leave()/changeStatus() close the previous period.
+        statusHistoryRepository.findByMemberIdOrderByStartDateDesc(memberId).stream()
+                .filter(h -> h.getEndDate() == null)
+                .findFirst()
+                .ifPresent(current -> {
+                    current.setEndDate(request.returnDate());
+                    statusHistoryRepository.save(current);
+                });
+        statusHistoryRepository.save(MemberStatusHistory.builder()
+                .member(member)
+                .status(reinstatedStatus)
+                .startDate(request.returnDate())
+                .reason("Member returned to the laboratory")
+                .createdAt(Instant.now())
+                .build());
+
         member.setCurrentStatus(reinstatedStatus);
         memberRepository.save(member);
+
+        userRoleSyncService.syncForMember(member, RoleChangeSource.STATUS_CHANGE);
 
         auditService.record(AuditAction.STATUS_CHANGE, "Member", memberId, "Member returned to the laboratory");
     }

@@ -1,35 +1,55 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Calendar, Plus, AlertCircle, Pencil, Trash2, FileCheck, FileX } from 'lucide-react';
-import StatCard from '../components/StatCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  CalendarClock,
+  Plus,
+  Pencil,
+  Trash2,
+  FileCheck,
+  FileX,
+  ClipboardCheck,
+  MapPin,
+} from 'lucide-react';
 import MeetingFormModal from '../components/MeetingFormModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { ToastStack, useToasts } from '../components/Toast';
+import {
+  PageHeader,
+  Card,
+  Toolbar,
+  SearchInput,
+  StatTile,
+  Tabs,
+  Button,
+  IconButton,
+  Badge,
+  Alert,
+  EmptyState,
+  TableSkeleton,
+  Table,
+  THead,
+  TBody,
+  TR,
+  TD,
+  TDPrimary,
+  TDActions,
+} from '../components/ui';
 import { listMeetings, deleteMeeting } from '../services/meetingService';
+import { EVENT_MEETING_CREATE_ROLES, MANAGEMENT_ROLES, hasRole } from '../utils/roles';
 
 function friendlyError(err, fallback) {
   if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
   return err.response?.data?.message || fallback;
 }
 
-function TableSkeleton() {
-  return (
-    <div className="px-5.5 py-2">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 py-4 border-b border-lias-border-light last:border-b-0">
-          <div className="flex-1 space-y-2">
-            <div className="h-3 w-56 bg-lias-bg rounded animate-pulse" />
-            <div className="h-2.5 w-32 bg-lias-bg rounded animate-pulse" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+export default function ReunionsPage({ user }) {
+  const canManage = hasRole(user, EVENT_MEETING_CREATE_ROLES);
+  const canDelete = hasRole(user, MANAGEMENT_ROLES);
 
-export default function ReunionsPage() {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [when, setWhen] = useState('all');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -41,7 +61,7 @@ export default function ReunionsPage() {
   const loadMeetings = useCallback(() => {
     setLoading(true);
     setError(null);
-    listMeetings()
+    listMeetings({ size: 100 })
       .then((res) => setMeetings(res.content))
       .catch((err) => setError(friendlyError(err, 'Échec du chargement des réunions')))
       .finally(() => setLoading(false));
@@ -51,28 +71,30 @@ export default function ReunionsPage() {
     loadMeetings();
   }, [loadMeetings]);
 
-  const upcomingCount = meetings.filter((m) => new Date(m.meetingDate) > new Date()).length;
+  const now = new Date();
+  const upcomingCount = meetings.filter((m) => new Date(m.meetingDate) > now).length;
   const withMinutesCount = meetings.filter((m) => m.hasMinutes).length;
 
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(meeting) {
-    setEditing(meeting);
-    setFormOpen(true);
-  }
-
-  function handleSaved() {
-    loadMeetings();
-  }
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return meetings.filter((m) => {
+      const matchesSearch =
+        !q ||
+        m.title?.toLowerCase().includes(q) ||
+        m.type?.toLowerCase().includes(q) ||
+        m.location?.toLowerCase().includes(q);
+      const date = new Date(m.meetingDate);
+      const matchesWhen =
+        when === 'all' || (when === 'upcoming' ? date >= now : when === 'past' ? date < now : true);
+      return matchesSearch && matchesWhen;
+    });
+  }, [meetings, search, when]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete() {
     setDeleting(true);
     try {
       await deleteMeeting(deleteTarget.id);
-      toast.success('Réunion supprimée.');
+      toast.success('Réunion archivée.');
       setDeleteTarget(null);
       loadMeetings();
     } catch (err) {
@@ -86,112 +108,197 @@ export default function ReunionsPage() {
     <div>
       <ToastStack toasts={toast.toasts} onDismiss={toast.dismiss} />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="m-0 text-[22px] font-bold text-lias-navy">PV & Réunions</h1>
-          <p className="mt-1.5 mb-0 text-[13.5px] text-lias-muted">
-            Planifiez les réunions internes et archivez leurs procès-verbaux.
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-lias-blue text-white border-none rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 shrink-0"
-        >
-          <Plus size={16} />
-          Nouvelle réunion
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Instances du laboratoire"
+        title="Réunions & procès-verbaux"
+        description="Planification des réunions internes, ordre du jour et archivage des procès-verbaux. Chaque PV reste consultable et téléchargeable dans la durée."
+        actions={
+          canManage && (
+            <Button
+              icon={Plus}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              Nouvelle réunion
+            </Button>
+          )
+        }
+      />
 
       {error && (
-        <div className="mb-5 flex items-center gap-2 bg-lias-danger-bg text-lias-danger-text text-sm rounded-lg px-4 py-3">
-          <AlertCircle size={16} />
+        <Alert tone="danger" className="mb-5">
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4.5 mb-7">
-        <StatCard label="Total Réunions" value={meetings.length} icon={Calendar} loading={loading} />
-        <StatCard label="À venir" value={upcomingCount} icon={Calendar} loading={loading} />
-        <StatCard label="Avec PV archivé" value={withMinutesCount} icon={FileCheck} loading={loading} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatTile label="Réunions enregistrées" value={meetings.length} icon={CalendarClock} loading={loading} />
+        <StatTile
+          label="À venir"
+          value={upcomingCount}
+          hint={upcomingCount > 0 ? 'Prochainement' : 'Aucune réunion programmée'}
+          icon={CalendarClock}
+          loading={loading}
+        />
+        <StatTile
+          label="PV archivés"
+          value={withMinutesCount}
+          hint={
+            meetings.length > 0
+              ? `${Math.round((withMinutesCount / meetings.length) * 100)}% des réunions documentées`
+              : undefined
+          }
+          hintTone={withMinutesCount === meetings.length && meetings.length > 0 ? 'success' : 'warning'}
+          icon={FileCheck}
+          loading={loading}
+        />
       </div>
 
-      <div className="bg-white border border-lias-border rounded-xl overflow-hidden">
+      <Card>
+        <Toolbar>
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher une réunion..."
+            className="w-full sm:w-72"
+          />
+          <Tabs
+            tabs={[
+              { key: 'all', label: 'Toutes' },
+              { key: 'upcoming', label: 'À venir' },
+              { key: 'past', label: 'Passées' },
+            ]}
+            active={when}
+            onChange={setWhen}
+          />
+          <div className="sm:ml-auto text-[12.5px] text-lias-muted">
+            {loading ? '—' : `${visible.length} réunion(s)`}
+          </div>
+        </Toolbar>
+
         {loading ? (
-          <TableSkeleton />
-        ) : meetings.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-lias-muted text-sm">
-            Aucune réunion planifiée.
-          </div>
+          <TableSkeleton rows={5} columns={5} />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={ClipboardCheck}
+            title="Aucune réunion"
+            description={
+              search || when !== 'all'
+                ? 'Aucune réunion ne correspond à ces critères.'
+                : "Planifiez la première réunion interne du laboratoire."
+            }
+            action={
+              canManage && !search ? (
+                <Button
+                  icon={Plus}
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  Planifier une réunion
+                </Button>
+              ) : null
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[760px]">
-              <thead>
-                <tr className="bg-lias-bg">
-                  {['Titre', 'Date', 'Type', 'Lieu', 'PV', ''].map((h, i) => (
-                    <th
-                      key={h + i}
-                      className={`text-[11.5px] font-semibold text-lias-muted uppercase tracking-wider py-3 ${
-                        i === 5 ? 'px-5.5 text-right' : 'px-5.5 text-left'
-                      }`}
-                    >
-                      {i === 5 ? 'Actions' : h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {meetings.map((m) => (
-                  <tr key={m.id} className="border-t border-lias-border-light">
-                    <td className="px-5.5 py-3.5 text-[13px] font-medium text-lias-ink">{m.title}</td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted font-mono">
-                      {new Date(m.meetingDate).toLocaleString('fr-FR')}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{m.type || '—'}</td>
-                    <td className="px-5.5 py-3.5 text-[13px] text-lias-muted">{m.location || '—'}</td>
-                    <td className="px-5.5 py-3.5">
-                      {m.hasMinutes ? (
-                        <FileCheck size={16} className="text-lias-success" />
+          <Table minWidth="min-w-[820px]">
+            <THead
+              columns={[
+                'Réunion',
+                'Date et heure',
+                'Type',
+                'Lieu',
+                'Procès-verbal',
+                { label: 'Actions', align: 'right' },
+              ]}
+            />
+            <TBody>
+              {visible.map((m) => {
+                const date = new Date(m.meetingDate);
+                const isPast = date < now;
+                return (
+                  <TR key={m.id} onClick={canManage ? () => { setEditing(m); setFormOpen(true); } : undefined}>
+                    <TDPrimary
+                      title={m.title}
+                      subtitle={m.agenda ? m.agenda.slice(0, 80) + (m.agenda.length > 80 ? '…' : '') : null}
+                    />
+                    <TD className="text-lias-muted font-mono text-[12.5px]">
+                      {date.toLocaleDateString('fr-FR')}
+                      <span className="block text-[11.5px] text-lias-faint">
+                        {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        {isPast ? ' — passée' : ''}
+                      </span>
+                    </TD>
+                    <TD className="text-lias-muted">{m.type || '—'}</TD>
+                    <TD className="text-lias-muted">
+                      {m.location ? (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin size={12} className="text-lias-faint shrink-0" />
+                          {m.location}
+                        </span>
                       ) : (
-                        <FileX size={16} className="text-lias-muted" />
+                        '—'
                       )}
-                    </td>
-                    <td className="px-5.5 py-3.5 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => openEdit(m)}
-                          className="w-8 h-8 rounded-lg border border-lias-border bg-white cursor-pointer flex items-center justify-center text-lias-muted hover:text-lias-blue-dark"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(m)}
-                          className="w-8 h-8 rounded-lg border border-rose-200 bg-white cursor-pointer flex items-center justify-center text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </TD>
+                    <TD>
+                      {m.hasMinutes ? (
+                        <Badge tone="success" icon={FileCheck} size="sm">
+                          Archivé
+                        </Badge>
+                      ) : (
+                        <Badge tone={isPast ? 'warning' : 'neutral'} icon={FileX} size="sm">
+                          {isPast ? 'À rédiger' : 'En attente'}
+                        </Badge>
+                      )}
+                    </TD>
+                    <TDActions>
+                      {canManage && (
+                        <IconButton
+                          icon={Pencil}
+                          label="Modifier / gérer les PV"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(m);
+                            setFormOpen(true);
+                          }}
+                        />
+                      )}
+                      {canDelete && (
+                        <IconButton
+                          icon={Trash2}
+                          label="Archiver"
+                          variant="danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(m);
+                          }}
+                        />
+                      )}
+                    </TDActions>
+                  </TR>
+                );
+              })}
+            </TBody>
+          </Table>
         )}
-      </div>
+      </Card>
 
       <MeetingFormModal
         open={formOpen}
         meeting={editing}
         onClose={() => setFormOpen(false)}
-        onSaved={handleSaved}
+        onSaved={loadMeetings}
         toast={toast}
       />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Supprimer la réunion"
-        message={`Voulez-vous vraiment supprimer "${deleteTarget?.title}" ?`}
-        confirmLabel="Supprimer"
+        title="Archiver la réunion"
+        message={`« ${deleteTarget?.title} » sera archivée (suppression logique). Les procès-verbaux déjà déposés restent conservés.`}
+        confirmLabel="Archiver"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

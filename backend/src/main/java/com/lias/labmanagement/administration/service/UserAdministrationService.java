@@ -10,9 +10,13 @@ import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.exception.ConflictException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.web.PageResponse;
+import com.lias.labmanagement.governance.service.UserRoleSyncService;
+import com.lias.labmanagement.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,7 @@ public class UserAdministrationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final UserRoleSyncService userRoleSyncService;
 
     @Transactional(readOnly = true)
     public PageResponse<UserAdminResponse> list(Pageable pageable) {
@@ -67,15 +72,30 @@ public class UserAdministrationService {
         return toResponse(saved);
     }
 
+    /**
+     * Direct SYSTEM_ADMIN override of a user's effective role. Still historized like any
+     * other role change (see {@link UserRoleSyncService}). Note: for accounts linked to a
+     * Member profile, this value will be recomputed and may be overwritten the next time
+     * that member's status or mandate changes — it is not a permanent pin, only a
+     * point-in-time correction (e.g. bootstrapping SYSTEM_ADMIN itself, which has no
+     * Member/Mandate counterpart to derive a role from).
+     */
     @Transactional
     public UserAdminResponse updateRole(UUID id, UpdateUserRoleRequest request) {
         User user = getUser(id);
         String oldRole = user.getRole().name();
-        user.setRole(request.role());
-        User saved = userRepository.save(user);
+        userRoleSyncService.overrideRole(user, request.role(), currentActorId());
         auditService.record(AuditAction.ROLE_CHANGE, "User", id,
                 "Role changed from " + oldRole + " to " + request.role());
-        return toResponse(saved);
+        return toResponse(user);
+    }
+
+    private UUID currentActorId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails details) {
+            return details.getId();
+        }
+        return null;
     }
 
     @Transactional

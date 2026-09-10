@@ -24,6 +24,12 @@ export async function listDistributions(equipmentId) {
   return res.data.data;
 }
 
+// GET /api/v1/equipment/{id}/non-recipients -> active members who have NOT received this item
+export async function listNonRecipients(equipmentId) {
+  const res = await api.get(`/equipment/${equipmentId}/non-recipients`);
+  return res.data.data;
+}
+
 export async function distributeEquipment(equipmentId, payload) {
   const res = await api.post(`/equipment/${equipmentId}/distributions`, payload);
   return res.data.data;

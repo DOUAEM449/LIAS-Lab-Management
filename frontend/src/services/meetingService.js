@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadFile } from '../utils/download';
 
 export async function listMeetings({ page = 0, size = 50, sort = 'meetingDate,desc' } = {}) {
   const res = await api.get('/meetings', { params: { page, size, sort } });
@@ -36,4 +37,9 @@ export async function uploadMeetingMinutes(id, file) {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data.data;
+}
+
+/** CdC §2.17 — an archived procès-verbal has to be readable back. */
+export function downloadMeetingMinutes(minutesId, fileName) {
+  return downloadFile(`/meetings/minutes/${minutesId}/download`, fileName);
 }

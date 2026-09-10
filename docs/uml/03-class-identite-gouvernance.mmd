@@ -1,0 +1,143 @@
+%% LIAS - Diagramme de classes (1/4) : Identite, membres et gouvernance
+%% Champs et cardinalites extraits des entites JPA reelles.
+classDiagram
+  class BaseEntity {
+    <<abstract>>
+    +UUID id
+    +Instant createdAt
+    +Instant updatedAt
+    +UUID createdBy
+    +UUID updatedBy
+    +Long version
+    +boolean deleted
+    +Instant deletedAt
+    +markDeleted()
+    +restore()
+  }
+
+  class User {
+    +String email
+    +String passwordHash
+    +RoleName role
+    +boolean enabled
+    +boolean mustChangePassword
+    +Instant lastLoginAt
+    +int failedLoginAttempts
+  }
+
+  class UserRoleHistory {
+    +UUID id
+    +RoleName role
+    +RoleChangeSource source
+    +LocalDate startDate
+    +LocalDate endDate
+    +UUID changedBy
+  }
+
+  class Member {
+    +String firstName
+    +String lastName
+    +String email
+    +String photoUrl
+    +LocalDate birthDate
+    +LocalDate firstAffiliationDate
+    +String homeInstitution
+    +String homeLaboratory
+    +String biography
+    +String researchInterests
+    +MemberStatus currentStatus
+  }
+
+  class MemberStatusHistory {
+    +MemberStatus status
+    +LocalDate startDate
+    +LocalDate endDate
+    +String reason
+  }
+
+  class AffiliationHistory {
+    +LocalDate startDate
+    +LocalDate endDate
+    +String reason
+  }
+
+  class Mandate {
+    +MandateRoleType role
+    +LocalDate startDate
+    +LocalDate endDate
+    +boolean active
+    +isCurrentlyActive() boolean
+  }
+
+  class Team {
+    +String name
+    +String description
+    +LocalDate creationDate
+  }
+
+  class TeamMembershipHistory {
+    +LocalDate startDate
+    +LocalDate endDate
+  }
+
+  class MembershipRequest {
+    +String firstName
+    +String lastName
+    +String email
+    +MemberStatus requestedStatus
+    +String motivationLetter
+    +String cvPath
+    +RequestStatus status
+    +UUID decidedBy
+    +Instant decisionDate
+  }
+
+  class RoleName {
+    <<enumeration>>
+    SYSTEM_ADMIN
+    DIRECTOR
+    VICE_DIRECTOR
+    TEAM_LEADER
+    PERMANENT_MEMBER
+    ASSOCIATE_MEMBER
+    PHD_STUDENT
+    RETIRED_MEMBER
+    FORMER_MEMBER
+  }
+
+  class MemberStatus {
+    <<enumeration>>
+    PERMANENT
+    ASSOCIATE
+    PHD_STUDENT
+    RETIRED
+    FORMER
+  }
+
+  class MandateRoleType {
+    <<enumeration>>
+    DIRECTOR
+    VICE_DIRECTOR
+    TEAM_LEADER
+  }
+
+  BaseEntity <|-- User
+  BaseEntity <|-- Member
+  BaseEntity <|-- Team
+  BaseEntity <|-- MembershipRequest
+
+  User "1" -- "0..1" Member : compte technique
+  User "1" --> "0..*" UserRoleHistory : role effectif historise
+  Member "1" --> "0..*" MemberStatusHistory : STATUT historise
+  Member "1" --> "0..*" AffiliationHistory : periodes d appartenance
+  Member "1" --> "0..*" Mandate : MANDAT historise
+  Member "0..*" --> "0..1" Team : currentTeam
+  Member "1" --> "0..*" TeamMembershipHistory
+  Team "1" --> "0..*" TeamMembershipHistory
+  Team "1" --> "0..*" Mandate : TEAM_LEADER
+  User ..> RoleName
+  Member ..> MemberStatus
+  Mandate ..> MandateRoleType
+  MembershipRequest ..> MemberStatus : requestedStatus
+
+  note for User "RoleName est DERIVE par UserRoleSyncService\na partir de MemberStatus + Mandate actif.\nIl n est jamais saisi a la main."

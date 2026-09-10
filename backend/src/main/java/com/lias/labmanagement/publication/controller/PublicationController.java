@@ -27,13 +27,14 @@ public class PublicationController {
     private final PublicationService service;
 
     @GetMapping
-    @Operation(summary = "Search / list publications (public read access)")
+    @Operation(summary = "Search / list publications (public read access) — filterable by year, team and/or author")
     public ApiResponse<PageResponse<PublicationResponse>> search(
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) UUID teamId,
+            @RequestParam(required = false) UUID authorId,
             @RequestParam(required = false, defaultValue = "") String query,
             @ParameterObject Pageable pageable) {
-        return ApiResponse.of(service.search(year, teamId, query, pageable));
+        return ApiResponse.of(service.search(year, teamId, authorId, query, pageable));
     }
 
     @GetMapping("/{id}")

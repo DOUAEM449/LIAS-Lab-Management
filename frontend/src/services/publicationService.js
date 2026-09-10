@@ -1,9 +1,9 @@
 import api from './api';
 
-// GET /api/v1/publications?year=&teamId=&query=&page=&size=&sort= -> PageResponse<PublicationResponse> (public read)
-export async function searchPublications({ year, teamId, query, page = 0, size = 20, sort } = {}) {
+// GET /api/v1/publications?year=&teamId=&authorId=&query=&page=&size=&sort= -> PageResponse<PublicationResponse> (public read)
+export async function searchPublications({ year, teamId, authorId, query, page = 0, size = 20, sort } = {}) {
   const res = await api.get('/publications', {
-    params: { year, teamId, query, page, size, ...(sort ? { sort } : {}) },
+    params: { year, teamId, authorId, query, page, size, ...(sort ? { sort } : {}) },
   });
   return res.data.data;
 }

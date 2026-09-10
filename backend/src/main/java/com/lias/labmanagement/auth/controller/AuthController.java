@@ -8,6 +8,7 @@ import com.lias.labmanagement.auth.dto.LoginRequest;
 import com.lias.labmanagement.auth.dto.RefreshTokenRequest;
 import com.lias.labmanagement.auth.dto.ResetPasswordRequest;
 import com.lias.labmanagement.auth.service.AuthService;
+import com.lias.labmanagement.common.exception.UnauthorizedException;
 import com.lias.labmanagement.common.web.ApiResponse;
 import com.lias.labmanagement.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,10 +76,16 @@ public class AuthController {
     }
 
     @PostMapping("/me")
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Return the currently authenticated user's identity")
     public ApiResponse<CurrentUserResponse> me(@AuthenticationPrincipal CustomUserDetails user) {
+        // /api/v1/auth/** is permitAll at the filter-chain level (so login/refresh work
+        // without a token); the identity + freeze checks below are done explicitly here
+        // so that an unauthenticated, disabled, RETIRED or FORMER account gets a clean
+        // 401 rather than a 403 from the default @PreAuthorize access-denied handler.
+        if (user == null || !user.isEnabled()) {
+            throw new UnauthorizedException("Your account has been frozen or disabled");
+        }
         return ApiResponse.of(new CurrentUserResponse(user.getId(), user.getUsername(), user.getRole(),
-                false));
+                user.isMustChangePassword(), user.getMemberStatus()));
     }
 }

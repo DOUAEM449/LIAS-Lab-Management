@@ -41,8 +41,8 @@ public class PublicationService {
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
-    public PageResponse<PublicationResponse> search(Integer year, UUID teamId, String query, Pageable pageable) {
-        Page<Publication> page = publicationRepository.search(year, teamId, query, pageable);
+    public PageResponse<PublicationResponse> search(Integer year, UUID teamId, UUID authorId, String query, Pageable pageable) {
+        Page<Publication> page = publicationRepository.search(year, teamId, authorId, query, pageable);
         return PageResponse.from(page, page.getContent().stream().map(this::toResponse).toList());
     }
 

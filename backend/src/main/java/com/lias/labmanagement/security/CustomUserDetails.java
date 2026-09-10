@@ -1,6 +1,7 @@
 package com.lias.labmanagement.security;
 
 import com.lias.labmanagement.auth.entity.User;
+import com.lias.labmanagement.common.enums.MemberStatus;
 import com.lias.labmanagement.common.enums.RoleName;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,13 +25,28 @@ public class CustomUserDetails implements UserDetails {
     private final String password;
     private final RoleName role;
     private final boolean enabled;
+    private final boolean mustChangePassword;
+    /** Denormalized status of the linked Member profile, if any (null for purely technical accounts). */
+    private final MemberStatus memberStatus;
 
     public CustomUserDetails(User user) {
+        this(user, null);
+    }
+
+    public CustomUserDetails(User user, MemberStatus memberStatus) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPasswordHash();
         this.role = user.getRole();
-        this.enabled = user.isEnabled();
+        this.mustChangePassword = user.isMustChangePassword();
+        this.memberStatus = memberStatus;
+        // A RETIRED or FORMER member's account must be treated as frozen/disabled
+        // regardless of the raw users.enabled flag (CdC §8: "Compte gelé"/"Compte désactivé").
+        this.enabled = user.isEnabled() && !isFrozenStatus(memberStatus);
+    }
+
+    private static boolean isFrozenStatus(MemberStatus status) {
+        return status == MemberStatus.RETIRED || status == MemberStatus.FORMER;
     }
 
     @Override

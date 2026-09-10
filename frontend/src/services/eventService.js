@@ -16,6 +16,12 @@ export async function countEventsThisYear() {
   return res.data.data.content.filter((e) => new Date(e.startDate).getFullYear() === currentYear).length;
 }
 
+/** Lightweight { id, title } list for the event pickers (documents, discussions). */
+export async function listEventOptions() {
+  const res = await api.get('/events', { params: { page: 0, size: 200, sort: 'startDate,desc' } });
+  return res.data.data.content.map((e) => ({ id: e.id, title: e.title }));
+}
+
 export async function getEvent(id) {
   const res = await api.get(`/events/${id}`);
   return res.data.data;

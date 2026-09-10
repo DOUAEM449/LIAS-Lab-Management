@@ -10,6 +10,7 @@ import com.lias.labmanagement.members.dto.MemberPublicResponse;
 import com.lias.labmanagement.members.dto.MemberResponse;
 import com.lias.labmanagement.members.dto.MemberStatusHistoryResponse;
 import com.lias.labmanagement.members.dto.MemberUpdateRequest;
+import com.lias.labmanagement.members.dto.ReturnAffiliationRequest;
 import com.lias.labmanagement.members.service.MemberService;
 import com.lias.labmanagement.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -60,15 +62,16 @@ public class MemberController {
             @RequestParam(required = false) MemberStatus status,
             @RequestParam(required = false) UUID teamId,
             @RequestParam(required = false) String search,
-            @ParameterObject Pageable pageable) {
-        return ApiResponse.of(memberService.search(status, teamId, search, pageable));
+            @ParameterObject Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ApiResponse.of(memberService.search(status, teamId, search, pageable, currentUser));
     }
 
     @GetMapping("/api/v1/members/{id}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get full member profile")
-    public ApiResponse<MemberResponse> getById(@PathVariable UUID id) {
-        return ApiResponse.of(memberService.getById(id));
+    public ApiResponse<MemberResponse> getById(@PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ApiResponse.of(memberService.getById(id, currentUser));
     }
 
     @GetMapping("/api/v1/members/me")
@@ -80,9 +83,25 @@ public class MemberController {
 
     @PutMapping("/api/v1/members/{id}")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Update member profile (self-service or admin)")
-    public ApiResponse<MemberResponse> update(@PathVariable UUID id, @Valid @RequestBody MemberUpdateRequest request) {
-        return ApiResponse.of(memberService.updateProfile(id, request), "Profile updated successfully");
+    @Operation(summary = "Update member profile (self-service only, or SYSTEM_ADMIN/DIRECTOR/VICE_DIRECTOR for any member)")
+    public ApiResponse<MemberResponse> update(@PathVariable UUID id, @Valid @RequestBody MemberUpdateRequest request,
+                                               @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ApiResponse.of(memberService.updateProfile(id, request, currentUser), "Profile updated successfully");
+    }
+
+    @PostMapping("/api/v1/members/me/avatar")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Upload/replace the current user's own avatar photo")
+    public ApiResponse<MemberResponse> uploadMyAvatar(@AuthenticationPrincipal CustomUserDetails currentUser,
+                                                        @RequestParam("file") MultipartFile file) {
+        return ApiResponse.of(memberService.uploadAvatar(currentUser.getId(), file), "Avatar updated");
+    }
+
+    @DeleteMapping("/api/v1/members/me/avatar")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Remove the current user's own avatar photo, reverting to the default")
+    public ApiResponse<MemberResponse> deleteMyAvatar(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ApiResponse.of(memberService.deleteAvatar(currentUser.getId()), "Avatar removed");
     }
 
     @DeleteMapping("/api/v1/members/{id}")
@@ -128,5 +147,14 @@ public class MemberController {
     public ApiResponse<Void> leave(@PathVariable UUID id, @Valid @RequestBody LeaveAffiliationRequest request) {
         memberService.leave(id, request);
         return ApiResponse.message("Member marked as having left the laboratory");
+    }
+
+    @PostMapping("/api/v1/members/{id}/return")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN','DIRECTOR')")
+    @Operation(summary = "Reactivate a former/retired member: opens a new affiliation period, keeps all history")
+    public ApiResponse<MemberResponse> returnToLab(@PathVariable UUID id, @Valid @RequestBody ReturnAffiliationRequest request,
+                                                    @AuthenticationPrincipal CustomUserDetails currentUser) {
+        memberService.returnToLab(id, request, request.reinstatedStatus());
+        return ApiResponse.of(memberService.getById(id, currentUser), "Member reactivated");
     }
 }

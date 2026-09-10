@@ -1,0 +1,280 @@
+<title>Planches UML LIAS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+  /* ---------------------------------------------------------------
+     Planches UML LIAS — feuille de dessin technique.
+     Le fond « papier » des planches reste clair dans les deux thèmes :
+     un rendu Mermaid est figé à la génération, et une planche est,
+     par convention, une feuille. Seul l'habillage suit le thème.
+  --------------------------------------------------------------- */
+  :root {
+    color-scheme: light;
+
+    --ink:        #16202f;
+    --ink-soft:   #3a465a;
+    --muted:      #6a7383;
+    --faint:      #949cab;
+
+    --paper:      #f7f7f4;
+    --panel:      #eff0ec;
+    --rule:       #dcdcd4;
+    --rule-soft:  #e8e8e2;
+
+    --blue:       #2d5ca0;
+    --violet:     #6b4c9a;
+    --green:      #2f7d54;
+
+    --grid:       rgba(22, 32, 47, 0.045);
+    --sheet-shadow: rgba(22, 32, 47, 0.05);
+
+    --f-display: 'Archivo', system-ui, sans-serif;
+    --f-body:    'Newsreader', Georgia, serif;
+    --f-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ink:       #eef1f6;
+      --ink-soft:  #c3cad6;
+      --muted:     #97a0b0;
+      --faint:     #6f7889;
+      --paper:     #12181f;
+      --panel:     #1a222c;
+      --rule:      #2b3541;
+      --rule-soft: #212a35;
+      --blue:      #7ea6de;
+      --violet:    #a98fd6;
+      --green:     #6fbd90;
+      --grid:      rgba(238, 241, 246, 0.05);
+      --sheet-shadow: rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ink:       #eef1f6;
+    --ink-soft:  #c3cad6;
+    --muted:     #97a0b0;
+    --faint:     #6f7889;
+    --paper:     #12181f;
+    --panel:     #1a222c;
+    --rule:      #2b3541;
+    --rule-soft: #212a35;
+    --blue:      #7ea6de;
+    --violet:    #a98fd6;
+    --green:     #6fbd90;
+    --grid:      rgba(238, 241, 246, 0.05);
+    --sheet-shadow: rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+  a { color: var(--blue); }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 3px; }
+
+  /* ------------------------------ Masthead ------------------------------ */
+  .masthead {
+    padding: 56px 0 32px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 40px;
+  }
+  .mast-eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .masthead h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.5vw, 54px);
+    letter-spacing: -0.028em;
+    line-height: 1.02;
+    text-wrap: balance;
+    margin: 0 0 18px;
+  }
+  .mast-lede {
+    max-width: 62ch;
+    font-size: 17px;
+    color: var(--ink-soft);
+    margin: 0 0 26px;
+  }
+  .mast-facts {
+    display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-family: var(--f-mono); font-size: 11.5px; color: var(--muted);
+  }
+  .mast-facts b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ------------------------------- Legend ------------------------------- */
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule); border-radius: 3px;
+    margin-bottom: 44px; overflow: hidden;
+  }
+  .legend-cell { background: var(--paper); padding: 18px 20px; }
+  .legend-term {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--f-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px;
+    color: var(--ink);
+  }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+  .sw-status { background: var(--green); }
+  .sw-role   { background: var(--blue); }
+  .sw-mandat { background: var(--violet); }
+  .legend-cell p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-soft); }
+  .legend-cell.is-note { background: var(--panel); }
+  .legend-cell.is-note p { color: var(--muted); font-size: 13.5px; }
+
+  /* ------------------------------- Index -------------------------------- */
+  .index { margin-bottom: 56px; }
+  .index h2 {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  }
+  .idx-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2px; }
+  .idx-item {
+    display: grid; grid-template-columns: auto 1fr; column-gap: 12px;
+    align-items: baseline; padding: 11px 12px; border-radius: 3px;
+    text-decoration: none; color: inherit;
+    transition: background-color 140ms ease;
+  }
+  .idx-item:hover { background: var(--panel); }
+  .idx-fig {
+    grid-row: 1 / 3; font-family: var(--f-mono); font-size: 15px; font-weight: 700;
+    color: var(--blue); font-variant-numeric: tabular-nums;
+  }
+  .idx-name { font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .idx-kind { font-size: 12.5px; color: var(--muted); }
+
+  /* ------------------------------- Plates ------------------------------- */
+  .plate { margin-bottom: 68px; scroll-margin-top: 24px; }
+
+  .titleblock { border-top: 1px solid var(--ink); padding-top: 16px; margin-bottom: 20px; }
+  .tb-id { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+  .tb-fig {
+    font-family: var(--f-mono); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; color: var(--blue); font-variant-numeric: tabular-nums;
+  }
+  .tb-kind {
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .tb-title {
+    font-family: var(--f-display); font-weight: 700;
+    font-size: clamp(22px, 3vw, 29px); letter-spacing: -0.022em;
+    line-height: 1.12; text-wrap: balance; margin: 0 0 10px;
+  }
+  .tb-shows { max-width: 68ch; margin: 0; font-size: 16px; color: var(--ink-soft); }
+
+  /* La planche reste claire dans les deux thèmes (voir en-tête du fichier). */
+  .sheet {
+    background: #ffffff;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 26px 20px;
+    overflow-x: auto;
+    box-shadow: 0 1px 2px var(--sheet-shadow);
+  }
+  .sheet .mermaid { margin: 0; text-align: center; min-width: min-content; }
+  .sheet .mermaid svg { max-width: 100%; height: auto; }
+
+  .tb-meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px; margin: 18px 0 0;
+    padding-top: 16px; border-top: 1px solid var(--rule-soft);
+  }
+  .tb-meta dt {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+    margin-bottom: 5px;
+  }
+  .tb-meta dd { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  .tb-meta dd.mono { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); word-break: break-word; }
+
+  /* ------------------------------- Colophon ----------------------------- */
+  .colophon {
+    border-top: 2px solid var(--ink); padding-top: 24px; margin-top: 24px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px;
+  }
+  .colophon h3 {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px;
+  }
+  .colophon p, .colophon li { font-size: 14px; color: var(--ink-soft); margin: 0 0 8px; }
+  .colophon ul { margin: 0; padding-left: 18px; }
+  .colophon code {
+    font-family: var(--f-mono); font-size: 12px;
+    background: var(--panel); padding: 1px 5px; border-radius: 3px; color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="mast-eyebrow">Faculté des Sciences Ben M'Sik — Université Hassan II de Casablanca</p>
+    <h1>Planches UML<br>du système LIAS</h1>
+    <p class="mast-lede">
+      Huit planches produites à partir du code livré — entités JPA, annotations de sécurité,
+      migrations Flyway et services métier — et non d'une modélisation préalable. Chaque planche
+      indique de quels fichiers elle est dérivée et où la placer dans le rapport et la présentation.
+    </p>
+    <div class="mast-facts">
+      <span><b>Projet</b> Plateforme de gestion du laboratoire LIAS</span>
+      <span><b>Pile</b> Spring Boot 3.3 · Java 21 · React 19 · PostgreSQL</span>
+      <span><b>Notation</b> UML 2, rendu Mermaid</span>
+    </div>
+  </header>
+
+  <section class="legend" aria-label="Convention de couleurs">
+    <div class="legend-cell">
+      <span class="legend-term"><span class="swatch sw-status"></span>Statut</span>
+      <p>Catégorie d'appartenance au laboratoire : permanent, associé, doctorant, retraité, ancien membre. Évolue lentement, toujours historisée.</p>
+    </div>
+    <div class="legend-cell">
+      <span class="legend-term"><span class="swatch sw-mandat"></span>Mandat</span>
+      <p>Responsabilité de gouvernance datée — directeur, vice-directeur, chef d'équipe. Un seul titulaire actif à la fois par responsabilité.</p>
+    </div>
+    <div class="legend-cell">
+      <span class="legend-term"><span class="swatch sw-role"></span>Rôle</span>
+      <p>Permissions effectives lues par Spring Security. <em>Dérivées</em> du statut et du mandat, jamais saisies manuellement.</p>
+    </div>
+    <div class="legend-cell is-note">
+      <p>Cette distinction est la règle métier structurante du cahier des charges. Les planches 03, 07 et 08 sont celles qui la démontrent.</p>
+    </div>
+  </section>
+
+  <nav class="index" aria-label="Index des planches">
+    <h2>Index des planches</h2>
+    <div class="idx-list">
+          <!--INDEX-->
+    </div>
+  </nav>

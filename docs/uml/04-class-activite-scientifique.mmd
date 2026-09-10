@@ -1,0 +1,82 @@
+%% LIAS - Diagramme de classes (2/4) : Activite scientifique
+%% Evenements, reunions, publications, discussions.
+classDiagram
+  class Event {
+    +EventType type
+    +String title
+    +String description
+    +Integer editionNumber
+    +LocalDateTime startDate
+    +LocalDateTime endDate
+    +String location
+    +String bannerImagePath
+  }
+  class EventOrganizer { +UUID id }
+  class EventParticipant { +Instant registeredAt }
+
+  class Meeting {
+    +String title
+    +LocalDateTime meetingDate
+    +String agenda
+    +String type
+    +String location
+  }
+  class MeetingMinutes {
+    +String filePath
+    +String originalFileName
+    +UUID uploadedBy
+    +Instant uploadedAt
+  }
+
+  class Publication {
+    +String title
+    +String abstractText
+    +String keywords
+    +int year
+    +String doi
+    +String pdfPath
+  }
+  class PublicationAuthor { +int authorOrder }
+
+  class Discussion {
+    +String title
+    +DiscussionScope scope
+  }
+  class Message {
+    +String content
+    +Instant timestamp
+  }
+
+  class Member
+  class Team
+
+  class EventType {
+    <<enumeration>>
+    CONFERENCE
+    WORKSHOP
+    SEMINAR
+  }
+  class DiscussionScope {
+    <<enumeration>>
+    GLOBAL
+    TEAM
+    EVENT
+  }
+
+  Event "1" --> "0..*" EventOrganizer
+  Event "1" --> "0..*" EventParticipant
+  Member "1" --> "0..*" EventOrganizer
+  Member "1" --> "0..*" EventParticipant
+  Meeting "1" --> "0..*" MeetingMinutes
+  Publication "1" --> "1..*" PublicationAuthor
+  Member "1" --> "0..*" PublicationAuthor
+  Publication "0..*" --> "0..1" Team
+  Discussion "1" --> "0..*" Message
+  Member "1" --> "0..*" Message : sender
+  Member "1" --> "0..*" Discussion : createdByMember
+  Discussion "0..*" --> "0..1" Team : scope TEAM
+  Discussion "0..*" --> "0..1" Event : scope EVENT
+  Event ..> EventType
+  Discussion ..> DiscussionScope
+
+  note for Event "editionNumber permet d archiver\nles editions successives d un meme evenement."

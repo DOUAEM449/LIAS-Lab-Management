@@ -1,0 +1,26 @@
+# --- Build output -------------------------------------------------------------
+backend/target/
+frontend/dist/
+
+# --- Dependencies -----------------------------------------------------------
+node_modules/
+
+# --- Runtime uploads (user-generated binaries, regenerated at runtime) --------
+/uploads/
+backend/uploads/
+
+# --- Logs -------------------------------------------------------------------
+*.log
+npm-debug.log*
+
+# --- Local environment / secrets ------------------------------------------
+.env
+.env.local
+*.local
+
+# --- IDE / OS -------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

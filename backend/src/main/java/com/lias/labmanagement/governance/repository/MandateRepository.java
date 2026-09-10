@@ -17,4 +17,6 @@ public interface MandateRepository extends JpaRepository<Mandate, UUID> {
     Optional<Mandate> findByRoleAndTeamIdAndActiveTrueAndEndDateIsNull(MandateRoleType role, UUID teamId);
 
     List<Mandate> findByActiveTrueAndEndDateIsNull();
+
+    List<Mandate> findByMemberIdAndActiveTrueAndEndDateIsNull(UUID memberId);
 }
