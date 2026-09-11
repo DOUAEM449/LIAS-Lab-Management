@@ -72,7 +72,7 @@ Legend: ✅ implemented & verified · ⚪ no dedicated automated test (covered b
 | **Authorization** | `@EnableMethodSecurity` + `@PreAuthorize` per endpoint. Full matrix (anonymous→401, wrong-role→403, allowed→success, public→open) checked for the 9 roles, both live and in `AuthorizationMatrixTest`. Frontend route guards + in-page gating mirror the backend (incl. the VICE_DIRECTOR / governance-structure fix from the previous pass). |
 | **Role / mandate synchronization** | `User.role` is derived (`UserRoleSyncService`), never hand-set except `ADMIN_OVERRIDE`. Startup `UserRoleReconciliationRunner` = idempotent (log: "all accounts already consistent"). **0 role drift** across all active members. `douaamoussaoui2@gmail.com` = ASSOCIATE / ASSOCIATE_MEMBER / no mandate — confirmed after restart. |
 | **Secrets (code)** | ✅ No credential in tracked source. All via env vars (`DB_*`, `MAIL_*`, `JWT_SECRET`, `FILE_STORAGE_DIR`). |
-| **Secrets (Git history)** | ⚠️ **Neon credentials are in history** (commit `85ae166` onward, on `origin/main`). Removing them from the current commit does **not** purge history. Rotation + `git filter-repo`/BFG procedure in `SECURITY.md` — **must be done by the owner** (needs Neon console access + a force-push). |
+| **Secrets (Git history)** | Old Neon credentials remain in history (commit `85ae166` onward, 8 commits, on `origin/main`) — but the password was **rotated on 2026-09-11** and verified revoked, so it is a **dead credential**. Purging history is optional hygiene before publishing/archiving the repo; procedure in `SECURITY.md`. |
 | **Audit trail** | Every sensitive action recorded via `AuditService` (`REQUIRES_NEW`). LOGIN rows now name the actor (previous-pass fix). |
 | **Error responses** | Filter-layer 401/403 bodies fixed (this pass). `@PreAuthorize` denials → clean 403 via `@RestControllerAdvice`. Malformed params → 400 (previous-pass fix, now regression-locked). |
 
@@ -115,10 +115,14 @@ Coverage: not measured (no JaCoCo configured). The suites target the CdC-critica
 
 ## 6. Remaining issues
 
-### P0 — blocking for a *production-clean* state (not for the demo)
-- **Rotate the Neon `neondb_owner` password and purge Git history.** The credentials are public in `origin/main` history. Procedure in `SECURITY.md`. Requires the owner's Neon console access and a force-push; **cannot be done from here**. The demo itself is unaffected (the DB still works).
+### P0 — none
+
+The previous P0 (exposed Neon credentials) is **closed**: the password was rotated
+by the owner on 2026-09-11 and verified from this repository — the new credential
+connects, the old one is rejected. No blocking item remains.
 
 ### P1 — important
+- **Purge the dead credential from Git history** (optional but recommended before the repo is made public or archived). Destructive rewrite + force-push; procedure in `SECURITY.md`. Not urgent: the value no longer opens anything.
 - **`test.notif.audit@example.com`** is an *active* test member (ASSOCIATE). Kept, per the "don't delete real/demo data" rule — but you may want to archive it before the defence so it doesn't show in member lists. One click (archive) in the Members page, or `UPDATE members SET deleted=true WHERE email='test.notif.audit@example.com';`.
 - **6 soft-deleted `*@test.invalid` accounts** from the earlier audit remain in `users` (`deleted=true`). They are invisible to every query/screen and cannot log in. A hard purge also needs 6 `audit_logs` rows removed (FK), so it is left to you — SQL in §"Commands for you to run".
 
@@ -140,16 +144,14 @@ Coverage: not measured (no JaCoCo configured). The suites target the CdC-critica
 |---|---|---|
 | **READY FOR REPORT** | ✅ YES | All CdC modules implemented and verified; UML faithful to the code; 48 tests green; realistic completion ~95 % with the remaining items documented and classified. |
 | **READY FOR PRESENTATION (PPT)** | ✅ YES | The STATUT ≠ RÔLE ≠ MANDAT story, the governance/authorization matrix, the reconciliation mechanism and the architecture are all demonstrable and backed by tests and diagrams. |
-| **READY FOR DEMO** | ✅ YES | Full click-through works for every role with no broken buttons, wrong permissions or dead links (previous E2E pass); builds green; live smoke green. **Caveat:** rotate the Neon password before showing the repo publicly — the demo runs fine regardless. |
+| **READY FOR DEMO** | ✅ YES | Full click-through works for every role with no broken buttons, wrong permissions or dead links (previous E2E pass); builds green; live smoke green; the app runs on the rotated database credential. No caveat. |
 
 ---
 
 ## Commands for you to run (need your credentials / a force-push)
 
-**1. Rotate the exposed DB password** (Neon console → Roles → reset `neondb_owner`), then update `backend/.env`:
-```
-DB_PASSWORD=<new-value>
-```
+**1. Rotate the exposed DB password** — ✅ **DONE (2026-09-11).** Verified: the new
+credential in `backend/.env` connects, the old one is rejected. Nothing left to do.
 
 **2. Purge the secret from Git history** — see `SECURITY.md` for the full
 `git filter-repo` / BFG recipe (fill the placeholders with the old values from the

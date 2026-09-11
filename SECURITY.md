@@ -19,26 +19,39 @@ Template: [`backend/.env.example`](backend/.env.example).
 In CI / production, set them as real environment variables — `backend/.env` is
 absent there and `optional:` makes that a no-op.
 
-## ⚠️ Credentials previously committed to Git history
+## Credentials previously committed to Git history
 
 The Neon PostgreSQL host/user/password and a Gmail address were committed in
 `backend/src/main/resources/application-dev.yml`.
 
 - **Introduced in:** commit `85ae166` *("feat(config): integrate Neon Cloud PostgreSQL database with Flyway migration")*
-- **Also present in:** every commit after it on `main` and on `feat/finalisation-audit` (the file kept the values until this change).
+- **Files affected in history:** `backend/src/main/resources/application-dev.yml`
+  and its build copy `backend/target/classes/application-dev.yml` (the latter was
+  untracked in `bb0ed99`).
+- **Reach:** 8 commits carry the value; refs `main`, `origin/main`,
+  `feat/finalisation-audit`, tag `audit-rollback-point`, plus two local
+  `claude/lias-*` worktree branches.
 - **Published:** yes — those commits are on `origin/main`.
 
-Removing the values from the current commit (done) **does not** remove them from
-history. Two manual actions are required, in this order:
+### 1. Rotate the exposed credentials — ✅ DONE (2026-09-11)
 
-### 1. Rotate the exposed credentials (do this first — the old values are already public)
+The Neon password was rotated by the project owner. Verified from this repo:
+the **new** credential in `backend/.env` connects successfully, and the **old**
+credential is rejected with `password authentication failed`. The value still
+present in Git history is therefore a **dead credential**.
 
-- **Neon:** dashboard → project → *Roles* → reset the password for `neondb_owner`
-  (or create a new role and drop the old one). Update `DB_PASSWORD` in `backend/.env`.
-- **Gmail:** if an App Password was ever used for `MAIL_PASSWORD`, revoke it at
-  <https://myaccount.google.com/apppasswords> and issue a new one.
+Remaining, if ever used: a Gmail App Password for `MAIL_PASSWORD` should be
+revoked at <https://myaccount.google.com/apppasswords> (currently empty, so
+nothing to revoke).
 
-### 2. Purge the values from Git history (destructive — rewrites commit hashes)
+### 2. Purge the values from Git history — OPTIONAL hygiene (destructive)
+
+Now that the password is revoked, this is **no longer an active exposure**; what
+remains public in history is a dead password plus the Neon hostname and the
+default `*_owner` role name. Purging is still recommended before making the
+repository public or archiving it, but it is not blocking.
+
+Destructive — rewrites commit hashes:
 
 Requires a force-push and every collaborator to re-clone or hard-reset. **Not run
 automatically.**
