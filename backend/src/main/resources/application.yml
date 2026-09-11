@@ -2,6 +2,11 @@ spring:
   application:
     name: lab-management
 
+  # Load local secrets/overrides from backend/.env (KEY=value, git-ignored) when present.
+  # Nothing breaks in CI / prod where the file is absent and real env vars are used instead.
+  config:
+    import: optional:file:.env[.properties]
+
   profiles:
     active: dev
 

@@ -1,0 +1,44 @@
+# Test profile — fully isolated: in-memory H2, no Flyway, schema from entities.
+# Never touches the real (Neon) database or the local backend/.env file
+# (the .env import is switched off with `spring.config.import: ""`).
+#
+# NON_KEYWORDS=YEAR,VALUE,... : some entity columns ("year" on publications,
+# "read" on notifications) are reserved words in H2 but not in PostgreSQL,
+# where the app actually runs. Un-reserving them keeps the generated schema valid.
+spring:
+  config:
+    import: ""
+  datasource:
+    url: jdbc:h2:mem:lias;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;NON_KEYWORDS=YEAR,VALUE,KEY,READ,MONTH,DAY,HOUR,MINUTE,SECOND,USER,LANGUAGE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    show-sql: false
+  flyway:
+    enabled: false
+  mail:
+    host: localhost
+    port: 3025
+    username: ""
+    password: ""
+
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQtbGlhcy1sYWItbWFuYWdlbWVudC1oczUxMi1uZWVkcy02NC1ieXRlcy1taW5pbXVtLXBhZGRpbmc=
+    access-token-expiration-ms: 3600000
+    refresh-token-expiration-ms: 604800000
+    issuer: lias-lab-management
+  file-storage:
+    base-dir: ${java.io.tmpdir}/lias-test-uploads
+    max-size-mb: 25
+
+logging:
+  level:
+    org.springframework.security: WARN
+    com.lias.labmanagement: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.tool.schema: ERROR

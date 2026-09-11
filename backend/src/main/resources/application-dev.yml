@@ -1,15 +1,18 @@
+# Dev profile — connection/mail values come from environment variables only.
+# Local run: put them in backend/.env (git-ignored, loaded via spring.config.import
+# in application.yml). See backend/.env.example for the list of keys.
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:ep-aged-paper-ayw9lmr3.c-5.us-east-2.aws.neon.tech}:${DB_PORT:5432}/${DB_NAME:neondb}?sslmode=require
-    username: ${DB_USERNAME:neondb_owner}
-    password: ${DB_PASSWORD:npg_PXlxjfEyt19c}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}?sslmode=require
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: douaamoussaoui2@gmail.com
-    password: ${MAIL_PASSWORD}  # <--- رديها هكا
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:

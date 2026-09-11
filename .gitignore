@@ -15,8 +15,14 @@ npm-debug.log*
 
 # --- Local environment / secrets ------------------------------------------
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
 *.local
+# Spring profile files that carry real credentials (kept out of VCS)
+application-local.yml
+application-*-local.yml
+src/main/resources/application-secret*.yml
 
 # --- IDE / OS -------------------------------------------------------------------
 .idea/

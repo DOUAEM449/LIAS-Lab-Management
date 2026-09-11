@@ -3,6 +3,7 @@ package com.lias.labmanagement.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lias.labmanagement.common.web.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -17,9 +18,12 @@ import java.io.IOException;
  * a protected endpoint.
  */
 @Component
+@RequiredArgsConstructor
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /** The Spring-managed mapper (JavaTimeModule registered) — a raw {@code new ObjectMapper()}
+        would fail to serialize {@link ApiError}'s {@code Instant} timestamp. */
+    private final ObjectMapper objectMapper;
 
     @Override
     public void commence(jakarta.servlet.http.HttpServletRequest request,
