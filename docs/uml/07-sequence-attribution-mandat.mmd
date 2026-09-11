@@ -40,9 +40,9 @@ sequenceDiagram
   SYNC->>URH: nouvelle ligne (role = DIRECTOR, source = MANDATE_CHANGE)
   SYNC->>UR: save(B.user.role = DIRECTOR)
 
-  MS->>AUD: record(ROLE_CHANGE, "Mandate", id, details)
+  MS->>AUD: record(ROLE_CHANGE, Mandate, id, details)
   MS-->>CTL: MandateResponse
   CTL-->>UI: 200 OK
-  UI-->>DIR: B est directeur ; le mandat de A reste dans l historique
+  UI-->>DIR: B est directeur, le mandat de A reste dans l historique
 
   Note over DIR,AUD: STATUT (MemberStatus) : inchange pour A et B<br/>MANDAT (Mandate) : clos pour A, ouvert pour B<br/>ROLE (RoleName) : recalcule, jamais saisi

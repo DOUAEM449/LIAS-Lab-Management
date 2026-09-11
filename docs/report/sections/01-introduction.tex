@@ -1,0 +1,125 @@
+\chapter{Introduction générale}
+\label{ch:intro}
+
+\section{Contexte général}
+
+Le LIAS --- Laboratoire d'Informatique et Automatique pour les Systèmes --- est une
+structure de recherche rattachée à la Faculté des Sciences Ben M'Sik de l'Université
+Hassan~II de Casablanca. Comme toute unité de recherche, il fonctionne sur deux plans
+distincts et rarement outillés ensemble.
+
+Sur le plan externe, le laboratoire doit être visible : un visiteur, un candidat à une
+thèse ou un partenaire industriel doit pouvoir consulter la composition des équipes, la
+production scientifique et le calendrier des manifestations sans disposer d'un compte.
+
+Sur le plan interne, le laboratoire produit en permanence de l'information administrative
+dont la valeur est cumulative : des membres entrent, changent de statut, prennent des
+responsabilités, partent puis reviennent parfois ; des mandats de direction se succèdent ;
+des documents, des procès-verbaux et des conventions s'accumulent et doivent rester
+retrouvables plusieurs années après. Cette information est, dans la pratique courante,
+dispersée entre tableurs, messageries et dossiers partagés --- des supports qui ne
+conservent ni l'ordre chronologique des décisions ni leur auteur.
+
+\section{Problématique}
+
+Le cahier des charges du projet formule une exigence qui dépasse la simple numérisation
+de ces pratiques. Sa section~21 énonce quatre règles générales : aucun membre ne perd ses
+données, tout est historisé, toute action importante est traçable, et surtout une
+séparation stricte doit être maintenue entre le \srt{} d'appartenance d'un membre
+(permanent, associé, doctorant\dots) et son \rol{} de responsabilité.
+
+Cette dernière règle est la véritable difficulté du sujet. Dans une application de gestion
+classique, le rôle applicatif est un champ que l'administrateur renseigne. Ici, il ne peut
+pas l'être, pour une raison métier : un enseignant-chercheur \emph{permanent} qui devient
+directeur du laboratoire ne cesse pas d'être permanent ; il acquiert, pour une période
+datée, une responsabilité supplémentaire. À la fin de son mandat, il redevient un membre
+permanent ordinaire sans que rien n'ait été effacé. Trois notions coexistent donc et
+évoluent à des rythmes différents :
+
+\begin{itemize}
+  \item le \srt{} --- une catégorie d'appartenance, qui change lentement ;
+  \item le \man{} --- une responsabilité de gouvernance bornée par deux dates ;
+  \item le \rol{} --- l'ensemble des permissions que la sécurité applicative lit à chaque
+        requête.
+\end{itemize}
+
+La problématique du projet se formule alors ainsi : \emph{comment construire un système
+d'information dans lequel les permissions techniques découlent automatiquement et de
+manière vérifiable de la réalité institutionnelle du laboratoire, sans jamais détruire
+l'historique qui les justifie ?}
+
+\section{Objectifs}
+
+Les objectifs poursuivis découlent directement de la section~1 du cahier des charges et
+sont repris au tableau~\ref{tab:objectifs}.
+
+\begin{table}[H]
+\centering
+\caption{Objectifs du système et traduction technique retenue}
+\label{tab:objectifs}
+\small
+\begin{tabularx}{\textwidth}{@{}p{5.1cm}X@{}}
+\toprule
+\textbf{Objectif (CdC §1)} & \textbf{Traduction dans le système} \\
+\midrule
+Centraliser la gestion du laboratoire & Une base relationnelle unique, 22 contrôleurs REST, une interface unifiée pour 18 modules métier \\
+Assurer la traçabilité des activités & Journal d'audit systématique (acteur, action, entité, horodatage, adresse IP) \\
+Capitaliser la mémoire du laboratoire & Suppression logique généralisée, quatre tables d'historique, archivage documentaire versionné \\
+Structurer membres et responsabilités & Séparation \srt{}~/~\rol{}~/~\man{} avec dérivation automatique du rôle \\
+Faciliter le rapport annuel obligatoire & Agrégation automatique des indicateurs et export PDF, déclenché manuellement ou par planification annuelle \\
+Améliorer la collaboration & Discussions à trois portées, notifications ciblées, calendrier unifié \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Présentation du projet LIAS}
+
+La plateforme réalisée est une application web unique servant deux publics. Sa partie
+publique, accessible sans authentification, présente le laboratoire, ses équipes, ses
+publications et ses événements, et permet le dépôt d'une candidature d'adhésion. Sa partie
+interne, protégée par authentification, donne accès à dix-huit modules de gestion dont
+l'étendue dépend du rôle effectif de l'utilisateur connecté.
+
+Le système reconnaît neuf rôles applicatifs et cinq statuts d'appartenance, articulés par
+trois types de mandats de gouvernance. Il gère 31 entités persistantes réparties en 29
+tables, dont quatre tables d'historique et une table d'audit. L'ensemble représente
+environ 9~900 lignes de Java côté serveur et 13~000 lignes de JavaScript côté client.
+
+\section{Méthodologie de travail}
+
+Le projet a été conduit de manière incrémentale, chaque incrément étant validé avant le
+suivant. Quatre phases se sont succédé.
+
+\begin{enumerate}
+  \item \textbf{Analyse et modélisation.} Lecture du cahier des charges, identification
+        des acteurs et des règles métier, établissement du modèle de données. C'est à ce
+        stade qu'a été prise la décision structurante de faire du rôle une donnée dérivée
+        plutôt qu'une donnée saisie.
+  \item \textbf{Construction du socle.} Schéma relationnel versionné par Flyway, entités
+        JPA, couche de sécurité, puis modules métier ajoutés un à un selon un découpage
+        constant contrôleur~/~service~/~repository.
+  \item \textbf{Réalisation de l'interface.} Mise en place d'un système de composants
+        réutilisables, puis des 21 pages, chacune connectée à des endpoints réels --- le
+        cahier des charges proscrivant explicitement les maquettes et les données fictives.
+  \item \textbf{Validation.} Audit fonctionnel de bout en bout sur les 21 routes et les
+        neuf rôles, correction des défauts constatés, puis écriture de tests automatisés
+        verrouillant les règles métier les plus sensibles.
+\end{enumerate}
+
+Cette dernière phase a joué un rôle particulier. Elle a mis au jour des défauts qu'aucune
+lecture de code n'avait révélés : une dérive de rôle sur des comptes créés avant
+l'introduction du service de dérivation, des réponses d'erreur mal formées sur le chemin
+d'authentification, et des commandes visibles par un vice-directeur alors que le serveur
+les lui refusait. Ces corrections sont documentées au chapitre~\ref{ch:tests}.
+
+\section{Organisation du rapport}
+
+Le rapport suit la progression du projet. Le chapitre~\ref{ch:besoins} analyse les besoins
+et formalise les acteurs et les exigences. Le chapitre~\ref{ch:conception} présente
+l'architecture et la modélisation UML. Le chapitre~\ref{ch:techno} justifie les choix
+technologiques, en particulier le rattachement de Spring~Boot à l'écosystème JEE. Les
+chapitres~\ref{ch:backend} et~\ref{ch:frontend} détaillent la réalisation du serveur puis
+de l'interface. Le chapitre~\ref{ch:securite} traite de la sécurité et de la traçabilité.
+Le chapitre~\ref{ch:tests} expose la stratégie de validation et ses résultats. Le
+chapitre~\ref{ch:resultats} confronte le réalisé au cahier des charges et énonce les
+limites, avant le bilan du chapitre~\ref{ch:conclusion}.

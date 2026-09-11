@@ -1,0 +1,218 @@
+\chapter{Choix technologiques et environnement}
+\label{ch:techno}
+
+\section{Backend}
+
+Le serveur est construit sur Spring~Boot~3.3.4 et Java~21 (LTS). Cette section justifie ce
+choix au regard de l'objectif pédagogique du module, puis détaille les bibliothèques
+retenues.
+
+\subsection{Spring Boot comme implémentation moderne des spécifications Jakarta EE}
+\label{sec:jee}
+
+Le module dans lequel s'inscrit ce projet porte sur Java Enterprise Edition. Il convient
+donc d'expliciter en quoi le recours à Spring~Boot, souvent perçu comme une alternative à
+JEE, en constitue en réalité une mise en œuvre.
+
+Java Enterprise Edition --- renommé Jakarta~EE depuis son transfert à la fondation Eclipse
+et le passage de l'espace de noms \code{javax} à \code{jakarta} --- n'est pas un produit
+mais un ensemble de \emph{spécifications} : JPA pour la persistance, Bean~Validation pour
+la validation, l'API~Servlet pour le traitement des requêtes HTTP, CDI pour l'injection de
+dépendances, JTA pour les transactions. Un serveur d'applications tel que WildFly ou
+GlassFish en fournit une implémentation complète et monolithique. Spring~Boot suit une
+autre voie : il implémente ou intègre ces mêmes spécifications, mais les assemble dans un
+artefact autonome embarquant son propre conteneur de servlets.
+
+Le projet LIAS s'appuie effectivement sur ces spécifications, et le code le montre de
+manière mesurable. Le tableau~\ref{tab:jee} recense, par comptage des importations dans
+les sources, l'usage réel de chaque spécification.
+
+\begin{table}[H]
+\centering
+\caption{Spécifications Jakarta EE effectivement mises en œuvre dans le projet}
+\label{tab:jee}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.5cm}p{2.1cm}p{3.2cm}X@{}}
+\toprule
+\textbf{Spécification} & \textbf{Imports} & \textbf{Implémentation} & \textbf{Usage dans LIAS} \\
+\midrule
+Jakarta Persistence (JPA) & 224 & Hibernate~6.5, via Spring~Data~JPA & \code{@Entity}, \code{@Table}, \code{@Column}, \code{@ManyToOne}, \code{@Enumerated} sur les 31~entités ; JPQL dans les repositories \\
+Jakarta Bean Validation & 70 & Hibernate Validator & \code{@NotBlank}, \code{@NotNull}, \code{@Email}, \code{@Size}, \code{@Min} sur les DTO ; \code{@Valid} sur 17~paramètres de contrôleur \\
+Jakarta Servlet & 8 & Tomcat~10 embarqué & \code{HttpServletRequest}, \code{FilterChain} dans le filtre d'authentification et le gestionnaire d'erreurs \\
+Injection de dépendances & --- & Conteneur Spring (compatible JSR-330) & Injection par constructeur dans l'ensemble des services et contrôleurs \\
+Gestion transactionnelle & --- & Spring \code{@Transactional} & Démarcation déclarative, y compris \code{REQUIRES\_NEW} pour l'audit \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Trois points méritent d'être développés.
+
+\paragraph{La persistance est de la JPA, pas une abstraction propriétaire.} Les 31 entités
+du modèle sont annotées exclusivement avec l'API \code{jakarta.persistence}. Spring~Data
+n'ajoute qu'une couche de génération de requêtes au-dessus d'un \code{EntityManager}
+standard ; les entités elles-mêmes seraient déployables telles quelles sur un serveur
+d'applications JEE. La classe \code{SoftDeleteSafe} intercepte d'ailleurs une exception de
+l'API standard, \code{jakarta.persistence.EntityNotFoundException}, pour traiter le cas
+d'une association archivée.
+
+\paragraph{Le traitement HTTP repose sur l'API Servlet.} Le filtre
+\code{JwtAuthenticationFilter} étend \code{OncePerRequestFilter} et manipule directement
+\code{HttpServletRequest} et \code{FilterChain}. Tomcat~10, embarqué par
+\code{spring-boot-starter-web}, est un conteneur de servlets conforme à la spécification
+Jakarta~Servlet~6. La différence avec un déploiement JEE classique porte sur l'emballage
+--- un exécutable autonome plutôt qu'une archive déployée dans un serveur préexistant ---
+non sur le modèle de programmation.
+
+\paragraph{La validation est déclarative et standard.} Les contraintes portées par les DTO
+relèvent de Bean~Validation. Elles sont évaluées par le conteneur avant l'entrée dans la
+méthode de contrôleur, et leurs violations sont converties en réponses~400 structurées par
+un gestionnaire d'exceptions centralisé.
+
+Une réserve doit être formulée par honnêteté : la couche web utilise Spring~MVC et non
+JAX-RS (Jakarta RESTful Web Services). Les annotations \code{@RestController} et
+\code{@GetMapping} sont propres à Spring. C'est la seule spécification JEE significative
+qui ne soit pas employée telle quelle, et ce choix est assumé : Spring~MVC s'intègre
+nativement avec Spring~Security, dont dépend tout le modèle d'autorisation du projet.
+
+Ce choix architectural sert enfin l'orientation du Master. Une plateforme destinée à
+alimenter, à terme, des analyses sur l'activité d'un laboratoire a besoin d'un socle dont
+l'écosystème communique avec les outils de traitement de données --- pilotes JDBC
+matures, formats d'échange standards, intégration dans des chaînes de traitement. Spring
+Boot conserve la rigueur des spécifications Jakarta~EE tout en s'inscrivant dans
+l'outillage effectivement utilisé en production, ce qui répond simultanément à l'exigence
+académique du module et à la vocation professionnelle de la formation.
+
+\subsection{Bibliothèques retenues}
+
+Le tableau~\ref{tab:stackback} détaille la pile serveur.
+
+\begin{table}[H]
+\centering
+\caption{Pile technique du backend}
+\label{tab:stackback}
+\small
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}p{1.9cm}X@{}}
+\toprule
+\textbf{Composant} & \textbf{Version} & \textbf{Rôle dans le projet} \\
+\midrule
+Java & 21 (LTS) & Langage ; \code{record} utilisé pour tous les DTO \\
+Spring Boot & 3.3.4 & Socle applicatif, auto-configuration, serveur embarqué \\
+Spring Data JPA / Hibernate & 6.5 & Persistance, \code{@SQLRestriction} pour la suppression logique \\
+Spring Security & 6.3 & Filtrage, \code{@EnableMethodSecurity}, \code{@PreAuthorize} \\
+PostgreSQL & 18 & SGBD relationnel \\
+Flyway & --- & Versionnement du schéma (V1 à V3) \\
+jjwt & 0.12.6 & Génération et vérification des jetons JWT (HS512) \\
+MapStruct & 1.6.2 & Génération des convertisseurs entité $\rightarrow$ DTO \\
+Lombok & --- & Réduction du code répétitif des entités \\
+springdoc-openapi & 2.6.0 & Documentation interactive de l'API \\
+OpenPDF & 1.3.43 & Génération du rapport d'activité en PDF \\
+Spring Boot Starter Mail & --- & Envoi des identifiants et notifications \\
+JUnit 5 / Mockito / Spring Security Test & --- & Tests automatisés \\
+H2 & --- & Base en mémoire pour les tests d'intégration \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Frontend}
+
+L'interface est une application monopage React~19 construite avec Vite~8. Le
+tableau~\ref{tab:stackfront} en détaille les composants.
+
+\begin{table}[H]
+\centering
+\caption{Pile technique du frontend}
+\label{tab:stackfront}
+\small
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}p{1.9cm}X@{}}
+\toprule
+\textbf{Composant} & \textbf{Version} & \textbf{Rôle dans le projet} \\
+\midrule
+React & 19.2 & Bibliothèque d'interface, 21 pages et 27 composants \\
+Vite & 8.2 & Serveur de développement et outil de construction \\
+React Router & 7.18 & Routage client, gardes de route par rôle \\
+Axios & 1.19 & Client HTTP, intercepteurs jeton et erreur~401 \\
+Tailwind CSS & 4.3 & Système d'utilitaires de style \\
+lucide-react & 1.28 & Jeu d'icônes \\
+oxlint & 1.75 & Analyse statique \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Le document de spécification recommandait par ailleurs TypeScript, Shadcn~UI, Recharts et
+Framer~Motion. Ces recommandations n'ont pas été suivies, et il convient de le justifier
+plutôt que de le taire. Le tableau~\ref{tab:ecarts} expose les écarts et leurs motifs.
+
+\begin{table}[H]
+\centering
+\caption{Écarts assumés par rapport aux technologies recommandées}
+\label{tab:ecarts}
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.9cm}p{3.6cm}X@{}}
+\toprule
+\textbf{Recommandé} & \textbf{Retenu} & \textbf{Justification} \\
+\midrule
+MySQL & PostgreSQL & Type \code{uuid} natif, contraintes \code{CHECK} expressives, hébergement managé disponible ; le cahier des charges n'impose pas de SGBD \\
+TypeScript & JavaScript (ES2022) & Le périmètre du module porte sur le backend ; le contrat d'interface est déjà typé côté serveur par les DTO Java \\
+Shadcn UI & Système de composants interne & Sept modules écrits pour le projet ; aucune dépendance externe à maintenir, cohérence visuelle entièrement maîtrisée \\
+Recharts & Composant \code{Chart.jsx} interne & Un seul type de graphique est nécessaire ; évite d'embarquer une bibliothèque complète pour un usage marginal \\
+Framer Motion & Transitions CSS & Les micro-interactions requises sont couvertes sans dépendance supplémentaire \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Base de données}
+
+PostgreSQL a été retenu pour trois raisons techniques : la prise en charge native du type
+\code{uuid}, utilisé comme clé primaire de toutes les entités ; l'expressivité des
+contraintes \code{CHECK}, qui permettent de garantir au niveau du SGBD la validité des
+colonnes portant des énumérations ; et la disponibilité d'une offre hébergée compatible,
+qui a permis de travailler sur une base distante sans administration de serveur.
+
+Le schéma n'est jamais généré par l'ORM. Hibernate fonctionne en mode \code{validate} :
+il compare les entités au schéma existant et refuse de démarrer en cas d'écart. Les
+évolutions passent exclusivement par des migrations Flyway numérotées, appliquées
+automatiquement au démarrage. Cette discipline garantit qu'un environnement recréé depuis
+zéro obtient exactement le même schéma.
+
+\section{Sécurité}
+
+Les briques de sécurité sont détaillées au chapitre~\ref{ch:securite}. Elles reposent sur
+Spring~Security pour le filtrage et l'autorisation, sur la bibliothèque jjwt pour les
+jetons signés en HS512, et sur BCrypt avec un facteur de coût de~12 pour le stockage des
+mots de passe. Les secrets de connexion ne figurent pas dans le code source : ils sont lus
+depuis des variables d'environnement.
+
+\section{Outils de développement}
+
+Le projet est construit avec Maven, dont une distribution est embarquée dans le dépôt afin
+que la chaîne de construction ne dépende pas d'une installation préalable. Le contrôle de
+version est assuré par Git. La documentation de l'API est générée automatiquement par
+springdoc-openapi et consultable via une interface Swagger. Les diagrammes UML sont écrits
+en syntaxe Mermaid, ce qui les place sous contrôle de version au même titre que le code et
+permet de les rendre en images à la demande --- les figures de ce rapport ont été produites
+par ce mécanisme.
+
+\section{Environnement technique}
+
+Le tableau~\ref{tab:env} récapitule l'environnement d'exécution et de validation.
+
+\begin{table}[H]
+\centering
+\caption{Environnement technique du projet}
+\label{tab:env}
+\small
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}X@{}}
+\toprule
+\textbf{Élément} & \textbf{Valeur} \\
+\midrule
+Système d'exploitation & Windows 11 \\
+JDK & Eclipse Temurin 21.0.12 (LTS) \\
+Gestionnaire de dépendances & Apache Maven 3.9.16 (embarqué dans le dépôt) \\
+Exécution Node.js & v24 \\
+Base de données & PostgreSQL 18, instance hébergée \\
+Port du serveur applicatif & 8080 (configurable) \\
+Port du serveur de développement web & 5173 (configurable) \\
+Configuration sensible & Variables d'environnement, fichier local exclu du dépôt \\
+\bottomrule
+\end{tabularx}
+\end{table}

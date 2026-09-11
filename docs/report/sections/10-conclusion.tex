@@ -1,0 +1,98 @@
+\chapter{Conclusion générale}
+\label{ch:conclusion}
+
+\section{Bilan}
+
+Le projet avait pour objet la réalisation d'une plateforme web de gestion pour le
+laboratoire LIAS, remplissant simultanément la fonction de site institutionnel public et
+celle de système d'information interne. Les 21 sections du cahier des charges sont
+couvertes par des fonctionnalités opérationnelles, connectées à une base de données réelle
+et vérifiées par un parcours complet de l'application.
+
+Le résultat se mesure sur trois plans. Sur le plan fonctionnel, dix-huit modules couvrent
+le cycle de vie des membres, la gouvernance, l'activité scientifique, les ressources
+matérielles et documentaires, la communication interne et le pilotage annuel. Sur le plan
+technique, le système compte 31 entités persistantes, 22 contrôleurs REST et 21 pages
+d'interface, soit environ 23~000 lignes de code applicatif. Sur le plan de la validation,
+48 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
+des routes et des rôles.
+
+La difficulté centrale du sujet --- la séparation stricte entre le \srt{} d'appartenance,
+le \man{} de gouvernance et le \rol{} applicatif --- a été traitée par une décision de
+conception prise tôt et tenue jusqu'au bout : le rôle n'est pas une donnée saisie mais une
+donnée dérivée. Cette décision a eu des conséquences en cascade sur le modèle de données,
+sur le service de gouvernance, sur la chaîne de sécurité et jusque sur la présentation des
+fiches membres. Elle a également révélé sa propre limite --- l'existence de comptes
+antérieurs non réconciliés --- que la procédure de réconciliation au démarrage est venue
+combler.
+
+Le bilan comporte aussi ce qui n'a pas été fait : le thème sombre, la mesure de couverture,
+la couverture de test de trois modules, la campagne de performance et l'assainissement de
+l'historique de gestion de version. Ces points sont énoncés au chapitre précédent et n'ont
+pas été dissimulés dans la conclusion.
+
+\section{Compétences acquises}
+
+\paragraph{Sur le plan technique.} La conduite du projet a permis de pratiquer l'ensemble
+de la chaîne Jakarta~EE telle qu'elle est mise en œuvre par Spring~Boot : mapping objet-
+relationnel avec JPA, validation déclarative par Bean~Validation, traitement des requêtes
+au niveau de l'API~Servlet, démarcation transactionnelle, et sécurité par annotation. Le
+versionnement du schéma par migrations et l'exécution de l'ORM en mode strict de validation
+ont imposé une rigueur sur le modèle de données qu'une génération automatique du schéma
+aurait masquée.
+
+\paragraph{Sur le plan de la conception.} La leçon la plus durable concerne la distinction
+entre donnée saisie et donnée dérivée. Faire du rôle un champ modifiable aurait été plus
+simple à écrire et aurait fonctionné --- jusqu'à la première incohérence entre le rôle
+stocké et la réalité des mandats, incohérence impossible à détecter automatiquement. Le
+choix inverse coûte un service supplémentaire et impose une procédure de réconciliation,
+mais il rend une classe entière d'anomalies structurellement impossible.
+
+\paragraph{Sur le plan de la validation.} Le projet a montré concrètement les limites de
+chaque niveau de vérification. La compilation ne dit rien du comportement. Un code de
+statut HTTP correct ne garantit pas une réponse correcte --- le défaut de sérialisation des
+réponses d'erreur en est l'illustration la plus nette, puisqu'il a survécu à des dizaines
+de vérifications portant sur le seul code retour. Seul le parcours réel de l'application,
+prolongé par des tests d'intégration exerçant la chaîne complète, a permis de le mettre au
+jour.
+
+\paragraph{Sur le plan méthodologique.} La gestion des secrets constitue un enseignement à
+part. Un identifiant de base de données placé dans un fichier de configuration au tout
+début du projet y est resté jusqu'à la phase finale, et son retrait a exigé, en plus d'une
+modification de code, une rotation effective du mot de passe. Une configuration de
+développement est un fichier de code comme un autre.
+
+\section{Apports du projet}
+
+Pour le laboratoire, la plateforme apporte une mémoire institutionnelle interrogeable : la
+succession des directions, les périodes d'affiliation, les décisions d'adhésion, les
+documents et leurs versions successives cessent d'être dispersés dans des supports qui ne
+conservent ni l'ordre ni l'auteur des décisions. La production automatisée du rapport
+d'activité annuel, qui conditionne le budget, transforme un exercice de compilation manuel
+en une agrégation reproductible.
+
+Pour la formation, le projet a servi de terrain d'application à des notions habituellement
+abordées séparément : persistance, sécurité, architecture en couches, modélisation UML et
+validation. Leur mise en œuvre conjointe sur un domaine métier non trivial fait apparaître
+des interactions qu'un exercice isolé ne révèle pas --- notamment entre la suppression
+logique et l'intégrité référentielle, ou entre l'authentification sans état et la
+révocation immédiate des droits.
+
+\section{Perspectives}
+
+À court terme, les limites recensées au chapitre~\ref{ch:resultats} constituent une feuille
+de route immédiate : thème sombre, couverture de test objectivée, extension des tests aux
+modules non couverts, rafraîchissement transparent du jeton, purge de l'historique de
+gestion de version.
+
+À plus longue échéance, la perspective la plus cohérente avec la spécialité du Master
+consiste à exploiter analytiquement les données que la plateforme accumule. Le principe de
+conservation intégrale, adopté ici pour satisfaire une exigence de traçabilité
+administrative, a un effet de bord favorable : chaque table d'historique constitue une
+série temporelle. Les effectifs par statut, la durée des mandats, la productivité
+scientifique par équipe ou la saisonnalité des activités sont déjà présents dans le
+schéma ; il ne manque qu'une couche de restitution pour les rendre exploitables.
+
+Le système livré n'est pas un prototype : il fonctionne sur une base réelle, applique une
+politique de sécurité vérifiée et conserve l'intégralité de l'historique qu'il produit. Il
+constitue, à ce titre, une base sur laquelle il est possible de construire.

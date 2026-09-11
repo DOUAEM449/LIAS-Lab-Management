@@ -1,0 +1,250 @@
+\chapter{Réalisation du backend}
+\label{ch:backend}
+
+\section{Architecture backend}
+
+Le serveur suit un découpage en quatre couches appliqué sans exception à l'ensemble des
+modules : un contrôleur REST expose les endpoints et porte les règles d'autorisation ; un
+service concentre la logique métier et la démarcation transactionnelle ; un repository
+Spring~Data assure la persistance ; des DTO, implémentés sous forme de \code{record} Java,
+transportent les données à l'entrée et à la sortie sans jamais exposer les entités JPA.
+
+Cette dernière règle est importante : aucune entité n'est sérialisée directement en JSON.
+Elle évite deux écueils classiques --- la divulgation involontaire d'attributs sensibles et
+les initialisations paresseuses déclenchées pendant la sérialisation --- au prix d'une
+étape de conversion, prise en charge par MapStruct lorsqu'elle est répétitive.
+
+Le volume réalisé s'établit à 22 contrôleurs, 28 services, 30 repositories et 31 entités,
+soit environ 9~900 lignes de Java.
+
+\section{Organisation des packages}
+
+Le découpage des packages est fonctionnel et non technique : on ne trouve pas un package
+\code{controllers} et un package \code{services}, mais un package par domaine métier
+contenant ses propres couches. Le tableau~\ref{tab:packages} en donne la structure.
+
+\begin{table}[H]
+\centering
+\caption{Organisation des packages métier du backend}
+\label{tab:packages}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.2cm}X@{}}
+\toprule
+\textbf{Package} & \textbf{Responsabilité} \\
+\midrule
+\code{auth} & Comptes, authentification, jetons de réinitialisation, historique des rôles \\
+\code{members} & Profils, statuts, périodes d'affiliation \\
+\code{governance} & Équipes, mandats, appartenance aux équipes, dérivation des rôles \\
+\code{membershiprequest} & Candidatures d'adhésion et décisions \\
+\code{event} & Événements, organisateurs, participants \\
+\code{publication} & Publications et co-signataires \\
+\code{meeting} & Réunions et procès-verbaux \\
+\code{document} & Archivage documentaire et versions \\
+\code{equipment} & Inventaire, distributions, demandes de matériel \\
+\code{partnership} & Partenaires et conventions \\
+\code{notification} & Notifications, discussions, messages \\
+\code{calendar} & Agrégation du calendrier \\
+\code{report} & Rapports annuels et génération PDF \\
+\code{audit} & Journal d'audit \\
+\code{administration} & Administration des comptes, recherche globale \\
+\code{laboratory} & Identité institutionnelle \\
+\code{security} & Filtre JWT, détails utilisateur, service de jetons \\
+\code{common} & Classe de base des entités, stockage de fichiers, gestion des erreurs, énumérations \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Ce découpage présente un avantage pratique vérifié pendant le projet : ajouter un module
+n'oblige à toucher aucun package existant, hormis l'enregistrement éventuel d'une règle
+d'autorisation partagée.
+
+\section{Authentification}
+
+L'authentification est sans état. La méthode \code{login} vérifie les identifiants via le
+gestionnaire d'authentification de Spring~Security, puis émet deux jetons : un jeton
+d'accès valable une heure et un jeton de rafraîchissement valable sept jours. Les mots de
+passe sont hachés avec BCrypt au facteur de coût~12.
+
+Le filtre \code{JwtAuthenticationFilter} s'exécute avant la chaîne d'autorisation. Il
+extrait le jeton, en vérifie la signature et le type, puis --- et c'est le point
+déterminant --- recharge l'utilisateur depuis la base par
+\code{CustomUserDetailsService.loadUserByUsername}. Les habilitations attachées au contexte
+de sécurité proviennent donc toujours de l'état courant en base, jamais de la charge utile
+du jeton. Le filtre vérifie en outre que le compte est actif, ce qui permet à un gel de
+statut de prendre effet immédiatement.
+
+Le module comprend également la réinitialisation de mot de passe par courriel, adossée à
+l'entité \code{PasswordResetToken} (jeton à usage unique avec date d'expiration), et le
+changement de mot de passe par l'utilisateur connecté.
+
+\section{Gestion des utilisateurs et des membres}
+
+La distinction entre \code{User} et \code{Member} structure ce module. \code{MemberService}
+porte les opérations métier : consultation paginée avec filtres, mise à jour de profil,
+changement de statut, départ, retour, archivage et restauration.
+
+La règle d'édition du profil mérite d'être citée car elle illustre une autorisation qui ne
+se réduit pas à un rôle : un membre peut modifier son propre profil, et seuls
+l'administrateur, le directeur et le vice-directeur peuvent modifier celui d'un autre. Ce
+contrôle est porté par le service et non par une annotation, parce qu'il dépend de
+l'identité de la cible et non seulement du rôle de l'appelant.
+
+L'archivage est une suppression logique. La classe \code{BaseEntity} porte les champs
+\code{deleted} et \code{deletedAt}, et l'annotation Hibernate
+\code{@SQLRestriction("deleted = false")} exclut automatiquement les lignes archivées de
+toutes les requêtes. Cette élégance a une contrepartie : une entité archivée encore
+référencée par une autre devient inaccessible et lève une exception lors de
+l'initialisation paresseuse. L'utilitaire \code{SoftDeleteSafe} encapsule ces accès et
+substitue une valeur de repli --- « Membre archivé », « Matériel archivé » --- plutôt que
+de laisser l'erreur remonter et invalider toute la réponse.
+
+\section{Séparation \srt{} / \rol{} / \man{}}
+\label{sec:srm}
+
+Ce service constitue le cœur du projet. \code{UserRoleSyncService} applique un unique
+principe : le rôle applicatif n'est pas une donnée saisie mais une fonction du statut et
+des mandats actifs. Le listing~\ref{lst:compute} en donne la règle de résolution.
+
+\begin{lstlisting}[language=Java,caption={Résolution du rôle effectif (\code{UserRoleSyncService})},label={lst:compute}]
+private RoleName computeEffectiveRole(Member member) {
+    MemberStatus status = member.getCurrentStatus();
+    if (status == MemberStatus.RETIRED || status == MemberStatus.FORMER) {
+        // Un compte gele ne conserve jamais de permissions de gouvernance,
+        // meme si un mandat n'a pas ete explicitement clos.
+        return STATUS_TO_ROLE.get(status);
+    }
+    List<Mandate> activeMandates =
+        mandateRepository.findByMemberIdAndActiveTrueAndEndDateIsNull(member.getId());
+    for (MandateRoleType type : MANDATE_PRIORITY) {   // DIRECTOR > VICE_DIRECTOR > TEAM_LEADER
+        if (activeMandates.stream().anyMatch(m -> m.getRole() == type)) {
+            return MANDATE_TO_ROLE.get(type);
+        }
+    }
+    return STATUS_TO_ROLE.getOrDefault(status, RoleName.ASSOCIATE_MEMBER);
+}
+\end{lstlisting}
+
+Trois propriétés de cette fonction sont vérifiées par les tests du
+chapitre~\ref{ch:tests}. Le statut gelé l'emporte sur tout, y compris sur un mandat qui
+n'aurait pas été clos --- c'est une défense en profondeur, puisque le changement de statut
+clôt déjà les mandats. La priorité entre mandats est stricte et totale. Enfin, en l'absence
+de mandat, le rôle retombe sur celui que le statut implique.
+
+Toute application effective d'un rôle passe par \code{applyRole}, qui clôt la ligne
+d'historique ouverte, en ouvre une nouvelle avec sa cause --- changement de mandat,
+changement de statut, dérogation administrative ou réconciliation --- puis écrit le rôle
+sur le compte. Si le rôle calculé est déjà celui enregistré et déjà historisé, la méthode
+ne fait rien : l'opération est idempotente.
+
+Ce service n'est cependant invoqué que sur les chemins d'écriture. Un compte créé avant
+son introduction, et jamais modifié depuis, conserverait un rôle obsolète. C'est
+exactement ce qui a été constaté lors de l'audit fonctionnel. La réponse a été
+\code{reconcileAll()}, exécuté au démarrage par un \code{CommandLineRunner} : la méthode
+parcourt les membres, recalcule le rôle attendu, corrige les écarts et complète les
+historiques manquants. Sur un système déjà cohérent, elle n'écrit rien et le journal
+indique simplement que tous les comptes sont conformes.
+
+\section{Gouvernance}
+
+\code{MandateService} implémente la règle d'unicité du titulaire énoncée au cahier des
+charges : attribuer un mandat de directeur ou de vice-directeur clôt automatiquement celui
+du titulaire précédent. Le mandat n'est jamais supprimé --- sa date de fin est renseignée
+et son indicateur d'activité abaissé --- de sorte que l'historique de gouvernance reste
+intégralement reconstituable. Chaque attribution et chaque clôture déclenche la
+resynchronisation des rôles décrite en~§\ref{sec:srm} et illustrée par la
+figure~\ref{fig:seqMandat}.
+
+L'attribution et la clôture d'un mandat sont réservées à l'administrateur système et au
+directeur. Le vice-directeur, bien qu'il accède au module de gouvernance, n'y dispose que
+d'une consultation et du transfert d'un membre entre équipes.
+
+\section{Équipes}
+
+\code{TeamService} gère les équipes de recherche, dont le responsable n'est pas un champ de
+la table mais une donnée déduite du mandat \code{TEAM\_LEADER} actif rattaché à l'équipe.
+Ce choix évite une incohérence possible entre un champ « chef d'équipe » et la table des
+mandats.
+
+L'appartenance d'un membre à une équipe est elle aussi historisée :
+\code{TeamMembershipHistory} conserve chaque période, et le transfert d'un membre clôt la
+période courante avant d'en ouvrir une nouvelle.
+
+\section{Équipements}
+
+Le module matériel répond aux sections~14 et~15 du cahier des charges et repose sur un
+invariant simple : la quantité disponible d'un article diminue exactement du nombre
+d'unités distribuées et remonte du même nombre au retour. \code{EquipmentService.distribute}
+refuse toute distribution excédant le stock disponible, et \code{returnDistribution} refuse
+un retour déjà enregistré.
+
+L'exigence la plus spécifique du cahier des charges est le suivi de « qui n'a pas reçu ».
+Elle est satisfaite par une requête JPQL dédiée, \code{findMembersWithoutDistribution},
+qui calcule le complément : les membres actifs ne figurant pas parmi les bénéficiaires
+d'un article donné. Les demandes de matériel suivent un cycle propre --- soumission par
+tout membre des modules internes, validation ou rejet par le directeur ou le
+vice-directeur --- avec notification des décideurs à la soumission.
+
+\section{Documents et versions}
+
+\code{DocumentService} implémente l'archivage documentaire. Un document porte des
+métadonnées --- titre, catégorie parmi neuf valeurs, étiquettes, événement de rattachement
+éventuel --- et au moins une version. Le dépôt d'un nouveau fichier n'écrase jamais le
+précédent : il ajoute une ligne \code{DocumentVersion} avec son numéro d'ordre, son
+déposant et son horodatage.
+
+Le stockage physique est délégué à \code{FileStorageService}, qui range les fichiers selon
+une arborescence \code{catégorie/aaaa/MM/jj/} et attribue à chacun un nom aléatoire tout en
+conservant le nom d'origine en base. Le répertoire racine est lu depuis la variable
+d'environnement \code{FILE\_STORAGE\_DIR}, ce qui rend le déploiement indépendant de la
+machine. Le téléchargement passe par un endpoint authentifié qui renvoie le flux avec son
+type et son nom d'origine, plutôt que par un lien direct vers le disque.
+
+\section{Événements}
+
+\code{EventService} couvre les conférences, séminaires et workshops. Deux mécanismes
+répondent à des exigences précises du cahier des charges : l'attribut \code{editionNumber}
+et l'endpoint \code{/events/editions} permettent de retrouver les occurrences successives
+d'une même manifestation ; les entités \code{EventOrganizer} et \code{EventParticipant}
+distinguent l'équipe organisatrice des inscrits. La création et la modification sont
+ouvertes aux chefs d'équipe, la suppression reste réservée à la direction, et l'inscription
+est accessible à tout membre authentifié.
+
+\section{Notifications}
+
+\code{NotificationService} expose quatre modes d'émission, correspondant à quatre
+politiques de destinataires : notification individuelle, diffusion à une liste,
+notification de la gouvernance et diffusion à tous les membres actifs. Le troisième mérite
+attention : les destinataires ne sont pas déterminés par un rôle stocké mais par les
+mandats de directeur et de vice-directeur \emph{actuellement actifs}. Une notification de
+décision suit donc automatiquement l'évolution de la gouvernance, sans configuration.
+
+La diffusion générale exclut les membres retraités et anciens, cohérente avec le fait que
+ces comptes n'ont plus d'accès actif.
+
+\section{Audit et traçabilité}
+
+\code{AuditService} enregistre l'acteur, l'action, le type et l'identifiant de l'entité
+concernée, un libellé explicatif, l'adresse IP et l'horodatage. Son point notable est
+l'usage de la propagation \code{REQUIRES\_NEW} : l'écriture de la trace s'effectue dans une
+transaction distincte de l'opération métier. Si celle-ci échoue et est annulée, la trace de
+la tentative subsiste --- ce qui est précisément l'objet d'un journal d'audit.
+
+Comme indiqué au chapitre~\ref{ch:conception}, l'entité d'audit ne possède pas
+d'association JPA vers les entités tracées. Ce découplage assumé permet d'auditer n'importe
+quel type d'objet sans multiplier les clés étrangères ni rendre la trace dépendante de la
+survie de sa cible.
+
+\section{Rapports annuels et génération PDF}
+
+\code{ReportService} agrège les indicateurs d'une année --- événements, publications,
+activités --- et les conserve dans l'entité \code{AnnualReport}. La production du document
+est confiée à \code{AnnualReportPdfGenerator}, bâti sur OpenPDF, qui compose une mise en
+page structurée archivée via le service de stockage ; le fichier est ensuite téléchargeable
+par un endpoint authentifié.
+
+Le cahier des charges demande une génération « annuelle automatique ». Elle est assurée par
+\code{AnnualReportScheduler}, déclenché par une expression \code{cron} configurable dont la
+valeur par défaut porte l'exécution au 1\textsuperscript{er} janvier à 02~h, heure de
+Casablanca, afin de clore l'année civile écoulée. La génération manuelle depuis l'interface
+reste possible et produit le même document, ce qui permet de préparer le rapport avant
+l'échéance.

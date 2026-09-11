@@ -31,3 +31,12 @@ src/main/resources/application-secret*.yml
 *.iml
 .DS_Store
 Thumbs.db
+
+# --- LaTeX (fichiers auxiliaires) ------------------------------------------
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.out
+docs/report/*.toc
+docs/report/*.lof
+docs/report/*.lot
+docs/report/*.synctex.gz
