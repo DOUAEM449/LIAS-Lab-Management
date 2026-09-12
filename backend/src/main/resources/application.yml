@@ -3,9 +3,15 @@ spring:
     name: lab-management
 
   # Load local secrets/overrides from backend/.env (KEY=value, git-ignored) when present.
+  # Three locations are tried so the app starts the same way whatever the working
+  # directory is: `backend/` (mvn spring-boot:run) or the repository root (IDE run
+  # configurations default to the project root).
   # Nothing breaks in CI / prod where the file is absent and real env vars are used instead.
   config:
-    import: optional:file:.env[.properties]
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:./backend/.env[.properties]
+      - optional:file:../backend/.env[.properties]
 
   profiles:
     active: dev
