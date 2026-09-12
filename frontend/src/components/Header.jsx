@@ -136,21 +136,26 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '--';
 
   return (
-    <header className="h-[68px] shrink-0 bg-lias-surface border-b border-lias-border flex items-center justify-between px-5 sm:px-7 gap-4 sticky top-0 z-30">
+    /* UI — barre translucide avec flou d'arrière-plan : au défilement, le contenu
+       se devine sous l'en-tête au lieu de disparaître derrière un bandeau opaque. */
+    <header className="h-[68px] shrink-0 bg-lias-surface/85 backdrop-blur-md border-b border-lias-border flex items-center justify-between px-5 sm:px-7 gap-4 sticky top-0 z-30">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={onToggleSidebar}
           aria-label="Afficher/masquer le menu"
-          className="lg:hidden w-9 h-9 rounded-lg border border-lias-border bg-lias-surface cursor-pointer
+          className="lg:hidden w-9 h-9 rounded-control border border-lias-border bg-lias-surface cursor-pointer
             flex items-center justify-center text-lias-muted hover:text-lias-ink shrink-0"
         >
           <PanelLeft size={17} />
         </button>
 
         <div className="relative flex-1 max-w-[520px]" ref={searchRef}>
+          {/* UI — au focus le champ passe en surface pleine et reçoit un halo teinté,
+              ce qui en fait clairement la zone active de la barre. */}
           <div
-            className="flex items-center gap-3 bg-lias-surface-muted border border-lias-border rounded-lg px-3.5 py-2.5
-              focus-within:border-lias-blue focus-within:bg-lias-surface transition-colors duration-150"
+            className="flex items-center gap-3 bg-lias-surface-muted border border-lias-border rounded-control px-3.5 py-2.5
+              focus-within:border-lias-blue focus-within:bg-lias-surface focus-within:ring-2 focus-within:ring-lias-blue/15
+              transition-[background-color,border-color,box-shadow] duration-150"
           >
             <Search size={16} className="text-lias-faint shrink-0" />
             <input
@@ -163,7 +168,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
               }}
               onFocus={() => setSearchOpen(true)}
               placeholder="Rechercher un membre, un document, un événement..."
-              className="border-none outline-none bg-transparent text-[13.5px] w-full text-lias-ink placeholder:text-lias-faint"
+              className="border-none outline-none bg-transparent text-body-sm w-full text-lias-ink placeholder:text-lias-faint"
             />
             {searchLoading ? (
               <Loader2 size={14} className="animate-spin text-lias-faint shrink-0" />
@@ -178,7 +183,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
             <div className="absolute top-[46px] left-0 w-full bg-lias-surface border border-lias-border rounded-card shadow-overlay overflow-hidden z-20 lias-enter">
               <div className="flex flex-col max-h-96 overflow-y-auto">
                 {!searchLoading && searchResults.length === 0 && (
-                  <div className="px-4 py-5 text-[12.5px] text-lias-muted text-center">
+                  <div className="px-4 py-5 text-meta text-lias-muted text-center">
                     Aucun résultat pour « {searchQuery.trim()} ».
                   </div>
                 )}
@@ -194,11 +199,11 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
                         text-left bg-transparent border-x-0 border-t-0 w-full transition-colors duration-150
                         ${category.to ? 'cursor-pointer hover:bg-lias-surface-muted' : 'cursor-default'}`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-control bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
                         <Icon size={14} className="text-lias-blue-dark" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[12.5px] font-medium text-lias-ink truncate">{r.title}</div>
+                        <div className="text-meta font-medium text-lias-ink truncate">{r.title}</div>
                         <div className="text-[11px] text-lias-muted">
                           {category.label}
                           {r.subtitle ? ` — ${r.subtitle}` : ''}
@@ -218,7 +223,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
           <button
             onClick={openNotifications}
             aria-label="Notifications"
-            className="relative w-[38px] h-[38px] rounded-lg border border-lias-border bg-lias-surface cursor-pointer
+            className="relative w-[38px] h-[38px] rounded-control border border-lias-border bg-lias-surface cursor-pointer
               flex items-center justify-center text-lias-ink hover:bg-lias-surface-muted transition-colors duration-150"
           >
             <Bell size={17} strokeWidth={2} />
@@ -233,17 +238,17 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
           {notifOpen && (
             <div className="absolute top-[46px] right-0 w-[340px] bg-lias-surface border border-lias-border rounded-card shadow-overlay overflow-hidden z-20 lias-enter">
               <div className="flex items-center justify-between px-4 py-3 border-b border-lias-border-light">
-                <span className="text-[13px] font-semibold text-lias-navy">Notifications</span>
+                <span className="text-body-sm font-semibold text-lias-navy">Notifications</span>
                 {unreadCount > 0 && (
                   <span className="text-[11px] font-semibold text-lias-blue-dark">{unreadCount} non lue(s)</span>
                 )}
               </div>
               <div className="flex flex-col max-h-80 overflow-y-auto">
                 {notifLoading && (
-                  <div className="px-4 py-6 text-[12.5px] text-lias-muted text-center">Chargement...</div>
+                  <div className="px-4 py-6 text-meta text-lias-muted text-center">Chargement...</div>
                 )}
                 {!notifLoading && notifications.length === 0 && (
-                  <div className="px-4 py-6 text-[12.5px] text-lias-muted text-center">Aucune notification.</div>
+                  <div className="px-4 py-6 text-meta text-lias-muted text-center">Aucune notification.</div>
                 )}
                 {!notifLoading &&
                   notifications.map((n) => (
@@ -254,7 +259,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
                     >
                       {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-lias-blue mt-2 shrink-0" />}
                       <div className={n.read ? 'pl-4' : ''}>
-                        <div className="text-[12.5px] text-lias-ink leading-snug">{n.message}</div>
+                        <div className="text-meta text-lias-ink leading-snug">{n.message}</div>
                         <div className="text-[11px] text-lias-muted mt-1">
                           {new Date(n.createdAt).toLocaleString('fr-FR')}
                         </div>
@@ -279,7 +284,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
         <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setUserMenuOpen((o) => !o)}
-            className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none p-0 rounded-lg"
+            className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none p-0 rounded-control"
           >
             <div className="w-[38px] h-[38px] rounded-full bg-lias-navy flex items-center justify-center text-white font-semibold text-[13px] shrink-0 overflow-hidden">
               {avatarUrl ? (
@@ -289,7 +294,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
               )}
             </div>
             <div className="leading-tight text-left hidden md:block max-w-[180px]">
-              <div className="text-[12.5px] font-semibold text-lias-ink truncate">
+              <div className="text-meta font-semibold text-lias-ink truncate">
                 {user?.email ?? 'Utilisateur'}
               </div>
               <div className="text-[11px] text-lias-muted truncate">
@@ -302,7 +307,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
           {userMenuOpen && (
             <div className="absolute top-[52px] right-0 w-56 bg-lias-surface border border-lias-border rounded-card shadow-overlay overflow-hidden z-20 lias-enter">
               <div className="px-4 py-3 border-b border-lias-border-light md:hidden">
-                <div className="text-[12.5px] font-semibold text-lias-ink truncate">{user?.email}</div>
+                <div className="text-meta font-semibold text-lias-ink truncate">{user?.email}</div>
                 <div className="text-[11px] text-lias-muted">{ROLE_LABEL_FR[user?.role] ?? user?.role}</div>
               </div>
               <Link

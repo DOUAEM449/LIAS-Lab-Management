@@ -27,15 +27,23 @@ export function BarChart({ data, height = 150, emptyLabel = 'Aucune donnée sur 
       {data.map((d) => {
         const ratio = d.value / max;
         return (
-          <div key={d.label} className="flex-1 flex flex-col items-center justify-end h-full gap-2 min-w-0">
-            <span className="text-[12px] font-semibold text-lias-navy tabular-nums">{d.value}</span>
-            <div
-              className="w-full max-w-[46px] rounded-t-md bg-lias-blue/85 hover:bg-lias-blue
-                transition-[height,background-color] duration-300"
-              style={{ height: `${Math.max(ratio * 100, 3)}%` }}
-              title={`${d.label} : ${d.value}`}
-            />
-            <span className="text-[11px] text-lias-muted font-mono truncate w-full text-center">{d.label}</span>
+          /* UI — le chiffre et le libellé occupent leur hauteur naturelle (shrink-0)
+             et la barre se partage l'espace restant. Auparavant la barre visait
+             100 % de la colonne : sur la valeur maximale, les trois éléments
+             dépassaient la hauteur fixe et l'étiquette de l'année décrochait. */
+          <div key={d.label} className="flex-1 flex flex-col items-center h-full gap-2 min-w-0">
+            <span className="text-meta font-semibold text-lias-navy tabular-nums shrink-0">{d.value}</span>
+            <div className="flex-1 w-full flex items-end justify-center min-h-0">
+              <div
+                className="w-full max-w-[46px] rounded-t-md bg-lias-blue/85 hover:bg-lias-blue
+                  transition-[height,background-color] duration-300"
+                style={{ height: `${Math.max(ratio * 100, 3)}%` }}
+                title={`${d.label} : ${d.value}`}
+              />
+            </div>
+            <span className="text-micro text-lias-muted font-mono truncate w-full text-center shrink-0">
+              {d.label}
+            </span>
           </div>
         );
       })}

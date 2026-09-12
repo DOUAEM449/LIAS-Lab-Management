@@ -163,9 +163,13 @@ export default function MembresPage({ currentUser, myMemberId }) {
                             className="w-9 h-9 rounded-full object-cover shrink-0 border border-lias-border"
                           />
                         ) : (
+                          /* UI — correction de contraste : à L=58 % certaines teintes
+                             (vert, cyan, jaune) rendaient les initiales blanches
+                             illisibles. À 48 % avec un peu plus de chroma, le rapport
+                             de contraste reste suffisant sur les 360 teintes possibles. */
                           <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11.5px] font-semibold shrink-0"
-                            style={{ background: `oklch(58% 0.1 ${avatarHue(fullName)})` }}
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-meta font-semibold shrink-0 uppercase"
+                            style={{ background: `oklch(48% 0.12 ${avatarHue(fullName)})` }}
                             aria-hidden="true"
                           >
                             {m.firstName?.[0]}

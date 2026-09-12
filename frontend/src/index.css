@@ -13,6 +13,34 @@
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
+  /* UI — Échelle typographique.
+     Auparavant chaque composant choisissait sa taille au pixel près
+     (text-[13.5px], text-[12.5px], text-[23px]... neuf valeurs arbitraires).
+     Ces huit marches nommées remplacent ces valeurs ad hoc : le rythme
+     vertical devient prévisible et une modification se fait en un seul point. */
+  --text-micro: 0.6875rem;              /* 11px — sur-titres, en-têtes de tableau, libellés capitales */
+  --text-micro--line-height: 1.45;
+  --text-meta: 0.75rem;                 /* 12px — indices, légendes, métadonnées secondaires */
+  --text-meta--line-height: 1.5;
+  --text-body-sm: 0.8125rem;            /* 13px — corps dense : cellules, champs, listes */
+  --text-body-sm--line-height: 1.55;
+  --text-body: 0.875rem;                /* 14px — corps courant */
+  --text-body--line-height: 1.6;
+  --text-title-sm: 0.9375rem;           /* 15px — titres de carte */
+  --text-title-sm--line-height: 1.4;
+  --text-title: 1.0625rem;              /* 17px — titres de section */
+  --text-title--line-height: 1.35;
+  --text-display: 1.5rem;               /* 24px — titre de page */
+  --text-display--line-height: 1.2;
+  --text-metric: 1.9375rem;             /* 31px — chiffre d'une tuile d'indicateur */
+  --text-metric--line-height: 1;
+
+  /* UI — Rampe de rayons cohérente (contrôles < cartes < panneaux),
+     au lieu d'un rounded-lg fixe sur les contrôles et d'un radius-card isolé. */
+  --radius-control: 0.5rem;             /* 8px  — boutons, champs, onglets */
+  --radius-card: 0.875rem;              /* 14px — cartes et tuiles (était 12px) */
+  --radius-panel: 1.125rem;             /* 18px — modales et panneaux latéraux */
+
   /* Sidebar / brand navy */
   --color-lias-navy: oklch(22% 0.035 255);
   --color-lias-navy-light: oklch(32% 0.03 255);
@@ -27,12 +55,15 @@
   --color-lias-blue-tint: oklch(92% 0.05 250 / 0.5);
   --color-lias-blue-tint-solid: oklch(95% 0.032 250);
 
-  /* Neutrals / surfaces */
-  --color-lias-bg: oklch(98% 0.003 250);
+  /* Neutrals / surfaces.
+     UI — le fond applicatif est légèrement assombri et refroidi (98% -> 96.8%)
+     pour que les cartes blanches se détachent d'elles-mêmes, au lieu de dépendre
+     uniquement d'un filet de bordure. */
+  --color-lias-bg: oklch(96.8% 0.005 250);
   --color-lias-surface: oklch(100% 0 0);
-  --color-lias-surface-muted: oklch(97% 0.004 250);
-  --color-lias-border: oklch(90% 0.005 250);
-  --color-lias-border-light: oklch(94% 0.004 250);
+  --color-lias-surface-muted: oklch(97.5% 0.004 250);
+  --color-lias-border: oklch(91% 0.006 250);
+  --color-lias-border-light: oklch(94.5% 0.004 250);
   --color-lias-border-strong: oklch(84% 0.008 250);
   --color-lias-ink: oklch(25% 0.02 250);
   --color-lias-ink-soft: oklch(38% 0.015 250);
@@ -58,12 +89,16 @@
   --color-lias-mandate-bg: oklch(95% 0.04 300);
   --color-lias-mandate-text: oklch(42% 0.13 300);
 
-  /* Elevation — deliberately shallow: institutional, not "app-store glossy" */
-  --shadow-card: 0 1px 2px oklch(22% 0.035 255 / 0.04);
-  --shadow-raised: 0 1px 3px oklch(22% 0.035 255 / 0.07), 0 4px 12px oklch(22% 0.035 255 / 0.05);
-  --shadow-overlay: 0 12px 40px oklch(22% 0.035 255 / 0.18);
-
-  --radius-card: 0.75rem;
+  /* Elevation — institutional, not "app-store glossy".
+     UI — l'ancienne ombre de carte (1px à 4 %) était pratiquement invisible :
+     les cartes se lisaient comme de simples filets. Chaque niveau combine
+     désormais un liseré de contact net et une diffusion large, ce qui donne de
+     la profondeur sans effet brillant. */
+  --shadow-card: 0 1px 1px oklch(22% 0.035 255 / 0.04), 0 2px 6px oklch(22% 0.035 255 / 0.05);
+  --shadow-raised: 0 1px 2px oklch(22% 0.035 255 / 0.06), 0 6px 18px oklch(22% 0.035 255 / 0.08);
+  --shadow-overlay: 0 2px 6px oklch(22% 0.035 255 / 0.10), 0 18px 50px oklch(22% 0.035 255 / 0.20);
+  /* Liseré interne haut, utilisé sur la barre latérale sombre. */
+  --shadow-inset-top: inset 0 1px 0 oklch(100% 0 0 / 0.06);
 }
 
 @layer base {

@@ -23,8 +23,10 @@ export function THead({ columns }) {
             <th
               key={`${label}-${i}`}
               style={width ? { width } : undefined}
-              className={`text-[11px] font-semibold text-lias-muted uppercase tracking-[0.06em] py-3 px-5.5
-                border-b border-lias-border-light whitespace-nowrap
+              /* UI — l'en-tête est posé sur un filet plus marqué que les séparateurs
+                 de lignes, pour rester identifiable quand la table est longue. */
+              className={`text-micro font-semibold text-lias-muted uppercase tracking-[0.07em] py-2.5 px-5.5
+                border-b border-lias-border whitespace-nowrap
                 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
             >
               {label}
@@ -52,10 +54,12 @@ export function TR({ children, onClick, className = '' }) {
   );
 }
 
+/* UI — la hauteur de ligne passe de py-3.5 à py-3 : à densité de contenu égale,
+   deux lignes de plus tiennent à l'écran sans que la table paraisse serrée. */
 export function TD({ children, align = 'left', className = '' }) {
   return (
     <td
-      className={`px-5.5 py-3.5 text-[13px] text-lias-ink align-middle
+      className={`px-5.5 py-3 text-body-sm text-lias-ink align-middle
         ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'} ${className}`}
     >
       {children}
@@ -66,10 +70,10 @@ export function TD({ children, align = 'left', className = '' }) {
 /** Primary cell: a strong first line with an optional muted second line. */
 export function TDPrimary({ title, subtitle, mono = false, className = '' }) {
   return (
-    <td className={`px-5.5 py-3.5 align-middle ${className}`}>
-      <div className="text-[13px] font-medium text-lias-ink">{title}</div>
+    <td className={`px-5.5 py-3 align-middle ${className}`}>
+      <div className="text-body-sm font-semibold text-lias-ink">{title}</div>
       {subtitle && (
-        <div className={`text-[11.5px] text-lias-muted mt-0.5 ${mono ? 'font-mono' : ''}`}>{subtitle}</div>
+        <div className={`text-meta text-lias-muted mt-0.5 ${mono ? 'font-mono' : ''}`}>{subtitle}</div>
       )}
     </td>
   );
@@ -78,7 +82,7 @@ export function TDPrimary({ title, subtitle, mono = false, className = '' }) {
 /** Right-aligned container for row action buttons. */
 export function TDActions({ children }) {
   return (
-    <td className="px-5.5 py-3.5 text-right align-middle">
+    <td className="px-5.5 py-3 text-right align-middle">
       <div className="flex gap-2 justify-end">{children}</div>
     </td>
   );

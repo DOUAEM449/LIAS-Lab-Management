@@ -100,19 +100,25 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
         />
       )}
 
+      {/* UI — le panneau passe d'un aplat navy à un dégradé vertical vers le navy
+          profond : il gagne de la profondeur et le pied de barre se détache du
+          corps de navigation sans ajouter de séparateur supplémentaire. */}
       <aside
         className={`${collapsed ? 'lg:w-[74px]' : 'lg:w-[248px]'} w-[248px]
           fixed lg:sticky inset-y-0 left-0 top-0 h-screen z-50 lg:z-auto shrink-0
-          bg-lias-navy flex flex-col transition-[width,transform] duration-200
+          bg-gradient-to-b from-lias-navy to-lias-navy-deep
+          flex flex-col transition-[width,transform] duration-200
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className="flex items-center gap-3 px-4 h-[68px] shrink-0 border-b border-lias-navy-light">
-          <div className="w-9 h-9 rounded-lg bg-lias-blue flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-[15px] font-mono">L</span>
+        <div className="flex items-center gap-3 px-4 h-[68px] shrink-0 border-b border-white/[0.07]">
+          {/* Le monogramme reçoit un liseré clair : il se lit comme une pastille
+              posée sur le panneau, et non comme un carré de couleur à plat. */}
+          <div className="w-9 h-9 rounded-control bg-lias-blue ring-1 ring-inset ring-white/20 shadow-card flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-title-sm font-mono">L</span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-white font-semibold text-[15px] tracking-wide leading-tight">LIAS</div>
+              <div className="text-white font-semibold text-title-sm tracking-wide leading-tight">LIAS</div>
               <div className="text-lias-navy-text-dim text-[10.5px] truncate">Plateforme du laboratoire</div>
             </div>
           )}
@@ -126,7 +132,7 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
                   {group.label}
                 </div>
               )}
-              {group.label && collapsed && <div className="mx-3 mb-2 h-px bg-lias-navy-light" />}
+              {group.label && collapsed && <div className="mx-3 mb-2 h-px bg-white/[0.07]" />}
 
               <div className="flex flex-col gap-0.5">
                 {group.items.map(({ to, label, icon: Icon, end }) => (
@@ -136,12 +142,16 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
                     end={end}
                     onClick={onCloseMobile}
                     title={collapsed ? label : undefined}
+                    /* UI — l'état actif combinait un aplat bleu à 20 % et un rail,
+                       deux signaux redondants. Le rail devient le marqueur
+                       principal, le fond se réduit à un voile clair : la
+                       sélection reste évidente sans alourdir la colonne. */
                     className={({ isActive }) =>
-                      `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] no-underline
-                       transition-colors duration-150 ${collapsed ? 'lg:justify-center' : ''} ${
+                      `relative flex items-center gap-3 px-3 py-2.5 rounded-control text-body-sm no-underline
+                       transition-[background-color,color] duration-150 ${collapsed ? 'lg:justify-center' : ''} ${
                         isActive
-                          ? 'bg-lias-blue/20 text-white font-semibold'
-                          : 'text-lias-navy-text font-medium hover:bg-white/[0.06] hover:text-white'
+                          ? 'bg-white/[0.09] text-white font-semibold'
+                          : 'text-lias-navy-text font-medium hover:bg-white/[0.05] hover:text-white'
                       }`
                     }
                   >
@@ -150,7 +160,11 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
                         {isActive && (
                           <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-lias-blue" />
                         )}
-                        <Icon size={18} strokeWidth={2} className="shrink-0" />
+                        <Icon
+                          size={18}
+                          strokeWidth={2}
+                          className={`shrink-0 ${isActive ? 'text-lias-blue' : ''}`}
+                        />
                         {!collapsed && <span className="truncate">{label}</span>}
                       </>
                     )}
@@ -161,10 +175,10 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
           ))}
         </nav>
 
-        <div className="px-3 py-3 border-t border-lias-navy-light shrink-0">
+        <div className="px-3 py-3 border-t border-white/[0.07] shrink-0">
           {!collapsed && user && (
-            <div className="px-3 pb-3 mb-1 border-b border-lias-navy-light">
-              <div className="text-[12px] font-medium text-white truncate">{user.email}</div>
+            <div className="px-3 pb-3 mb-1 border-b border-white/[0.07]">
+              <div className="text-meta font-medium text-white truncate">{user.email}</div>
               <div className="text-[10.5px] text-lias-navy-text-dim truncate">
                 {ROLE_LABEL[user.role] ?? user.role}
               </div>
@@ -175,7 +189,7 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
             onClick={handleLogout}
             title={collapsed ? 'Déconnexion' : undefined}
             className={`w-full bg-transparent border-none text-lias-navy-text-dim cursor-pointer flex items-center
-              gap-3 py-2 px-3 text-[12.5px] rounded-lg hover:bg-white/[0.06] hover:text-white
+              gap-3 py-2 px-3 text-meta rounded-control hover:bg-white/[0.05] hover:text-white
               transition-colors duration-150 ${collapsed ? 'lg:justify-center' : ''}`}
           >
             <LogOut size={16} strokeWidth={2} className="shrink-0" />
@@ -185,7 +199,7 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
           <button
             onClick={onToggle}
             className={`hidden lg:flex w-full bg-transparent border-none text-lias-navy-text-dim cursor-pointer
-              items-center gap-3 py-2 px-3 text-[12.5px] rounded-lg hover:bg-white/[0.06]
+              items-center gap-3 py-2 px-3 text-meta rounded-control hover:bg-white/[0.05] hover:text-white
               transition-colors duration-150 ${collapsed ? 'lg:justify-center' : ''}`}
           >
             {collapsed ? (
