@@ -37,7 +37,7 @@ les sources, l'usage réel de chaque spécification.
 \textbf{Spécification} & \textbf{Imports} & \textbf{Implémentation} & \textbf{Usage dans LIAS} \\
 \midrule
 Jakarta Persistence (JPA) & 224 & Hibernate~6.5, via Spring~Data~JPA & \code{@Entity}, \code{@Table}, \code{@Column}, \code{@ManyToOne}, \code{@Enumerated} sur les 31~entités ; JPQL dans les repositories \\
-Jakarta Bean Validation & 70 & Hibernate Validator & \code{@NotBlank}, \code{@NotNull}, \code{@Email}, \code{@Size}, \code{@Min} sur les DTO ; \code{@Valid} sur 17~paramètres de contrôleur \\
+Jakarta Bean Validation & 70 & Hibernate Validator & \code{@NotBlank}, \code{@NotNull}, \code{@Email}, \code{@Size}, \code{@Min} sur les DTO ; \code{@Valid} sur 35~paramètres de contrôleur \\
 Jakarta Servlet & 8 & Tomcat~10 embarqué & \code{HttpServletRequest}, \code{FilterChain} dans le filtre d'authentification et le gestionnaire d'erreurs \\
 Injection de dépendances & --- & Conteneur Spring (compatible JSR-330) & Injection par constructeur dans l'ensemble des services et contrôleurs \\
 Gestion transactionnelle & --- & Spring \code{@Transactional} & Démarcation déclarative, y compris \code{REQUIRES\_NEW} pour l'audit \\

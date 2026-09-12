@@ -217,7 +217,7 @@ revenir sans que l'épisode précédent ne disparaisse.
 
 \section{Modèle de données}
 
-Le schéma relationnel compte 29 tables créées par trois migrations Flyway successives. Le
+Le schéma relationnel compte 30 tables créées par trois migrations Flyway successives. Le
 tableau~\ref{tab:migrations} en donne la répartition.
 
 \begin{table}[H]
@@ -229,7 +229,7 @@ tableau~\ref{tab:migrations} en donne la répartition.
 \toprule
 \textbf{Version} & \textbf{Objet} & \textbf{Contenu} \\
 \midrule
-V1 & Schéma initial & 27 tables : identité, membres, gouvernance, activité scientifique, ressources, notifications, audit \\
+V1 & Schéma initial & 28 tables : identité, membres, gouvernance, activité scientifique, ressources, notifications, audit \\
 V2 & Historique des rôles et identité du laboratoire & \code{user\_role\_history}, \code{laboratory} \\
 V3 & Source de réconciliation & Extension de la contrainte \code{CHECK} sur \code{user\_role\_history.source} pour admettre la valeur \code{RECONCILIATION} \\
 \bottomrule

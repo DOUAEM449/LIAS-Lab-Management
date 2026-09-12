@@ -272,9 +272,9 @@ interne, protégée par authentification, donne accès à dix-huit modules de ge
 l'étendue dépend du rôle effectif de l'utilisateur connecté.
 
 Le système reconnaît neuf rôles applicatifs et cinq statuts d'appartenance, articulés par
-trois types de mandats de gouvernance. Il gère 31 entités persistantes réparties en 29
+trois types de mandats de gouvernance. Il gère 31 entités persistantes réparties en 30
 tables, dont quatre tables d'historique et une table d'audit. L'ensemble représente
-environ 9 900 lignes de Java côté serveur et 13 000 lignes de JavaScript côté client.
+environ 9 900 lignes de Java côté serveur et 13 100 lignes de JavaScript côté client.
 
 
 ## Méthodologie de travail
@@ -729,7 +729,7 @@ revenir sans que l'épisode précédent ne disparaisse.
 ## Modèle de données
 
 
-Le schéma relationnel compte 29 tables créées par trois migrations Flyway successives. Le
+Le schéma relationnel compte 30 tables créées par trois migrations Flyway successives. Le
 tableau 3.1 en donne la répartition.
 
 
@@ -737,7 +737,7 @@ tableau 3.1 en donne la répartition.
 
 | **Version** | **Objet** | **Contenu** |
 | --- | --- | --- |
-| V1 | Schéma initial | 27 tables : identité, membres, gouvernance, activité scientifique, ressources, notifications, audit |
+| V1 | Schéma initial | 28 tables : identité, membres, gouvernance, activité scientifique, ressources, notifications, audit |
 | V2 | Historique des rôles et identité du laboratoire | `user_role_history`, `laboratory` |
 | V3 | Source de réconciliation | Extension de la contrainte `CHECK` sur `user_role_history.source` pour admettre la valeur `RECONCILIATION` |
 
@@ -816,7 +816,7 @@ les sources, l'usage réel de chaque spécification.
 | **Spécification** | **Imports** | **Implémentation** | **Usage dans LIAS** |
 | --- | --- | --- | --- |
 | Jakarta Persistence (JPA) | 224 | Hibernate 6.5, via Spring Data JPA | `@Entity`, `@Table`, `@Column`, `@ManyToOne`, `@Enumerated` sur les 31 entités ; JPQL dans les repositories |
-| Jakarta Bean Validation | 70 | Hibernate Validator | `@NotBlank`, `@NotNull`, `@Email`, `@Size`, `@Min` sur les DTO ; `@Valid` sur 17 paramètres de contrôleur |
+| Jakarta Bean Validation | 70 | Hibernate Validator | `@NotBlank`, `@NotNull`, `@Email`, `@Size`, `@Min` sur les DTO ; `@Valid` sur 35 paramètres de contrôleur |
 | Jakarta Servlet | 8 | Tomcat 10 embarqué | `HttpServletRequest`, `FilterChain` dans le filtre d'authentification et le gestionnaire d'erreurs |
 | Injection de dépendances | — | Conteneur Spring (compatible JSR-330) | Injection par constructeur dans l'ensemble des services et contrôleurs |
 | Gestion transactionnelle | — | Spring `@Transactional` | Démarcation déclarative, y compris `REQUIRES_NEW` pour l'audit |
@@ -1543,9 +1543,16 @@ Le module des conventions (figure 6.18) gère les partenaires académiques
 et industriels ainsi que les conventions associées et leurs documents.
 
 
-![Conventions et partenariats du laboratoire](figures/screens/25-conventions.png)
+![Conventions et partenariats — le jeu de démonstration ne comporte qu'un partenaire,
+sans convention signée à ce jour](figures/screens/25-conventions.png)
 
-**Figure 6.18** — Conventions et partenariats du laboratoire
+**Figure 6.18** — Conventions et partenariats — le jeu de démonstration ne comporte qu'un partenaire,
+sans convention signée à ce jour
+
+
+L'état de cette capture est celui du jeu de données de démonstration : un seul partenaire y
+est enregistré et aucune convention ne lui est encore rattachée. Les compteurs à zéro
+traduisent donc un module opérationnel mais peu alimenté, et non un défaut de chargement.
 
 
 ## Notifications
@@ -2113,8 +2120,8 @@ le commit final.
 | Repositories | 30 | Services d'appel API | 19 |
 | Énumérations métier | 10 |  |  |
 | Migrations Flyway | 3 |  |  |
-| Tables relationnelles | 29 |  |  |
-| Lignes de Java (sources) | 9 874 | Lignes de JavaScript / JSX | 13 049 |
+| Tables relationnelles | 30 |  |  |
+| Lignes de Java (sources) | 9 908 | Lignes de JavaScript / JSX | 13 112 |
 | Lignes de Java (tests) | 863 | Lignes SQL de migration | 750 |
 
 
@@ -2614,14 +2621,19 @@ chapitre 5 : les champs sont actifs pour le propriétaire du profil et pour la
 direction, et en lecture seule pour tout autre membre, avec un message explicite.
 
 
-![Espace personnel — profil, position dans le laboratoire et paramètres de sécurité](figures/screens/23-profil.png)
+![Espace personnel — les trois notions STATUT, RÔLE et MANDAT affichées côte à côte](figures/screens/23-profil.png)
 
-**Figure C.2** — Espace personnel — profil, position dans le laboratoire et paramètres de sécurité
+**Figure C.2** — Espace personnel — les trois notions STATUT, RÔLE et MANDAT affichées côte à côte
 
 
 L'espace personnel, présenté en figure C.2, regroupe les informations
-du membre connecté, sa position dans le laboratoire (statut, équipe, mandat éventuel) et le
-changement de mot de passe.
+du membre connecté, sa position dans le laboratoire et le changement de mot de passe. Le
+bandeau d'identité y donne l'illustration la plus directe de la règle centrale du projet :
+le membre affiché a pour STATUT « Permanent », pour RÔLE effectif « Vice-directeur », et
+détient simultanément deux MANDATs, « Chef d'équipe » et « Vice-directeur ». Les trois
+valeurs diffèrent, et seule la deuxième est calculée — elle découle de la plus élevée des
+deux responsabilités en cours, conformément à la règle de priorité du
+listing 5.1.
 
 
 # Reproduction de l'environnement

@@ -102,11 +102,11 @@ le cahier des charges PDF). Les écarts suivants sont assumés et justifiés au 
 | Repositories Spring Data | 30 |
 | Énumérations métier | 10 |
 | Migrations Flyway | 3 (V1, V2, V3) |
-| Tables relationnelles | 29 |
+| Tables relationnelles | 30 |
 | Pages React | 21 |
 | Composants React | 27 (+ 7 modules de design system) |
 | Services frontend (Axios) | 19 |
-| Lignes Java (`src/main`) | 9 874 |
+| Lignes Java (`src/main`) | 9 908 |
 | Lignes Java de test | 863 |
-| Lignes JavaScript / JSX | 13 049 |
+| Lignes JavaScript / JSX | 13 112 |
 | Lignes SQL de migration | 750 |
