@@ -58,6 +58,12 @@ export const MEMBER_PROFILE_EDIT_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRE
 // Consulting the audit trail (AuditLogController) — SYSTEM_ADMIN + governance.
 export const AUDIT_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR', 'VICE_DIRECTOR'];
 
+// Managing the governance structure itself — creating/editing/archiving teams
+// (TeamController) and assigning/ending mandates (MandateController). The backend
+// restricts these to SYSTEM_ADMIN + DIRECTOR only; a VICE_DIRECTOR reaches the
+// Gouvernance page (AUDIT/MANAGEMENT scope) but may only consult and transfer.
+export const GOVERNANCE_STRUCTURE_ROLES = ['SYSTEM_ADMIN', 'DIRECTOR'];
+
 // Deleting a document (DocumentController's method-level @PreAuthorize). Viewing,
 // uploading and editing metadata are open to every INTERNAL_MODULE_ROLES holder,
 // which is exactly the class-level rule on the same controller.

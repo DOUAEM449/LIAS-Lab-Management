@@ -1,0 +1,239 @@
+\cleardoublepage
+\appendix
+\addcontentsline{toc}{chapter}{Annexes}
+
+\chapter{Détail des tests automatisés}
+\label{ann:tests}
+
+Les 55 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+par \code{mvn clean test} se termine sans échec ni erreur.
+
+% Les noms de méthode de test sont longs : on réduit la fonte du code dans cette
+% table seule, pour qu'aucun identifiant ne déborde sur la colonne voisine.
+\begingroup
+\renewcommand{\code}[1]{\texttt{\footnotesize #1}}
+\begin{longtable}{@{}p{0.5cm}p{10.3cm}p{4.9cm}@{}}
+\caption{Liste exhaustive des tests automatisés}\label{tab:listetests}\\
+\toprule
+\textbf{\#} & \textbf{Méthode de test} & \textbf{Règle vérifiée} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{@{}l}{\small\itshape Tableau~\ref{tab:listetests} --- suite}\\
+\toprule
+\textbf{\#} & \textbf{Méthode de test} & \textbf{Règle vérifiée} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\multicolumn{3}{@{}l}{\bfseries UserRoleSyncServiceTest --- dérivation du rôle (17)}\\
+1 & \code{permanentMemberGetsPermanentRole} & Statut $\rightarrow$ rôle \\
+2 & \code{associateMemberGetsAssociateRole} & Statut $\rightarrow$ rôle \\
+3 & \code{phdStudentGetsPhdStudentRole} & Statut $\rightarrow$ rôle \\
+4 & \code{retiredMemberGetsRetiredRole} & Statut $\rightarrow$ rôle \\
+5 & \code{formerMemberGetsFormerRole} & Statut $\rightarrow$ rôle \\
+6 & \code{teamLeaderMandatePromotesToTeamLeader} & Mandat $\rightarrow$ rôle \\
+7 & \code{directorMandatePromotesToDirector} & Mandat $\rightarrow$ rôle \\
+8 & \code{directorOutranksTeamLeaderWhenBothHeld} & Priorité entre mandats \\
+9 & \code{viceDirectorOutranksTeamLeader} & Priorité entre mandats \\
+10 & \code{retiredStatusFreezesRoleEvenWithLeftoverDirectorMandate} & Primauté du statut gelé \\
+11 & \code{everyRealChangeOpensAHistoryRowWithItsSource} & Historisation \\
+12 & \code{noWriteWhenRoleAlreadyCorrectAndRecorded} & Idempotence \\
+13 & \code{overrideRoleAppliesAdminOverrideSource} & Dérogation administrative \\
+14 & \code{reconcileAllCorrectsADriftedRoleAndLeavesConsistentOnesAlone} & Réconciliation \\
+15 & \code{reconcileAllIsIdempotentWhenEverythingIsAlreadyConsistent} & Idempotence \\
+16 & \code{reconcileAllBackfillsHistoryForACorrectButUnrecordedRole} & Complètement d'historique \\
+17 & \code{syncForMemberIsANoOpForAnAccountWithNoLinkedUser} & Cas limite \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries AuthorizationMatrixTest --- matrice d'autorisation (9)}\\
+18 & \code{publicEndpointsAnonymous} & Endpoints publics ouverts \\
+19 & \code{membersListRequiresAuthentication} & 401 si anonyme \\
+20 & \code{adminUsersIsSystemAdminOnly} & Administration réservée \\
+21 & \code{auditLogIsGovernanceOnly} & Audit réservé à la direction \\
+22 & \code{reportsAreGovernanceOnly} & Rapports réservés \\
+23 & \code{deleteTeamIsAdminOrDirectorOnly} & Vice-directeur exclu \\
+24 & \code{governanceTierDeletes} & Suppressions de niveau direction \\
+25 & \code{internalModulesExcludePhdStudent} & CdC §2.2.C \\
+26 & \code{phdStudentMayCreatePublications} & CdC §12 \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries EquipmentServiceTest --- invariant de stock (8)}\\
+27 & \code{distributionReducesAvailableQuantityByTheDistributedAmount} & Décrément exact \\
+28 & \code{distributingExactlyTheRemainingStockIsAllowedAndDrainsItToZero} & Cas limite \\
+29 & \code{distributionAboveAvailableStockIsRejectedAndChangesNothing} & Refus sans effet \\
+30 & \code{returningADistributionPutsTheQuantityBackInStock} & Retour en stock \\
+31 & \code{returningAnAlreadyReturnedDistributionIsRejected} & Double retour refusé \\
+32 & \code{distributeThenReturnLeavesStockExactlyAsItStarted} & Neutralité du cycle \\
+33 & \code{raisingTotalQuantityRaisesAvailabilityByTheSameDelta} & Rééquilibrage \\
+34 & \code{loweringTotalQuantityNeverPushesAvailabilityBelowZero} & Plancher à zéro \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries NotificationServiceTest --- ciblage (5)}\\
+35 & \code{notifyPersistsAnUnreadNotificationForAnExistingMember} & Persistance \\
+36 & \code{notifySilentlySkipsAnUnknownRecipient} & Robustesse \\
+37 & \code{notifyGovernanceReachesTheCurrentDirectorAndViceDirector} & Résolution par mandat \\
+38 & \code{notifyGovernanceWithNoMandateHoldersNotifiesNobody} & Cas vide \\
+39 & \code{notifyAllDeduplicatesRecipientIdsAndIgnoresNulls} & Déduplication \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries CustomUserDetailsTest --- gel des comptes (5)}\\
+40 & \code{activeMemberIsEnabledAndExposesItsRoleAuthority} & Compte actif \\
+41 & \code{retiredMemberIsFrozen} & CdC §8.1 \\
+42 & \code{formerMemberIsFrozen} & CdC §8.2 \\
+43 & \code{technicalAccountWithoutMemberProfileStaysUsable} & Compte technique \\
+44 & \code{administrativelyDisabledAccountIsNotEnabledWhateverTheStatus} & Désactivation \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries BadRequestParamTest --- validation des paramètres (4)}\\
+45 & \code{calendarWithoutRequiredFromToParamsIs400NotServerError} & Paramètre manquant \\
+46 & \code{discussionsWithAnUnknownScopeEnumIs400NotServerError} & Énumération invalide \\
+47 & \code{aMalformedUuidPathVariableIs400NotServerError} & UUID mal formé \\
+48 & \code{aNonNumericYearPathVariableIs400NotServerError} & Type incompatible \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries MemberServiceTest --- archivage d'un membre (4)}\\
+49 & \code{archivingAMemberClosesEveryMandateTheyStillHold} & Archivage $\rightarrow$ clôture \\
+50 & \code{archivingAMemberRecomputesTheirEffectiveRole} & Resynchronisation du rôle \\
+51 & \code{archivingSoftDeletesWithoutTouchingHistorizedData} & Historique préservé \\
+52 & \code{mandatesAreClosedBeforeTheMemberRowIsArchived} & Ordre des opérations \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries MandateServiceTest --- gouvernance en exercice (3)}\\
+53 & \code{anArchivedMembersMandateIsNotReportedAsInExercise} & Titulaire archivé exclu \\
+54 & \code{mandatesOfLiveMembersAreStillReported} & Non-régression \\
+55 & \code{endingAllMandatesOfAMemberClosesThemWithoutDeletingThem} & Clôture sans suppression \\
+\end{longtable}
+\endgroup
+
+\chapter{Principaux endpoints de l'API}
+\label{ann:api}
+
+L'API expose 22 contrôleurs sous le préfixe \code{/api/v1}. Le
+tableau~\ref{tab:api} en présente les points d'entrée les plus significatifs ainsi que leur
+règle d'autorisation.
+
+\begin{longtable}{@{}p{1.5cm}p{6.4cm}p{6.1cm}@{}}
+\caption{Principaux endpoints de l'API REST}\label{tab:api}\\
+\toprule
+\textbf{Méthode} & \textbf{Chemin} & \textbf{Autorisation} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Méthode} & \textbf{Chemin} & \textbf{Autorisation} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+POST & \code{/auth/login} & Public \\
+POST & \code{/auth/refresh} & Public \\
+POST & \code{/auth/me} & Authentifié, compte non gelé \\
+POST & \code{/auth/forgot-password} & Public \\
+POST & \code{/membership-requests/public} & Public \\
+GET & \code{/public/laboratory} & Public \\
+GET & \code{/public/members} & Public \\
+GET & \code{/publications}, \code{/events}, \code{/teams}, \code{/partners} & Public (lecture) \\
+GET & \code{/members} & Authentifié \\
+PUT & \code{/members/\{id\}} & Soi-même, ou ADMIN / DIR / V-DIR \\
+POST & \code{/members/\{id\}/status} & ADMIN, DIR, V-DIR \\
+POST & \code{/members/\{id\}/leave}, \code{/return} & ADMIN, DIR \\
+DELETE & \code{/members/\{id\}} & ADMIN, DIR \\
+GET & \code{/members/\{id\}/status-history} & Authentifié \\
+GET & \code{/members/\{id\}/affiliation-history} & Authentifié \\
+GET & \code{/mandates/active} & Authentifié \\
+POST & \code{/mandates} & ADMIN, DIR \\
+POST & \code{/mandates/\{id\}/end} & ADMIN, DIR \\
+POST/PUT/DEL & \code{/teams}, \code{/teams/\{id\}} & ADMIN, DIR \\
+POST & \code{/team-memberships/transfer} & ADMIN, DIR, V-DIR \\
+GET & \code{/membership-requests} & ADMIN, DIR, V-DIR \\
+POST & \code{/membership-requests/\{id\}/approve} & \textbf{DIR seul} \\
+POST & \code{/membership-requests/\{id\}/reject} & \textbf{DIR seul} \\
+POST/PUT & \code{/events} & ADMIN, DIR, V-DIR, CHEF \\
+DELETE & \code{/events/\{id\}} & ADMIN, DIR, V-DIR \\
+POST & \code{/events/\{id\}/register} & Authentifié \\
+GET & \code{/events/editions} & Public (lecture) \\
+GET/POST/PUT & \code{/documents} & Modules internes (hors doctorants) \\
+GET & \code{/documents/\{id\}/versions} & Modules internes \\
+GET & \code{/documents/\{id\}/download} & Modules internes \\
+DELETE & \code{/documents/\{id\}} & ADMIN, DIR, V-DIR \\
+GET & \code{/equipment} & Modules internes \\
+POST/PUT/DEL & \code{/equipment} & ADMIN, DIR, V-DIR \\
+POST & \code{/equipment/\{id\}/distributions} & ADMIN, DIR, V-DIR \\
+POST & \code{/equipment/distributions/\{id\}/return} & ADMIN, DIR, V-DIR \\
+GET & \code{/equipment/\{id\}/non-recipients} & Modules internes \\
+POST & \code{/equipment-requests} & Modules internes \\
+POST & \code{/equipment-requests/\{id\}/approve} & DIR, V-DIR \\
+GET/POST/PUT & \code{/meetings} & Consultation : modules internes ; création : + CHEF \\
+POST & \code{/meetings/\{id\}/minutes} & ADMIN, DIR, V-DIR, CHEF \\
+GET & \code{/meetings/minutes/\{id\}/download} & Modules internes \\
+POST/PUT & \code{/publications} & Tous les rôles actifs, doctorants inclus \\
+DELETE & \code{/publications/\{id\}} & ADMIN, DIR, V-DIR \\
+GET/POST/DEL & \code{/partners}, \code{/agreements} & ADMIN, DIR, V-DIR \\
+GET & \code{/calendar?from=\&to=} & Authentifié \\
+GET/POST & \code{/discussions}, \code{/discussions/\{id\}/messages} & Authentifié \\
+GET & \code{/notifications}, \code{/notifications/unread-count} & Authentifié \\
+GET & \code{/search?q=} & Authentifié \\
+GET/POST & \code{/reports}, \code{/reports/\{year\}/generate} & ADMIN, DIR, V-DIR \\
+GET & \code{/reports/\{year\}/pdf} & ADMIN, DIR, V-DIR \\
+GET & \code{/admin/audit-logs} & ADMIN, DIR, V-DIR \\
+GET/POST & \code{/admin/users} & \textbf{ADMIN seul} \\
+PATCH & \code{/admin/users/\{id\}/role} & \textbf{ADMIN seul} \\
+PUT & \code{/laboratory} & \textbf{ADMIN seul} \\
+\end{longtable}
+
+\chapter{Captures complémentaires}
+\label{ann:captures}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/06-membre-details.png}
+\caption{Fiche membre --- onglet Profil, champs éditables selon les droits}
+\label{fig:annProfilMembre}
+\end{figure}
+
+La figure~\ref{fig:annProfilMembre} illustre la règle d'édition décrite au
+chapitre~\ref{ch:backend} : les champs sont actifs pour le propriétaire du profil et pour la
+direction, et en lecture seule pour tout autre membre, avec un message explicite.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/23-profil.png}
+\caption{Espace personnel --- les trois notions \srt{}, \rol{} et \man{} affichées côte à côte}
+\label{fig:annEspacePerso}
+\end{figure}
+
+L'espace personnel, présenté en figure~\ref{fig:annEspacePerso}, regroupe les informations
+du membre connecté, sa position dans le laboratoire et le changement de mot de passe. Le
+bandeau d'identité y donne l'illustration la plus directe de la règle centrale du projet :
+le membre affiché a pour \srt{} « Permanent », pour \rol{} effectif « Vice-directeur », et
+détient simultanément deux \man{}s, « Chef d'équipe » et « Vice-directeur ». Les trois
+valeurs diffèrent, et seule la deuxième est calculée --- elle découle de la plus élevée des
+deux responsabilités en cours, conformément à la règle de priorité du
+listing~\ref{lst:compute}.
+
+\chapter{Reproduction de l'environnement}
+\label{ann:repro}
+
+Les commandes ci-dessous permettent de reconstruire et de vérifier le projet. Elles
+correspondent exactement à celles dont les résultats sont rapportés au
+chapitre~\ref{ch:tests}.
+
+\begin{lstlisting}[language=bash,caption={Construction et vérification du projet},label={lst:repro}]
+# --- Configuration locale (valeurs a renseigner, fichier non versionne) ---
+#   backend/.env  :  DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD,
+#                    MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD,
+#                    JWT_SECRET, FILE_STORAGE_DIR
+#   Le modele complet se trouve dans backend/.env.example
+
+# --- Backend : compilation et tests ---
+cd backend
+set JAVA_HOME=<chemin du JDK 21>
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 55 tests
+
+# --- Backend : execution ---
+.maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run
+
+# --- Frontend : construction, analyse statique, execution ---
+cd ../frontend
+npm install
+npm run build
+npx oxlint
+npm run dev
+\end{lstlisting}
+
+La documentation interactive de l'API est accessible, l'application démarrée, à l'adresse
+\code{/swagger-ui.html}. Les diagrammes UML sources, au format Mermaid, se trouvent dans
+\code{docs/uml/} ; les images de ce rapport en sont le rendu direct.

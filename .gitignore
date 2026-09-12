@@ -1,5 +1,6 @@
 # --- Build output -------------------------------------------------------------
 backend/target/
+backend/target_*/
 frontend/dist/
 
 # --- Dependencies -----------------------------------------------------------
@@ -15,8 +16,14 @@ npm-debug.log*
 
 # --- Local environment / secrets ------------------------------------------
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
 *.local
+# Spring profile files that carry real credentials (kept out of VCS)
+application-local.yml
+application-*-local.yml
+src/main/resources/application-secret*.yml
 
 # --- IDE / OS -------------------------------------------------------------------
 .idea/
@@ -24,3 +31,15 @@ npm-debug.log*
 *.iml
 .DS_Store
 Thumbs.db
+
+# --- LaTeX (fichiers auxiliaires) ------------------------------------------
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.out
+docs/report/*.toc
+docs/report/*.lof
+docs/report/*.lot
+docs/report/*.synctex.gz
+# Caches de compilation latexmk/pdflatex (chemins absolus de la machine de build)
+docs/report/*.fdb_latexmk
+docs/report/*.fls

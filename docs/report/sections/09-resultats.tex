@@ -1,0 +1,167 @@
+\chapter{Résultats, discussion et perspectives}
+\label{ch:resultats}
+
+\section{Fonctionnalités réalisées}
+
+Le système livré comporte dix-huit modules fonctionnels, servis par 22 contrôleurs REST et
+21 pages d'interface. Le tableau~\ref{tab:volumetrie} en donne la volumétrie, relevée sur
+le commit final.
+
+\begin{table}[H]
+\centering
+\caption{Volumétrie du système livré}
+\label{tab:volumetrie}
+\small
+\begin{tabularx}{\textwidth}{@{}Xr@{\hskip 2em}Xr@{}}
+\toprule
+\textbf{Backend} & & \textbf{Frontend} & \\
+\midrule
+Entités JPA & 31 & Pages React & 21 \\
+Services métier & 28 & Composants & 27 \\
+Contrôleurs REST & 22 & Modules de design system & 7 \\
+Repositories & 30 & Services d'appel API & 19 \\
+Énumérations métier & 10 & & \\
+Migrations Flyway & 3 & & \\
+Tables relationnelles & 30 & & \\
+Lignes de Java (sources) & 9\,942 & Lignes de JavaScript / JSX & 13\,112 \\
+Lignes de Java (tests) & 1\,092 & Lignes SQL de migration & 750 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Correspondance avec le cahier des charges}
+
+Le tableau~\ref{tab:conformite} confronte chacune des 21 sections du cahier des charges à
+son implémentation. La colonne « preuve » renvoie à la figure du rapport qui en atteste.
+
+\begin{table}[H]
+\centering
+\caption{Correspondance entre le cahier des charges et l'implémentation}
+\label{tab:conformite}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}c p{3.05cm} X p{1.85cm} c@{}}
+\toprule
+\textbf{§} & \textbf{Exigence} & \textbf{Implémentation} & \textbf{Preuve} & \textbf{État} \\
+\midrule
+1 & Objectifs du système & Architecture trois tiers, 18 modules & Fig.~\ref{fig:archi} & Couvert \\
+2.1 & Accès visiteur libre & Endpoints publics, portail & Fig.~\ref{fig:portail} & Couvert \\
+2.2 & Cinq statuts de membre & \code{MemberStatus}, badges dédiés & Fig.~\ref{fig:membres} & Couvert \\
+2.2.C & Doctorant sans modules internes & Exclusion au niveau classe & Fig.~\ref{fig:sidebarPhd} & Couvert \\
+3 & Profil complet et modifiable & \code{Member}, 11 champs, avatar & Fig.~\ref{fig:membreGouv} & Couvert \\
+4.1 & Date de création du laboratoire & \code{Laboratory} & Fig.~\ref{fig:admin} & Couvert \\
+4.2 & Dates du membre & 3 champs datés, naissance confidentielle & Fig.~\ref{fig:membreHist} & Couvert \\
+4.3 & Historique des affiliations & \code{AffiliationHistory}, retour = nouvelle période & Fig.~\ref{fig:membreHist} & Couvert \\
+5.1 & Administrateur système & Contrôleur réservé, identité du labo & Fig.~\ref{fig:admin} & Couvert \\
+5.2 & Directeur en mandat & Décisions réservées au directeur & Fig.~\ref{fig:demandes} & Couvert \\
+5.3 & Mandats datés, historique conservé & \code{Mandate}, clôture sans suppression & Fig.~\ref{fig:gouvMandats} & Couvert \\
+6 & Demandes d'adhésion & Dépôt public, décision du directeur, création de compte & Fig.~\ref{fig:apply}, \ref{fig:demandes} & Couvert \\
+7 & Rôles et responsabilités & \code{UserRoleSyncService}, rôle dérivé et historisé & Fig.~\ref{fig:seqMandat} & Couvert \\
+8.1 & Retraité : compte gelé & Gel vérifié à chaque requête & Fig.~\ref{fig:etats} & Couvert \\
+8.2 & Ancien membre réactivable & \code{returnToLab()} & Fig.~\ref{fig:etats} & Couvert \\
+9 & Événements, archivage par édition & \code{editionNumber}, organisateurs, participants & Fig.~\ref{fig:events} & Couvert \\
+10 & Archivage documentaire versionné & \code{DocumentVersion}, 9 catégories & Fig.~\ref{fig:docVersions} & Couvert \\
+11 & Rapport annuel automatique & Agrégation, PDF, planification annuelle & Fig.~\ref{fig:rapports} & Couvert \\
+12 & Publications, doctorants inclus & Classement auteur / année / équipe & Fig.~\ref{fig:publis} & Couvert \\
+13 & Communication interne & 3 portées de discussion & Fig.~\ref{fig:notifs} & Couvert \\
+14 & Matériel : reçu / non reçu & Requête de complément dédiée & Fig.~\ref{fig:equipDist} & Couvert \\
+15 & Besoins en matériel & Soumission, validation par la direction & Fig.~\ref{fig:equip} & Couvert \\
+16 & Conventions et collaborations & \code{Partner}, \code{Agreement} & Fig.~\ref{fig:conventions} & Couvert \\
+17 & Procès-verbaux & Réunions, ordre du jour, dépôt de PV & Fig.~\ref{fig:reunions} & Couvert \\
+18 & Recherche globale & Endpoint transverse, barre permanente & Fig.~\ref{fig:dashboard} & Couvert \\
+19 & Notifications & 4 politiques de destinataires & Fig.~\ref{fig:notifs} & Couvert \\
+20 & Calendrier & Agrégation événements + réunions & Fig.~\ref{fig:calendrier} & Couvert \\
+21 & Règles générales & Suppression logique, 4 historiques, audit & Fig.~\ref{fig:audit} & Couvert \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Les 21 sections sont couvertes par une fonctionnalité opérationnelle. Cette conformité
+porte sur le périmètre fonctionnel ; elle ne signifie pas que le système est exempt de
+limites, exposées en~§\ref{sec:limites}.
+
+\section{Points forts}
+
+\paragraph{La séparation \srt{}~/~\rol{}~/~\man{} est structurelle, pas déclarative.} Elle
+n'est pas seulement documentée : elle est imposée par le code. Le rôle applicatif ne peut
+pas être incohérent avec la réalité institutionnelle, parce qu'il en est calculé. La
+réconciliation au démarrage garantit en outre que cette propriété reste vraie même si des
+données arrivent par un autre chemin.
+
+\paragraph{La sécurité ne fait pas confiance au jeton.} Le rechargement systématique des
+habilitations depuis la base rend la révocation immédiate. C'est un choix coûteux en
+lectures mais qui supprime toute une classe de vulnérabilités liées aux jetons survivants.
+
+\paragraph{L'interface et le serveur appliquent la même matrice.} Les listes de rôles
+utilisées par les gardes de route et par le masquage des commandes correspondent aux
+annotations du serveur. L'audit a permis de corriger le seul écart constaté ; l'objectif
+--- aucune commande visible qui soit refusée, aucune opération autorisée qui soit masquée
+--- est atteint.
+
+\paragraph{Rien n'est jamais détruit.} La suppression logique généralisée, les quatre tables
+d'historique et le journal d'audit répondent ensemble à la règle §21 du cahier des charges.
+L'utilitaire de résolution sûre des associations archivées évite que cette conservation ne
+dégrade l'expérience.
+
+\paragraph{La validation ne se limite pas à la compilation.} Les défauts décrits en
+§\ref{sec:defauts} n'auraient été révélés ni par la compilation, ni par une lecture de
+code, ni par la vérification des codes de statut HTTP. Ils l'ont été par un parcours réel
+et par des tests d'intégration.
+
+\section{Limites}
+\label{sec:limites}
+
+Les limites suivantes sont assumées et exposées sans atténuation.
+
+\paragraph{Absence de thème sombre.} Le document de spécification le mentionne parmi les
+exigences non fonctionnelles. Il n'a pas été implémenté. Le système de composants repose sur
+des variables de couleur centralisées, ce qui rendrait l'ajout mécanique, mais le travail
+n'a pas été fait.
+
+\paragraph{Aucune mesure de couverture de code.} Aucun outil de couverture n'est configuré.
+Les 55 tests protègent les règles identifiées comme critiques, mais la proportion du code
+exercée n'est pas connue et n'est pas estimée dans ce rapport.
+
+\paragraph{Modules inégalement couverts par les tests.} Les discussions, les partenariats et
+la génération PDF ne disposent pas de tests automatisés dédiés. Ils ont été validés
+manuellement lors de l'audit, ce qui est un niveau de garantie inférieur.
+
+\paragraph{Pas de campagne de performance.} Les précautions usuelles sont prises ---
+pagination côté serveur, désactivation de la session étendue à la vue, index sur les
+colonnes de recherche --- mais aucune mesure sous charge n'a été conduite. Le comportement
+du système au-delà de quelques dizaines d'utilisateurs simultanés n'est pas documenté.
+
+\paragraph{Accessibilité partielle.} Les boutons-icônes portent des libellés accessibles, le
+focus est visible et les modales se ferment au clavier, mais aucun audit selon un référentiel
+formel n'a été mené.
+
+\paragraph{Rafraîchissement de session non automatisé.} L'expiration du jeton d'accès ramène
+l'utilisateur à l'écran de connexion ; le jeton de rafraîchissement existe et l'endpoint
+correspondant est exposé, mais le client ne l'utilise pas de manière transparente.
+
+\paragraph{Client livré en un seul lot.} Le paquet JavaScript n'est pas découpé en fragments
+chargés à la demande. Sur une connexion lente, le premier affichage en est pénalisé.
+
+\paragraph{Historique de gestion de version à assainir.} Comme exposé au
+chapitre~\ref{ch:securite}, un identifiant de base de données a figuré dans un fichier
+versionné. Il a été retiré du code et le mot de passe correspondant a été effectivement
+changé --- l'ancien est refusé par le serveur de base de données. L'historique du dépôt en
+conserve néanmoins la trace, désormais inopérante ; sa purge reste à effectuer.
+
+\section{Perspectives d'évolution}
+
+\paragraph{Court terme.} Ajouter le thème sombre, configurer un outil de couverture pour
+objectiver l'effort de test, étendre les tests automatisés aux trois modules qui en sont
+dépourvus, et mettre en œuvre le rafraîchissement transparent du jeton.
+
+\paragraph{Moyen terme.} Découper le paquet client par route, introduire une recherche
+plein texte indexée sur les documents et les publications, et exporter le rapport annuel
+dans un second format destiné à la réutilisation bureautique.
+
+\paragraph{Long terme, en lien avec la spécialité.} Les données accumulées par la plateforme
+--- historiques de statuts, de mandats, d'affiliations, production scientifique datée,
+journal d'audit --- constituent un jeu longitudinal exploitable. Une extension analytique
+naturelle consisterait à en dériver des indicateurs de pilotage : évolution des effectifs
+par statut, productivité des équipes, durée moyenne des mandats, saisonnalité de
+l'activité. La conception actuelle s'y prête, précisément parce qu'aucune donnée n'est
+détruite : chaque table d'historique est déjà une série temporelle. C'est l'articulation la
+plus directe entre ce projet de module JEE et la finalité du Master.

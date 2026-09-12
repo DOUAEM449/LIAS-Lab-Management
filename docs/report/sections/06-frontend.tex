@@ -1,0 +1,377 @@
+\chapter{Réalisation du frontend}
+\label{ch:frontend}
+
+Toutes les captures de ce chapitre proviennent de l'application en fonctionnement,
+connectée à la base de données réelle. Le jeu de données affiché est un jeu de
+démonstration constitué pendant le développement ; aucune image n'est une maquette.
+
+\section{Architecture React}
+
+L'interface est une application monopage organisée en quatre niveaux. Les \emph{pages}
+--- 21 au total --- correspondent aux routes et orchestrent le chargement des données. Les
+\emph{composants} --- 27 --- encapsulent les fragments réutilisables, principalement les
+formulaires modaux. Le \emph{système de composants}, rassemblé dans
+\code{components/ui/}, fournit sept modules de primitives : boutons, badges, tables,
+retours d'état, mise en page, graphiques. Les \emph{services} --- 19 modules --- isolent
+tous les appels HTTP ; aucune page n'appelle directement Axios.
+
+Cette séparation a une conséquence pratique vérifiée lors de l'audit : lorsqu'un contrat
+d'API a changé, une seule fonction de service a dû être corrigée, et l'ensemble des pages
+consommatrices en a bénéficié.
+
+Le routage distingue trois espaces : les routes publiques, les routes d'authentification,
+et les routes d'administration regroupées sous \code{/admin}. Ces dernières sont protégées
+par un composant \code{RequireRole} qui redirige vers le tableau de bord tout utilisateur
+dont le rôle ne figure pas dans la liste autorisée.
+
+\section{Authentification}
+
+L'écran de connexion (figure~\ref{fig:login}) est adossé à l'endpoint \code{/auth/login}.
+Il gère l'état de chargement, l'erreur d'identifiants et le message de session expirée ou
+de compte gelé, déposé par l'intercepteur Axios lorsqu'une réponse~401 survient en cours de
+navigation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/03-login.png}
+\caption{Interface d'authentification}
+\label{fig:login}
+\end{figure}
+
+Le jeton reçu est conservé côté navigateur et réinjecté par l'intercepteur de requête sur
+chaque appel. L'écran donne également accès au parcours de réinitialisation du mot de
+passe.
+
+\section{Tableau de bord}
+
+Le tableau de bord (figure~\ref{fig:dashboard}) est la page d'entrée de l'espace interne.
+Son contenu est adapté au rôle : les indicateurs de demandes d'adhésion et les blocs de
+pilotage ne sont chargés que pour les profils de direction, ce qui évite d'émettre des
+requêtes vouées à un refus.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/04-dashboard.png}
+\caption{Tableau de bord principal du système LIAS}
+\label{fig:dashboard}
+\end{figure}
+
+On y distingue la barre de navigation latérale, groupée par domaine --- laboratoire,
+activité scientifique, ressources, pilotage --- et la barre supérieure portant la recherche
+globale et le compteur de notifications non lues.
+
+\section{Gestion des membres}
+
+La liste des membres (figure~\ref{fig:membres}) propose une recherche temporisée, un
+filtrage par statut et des indicateurs de répartition. Le statut est rendu par un badge de
+couleur distincte, conformément à l'exigence de lisibilité de la séparation entre statut et
+rôle.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/05-membres-liste.png}
+\caption{Liste des membres du laboratoire avec filtrage par statut}
+\label{fig:membres}
+\end{figure}
+
+La sélection d'une ligne ouvre la fiche du membre, organisée en quatre onglets. L'onglet
+\emph{Gouvernance} (figure~\ref{fig:membreGouv}) est celui qui matérialise la règle
+centrale du projet.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/07-membre-gouvernance.png}
+\caption{Fiche membre --- onglet Gouvernance, matérialisant la séparation \srt{} / \rol{} / \man{}}
+\label{fig:membreGouv}
+\end{figure}
+
+Cet écran présente côte à côte le statut d'appartenance et le mandat de gouvernance en
+cours, accompagnés d'un encadré explicitant que le rôle effectif est \emph{dérivé} des deux
+et n'est jamais saisi. Sur la capture, le membre est doctorante, ne détient aucun mandat
+actif, et l'historique conserve néanmoins un mandat de chef d'équipe échu : la séparation
+des trois notions est directement lisible à l'écran, ce qui était l'un des objectifs
+d'interface du cahier des charges.
+
+L'onglet \emph{Historique} (figure~\ref{fig:membreHist}) présente en vis-à-vis les deux
+chronologies exigées par la section~4 du cahier des charges : l'historique des statuts et
+les périodes d'affiliation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/08-membre-historique.png}
+\caption{Fiche membre --- historique des statuts et périodes d'affiliation}
+\label{fig:membreHist}
+\end{figure}
+
+La mention portée sous la seconde colonne --- un membre peut quitter puis revenir, chaque
+période étant conservée séparément --- rappelle la règle §4.3 dont cet écran est la
+traduction visuelle.
+
+\section{Gouvernance}
+
+Le module de gouvernance est organisé en trois onglets. L'onglet \emph{Structure}
+(figure~\ref{fig:gouvStruct}) affiche l'organigramme de direction, entièrement déduit des
+mandats actifs : un poste sans titulaire est explicitement présenté comme vacant plutôt que
+masqué.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/09-gouvernance-structure.png}
+\caption{Gouvernance --- organigramme de direction déduit des mandats actifs}
+\label{fig:gouvStruct}
+\end{figure}
+
+L'onglet \emph{Mandats} (figure~\ref{fig:gouvMandats}) permet l'attribution et la clôture
+des responsabilités. Le formulaire avertit que l'attribution d'un mandat de directeur ou de
+vice-directeur clôt automatiquement celui du titulaire précédent, et la note de bas de
+tableau rappelle qu'une clôture ne supprime rien.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/11-gouvernance-mandats.png}
+\caption{Gouvernance --- attribution et clôture des mandats}
+\label{fig:gouvMandats}
+\end{figure}
+
+Ces commandes ne sont affichées qu'à l'administrateur système et au directeur. Un
+vice-directeur accédant à la même page obtient la consultation et un encart explicatif ---
+correction issue de l'audit, décrite au chapitre~\ref{ch:tests}.
+
+\section{Équipes}
+
+L'onglet \emph{Équipes} (figure~\ref{fig:gouvEquipes}) présente les équipes de recherche
+avec leur responsable, leur effectif et leur date de création, ainsi que le formulaire de
+transfert d'un membre d'une équipe à une autre.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/10-gouvernance-equipes.png}
+\caption{Gouvernance --- équipes de recherche et transfert de membre}
+\label{fig:gouvEquipes}
+\end{figure}
+
+Le responsable affiché n'est pas un champ saisi : il provient du mandat de chef d'équipe
+actif rattaché à l'équipe. Une équipe sans mandat actif porte la mention « Aucun chef
+d'équipe ».
+
+\section{Demandes d'adhésion}
+
+L'écran des candidatures (figure~\ref{fig:demandes}) liste les dossiers déposés depuis le
+portail public, avec leur état et le détail de chaque dossier.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/12-demandes-adhesion.png}
+\caption{Demandes d'adhésion déposées depuis le portail public}
+\label{fig:demandes}
+\end{figure}
+
+Conformément à la section~6 du cahier des charges, les boutons de décision ne sont rendus
+que pour le directeur en mandat ; l'administrateur système et le vice-directeur accèdent à
+la consultation, accompagnée d'un message explicite. L'acceptation crée le compte du
+membre, ouvre sa première période d'affiliation et lui transmet ses identifiants.
+
+\section{Équipements}
+
+Le module matériel (figure~\ref{fig:equip}) est organisé en deux onglets : l'inventaire et
+les demandes. Les indicateurs de tête distinguent les références en stock, les unités
+disponibles, les unités distribuées et les références épuisées.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/13-equipements.png}
+\caption{Gestion du matériel --- inventaire et indicateurs de stock}
+\label{fig:equip}
+\end{figure}
+
+Le registre de distribution (figure~\ref{fig:equipDist}) répond à l'exigence la plus
+spécifique de la section~14 : il présente non seulement les bénéficiaires d'un article,
+mais également les membres actifs qui ne l'ont pas reçu, information calculée côté serveur.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/27-equipement-distribution.png}
+\caption{Registre de distribution --- bénéficiaires et non-bénéficiaires d'un article}
+\label{fig:equipDist}
+\end{figure}
+
+\section{Documents}
+
+L'archivage documentaire (figure~\ref{fig:docs}) propose la recherche, le filtrage par
+catégorie, le dépôt et le téléchargement, avec des indicateurs de volume stocké et de
+documents versionnés.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/14-documents.png}
+\caption{Archivage documentaire du laboratoire}
+\label{fig:docs}
+\end{figure}
+
+L'historique des versions (figure~\ref{fig:docVersions}) matérialise l'exigence
+d'historisation : chaque dépôt successif est conservé avec son numéro, son auteur et sa
+date, et reste téléchargeable individuellement.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/26-document-versions.png}
+\caption{Historique des versions d'un document archivé}
+\label{fig:docVersions}
+\end{figure}
+
+Les téléchargements ne sont pas de simples liens : les fichiers étant hors de l'espace
+public, ils sont récupérés par requête authentifiée puis remis au navigateur, ce qui
+garantit que le contrôle d'accès s'applique aussi aux pièces jointes.
+
+\section{Événements et calendrier}
+
+L'écran des événements (figure~\ref{fig:events}) couvre les conférences, séminaires et
+workshops, avec la gestion des organisateurs et des inscriptions.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/15-evenements.png}
+\caption{Événements scientifiques du laboratoire}
+\label{fig:events}
+\end{figure}
+
+Le calendrier (figure~\ref{fig:calendrier}) agrège en une vue unique les événements
+scientifiques et les réunions internes, avec navigation mensuelle et panneau de détail du
+jour sélectionné.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/16-calendrier.png}
+\caption{Calendrier unifié des événements et des réunions}
+\label{fig:calendrier}
+\end{figure}
+
+Cette agrégation est réalisée côté serveur par \code{CalendarService}, qui fusionne deux
+sources hétérogènes en une liste ordonnée d'éléments typés.
+
+\section{Publications et procès-verbaux}
+
+Le répertoire des publications (figure~\ref{fig:publis}) permet la recherche et le
+classement par année, équipe et auteur, conformément à la section~12. Son ajout est ouvert
+aux doctorants comme aux membres.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/17-publications.png}
+\caption{Répertoire des publications scientifiques}
+\label{fig:publis}
+\end{figure}
+
+Le module des réunions (figure~\ref{fig:reunions}) couvre la planification, l'ordre du jour
+et le dépôt des procès-verbaux exigés par la section~17.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/18-reunions-pv.png}
+\caption{Réunions internes et archivage des procès-verbaux}
+\label{fig:reunions}
+\end{figure}
+
+Le module des conventions (figure~\ref{fig:conventions}) gère les partenaires académiques
+et industriels ainsi que les conventions associées et leurs documents.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/25-conventions.png}
+\caption{Conventions et partenariats --- le jeu de démonstration ne comporte qu'un partenaire,
+sans convention signée à ce jour}
+\label{fig:conventions}
+\end{figure}
+
+L'état de cette capture est celui du jeu de données de démonstration : un seul partenaire y
+est enregistré et aucune convention ne lui est encore rattachée. Les compteurs à zéro
+traduisent donc un module opérationnel mais peu alimenté, et non un défaut de chargement.
+
+\section{Notifications}
+
+L'espace de communication interne (figure~\ref{fig:notifs}) réunit le centre de
+notifications personnel et les discussions, déclinées selon les trois portées prévues par
+la section~13 : laboratoire, équipe et événement.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/19-notifications.png}
+\caption{Notifications personnelles et espaces de discussion}
+\label{fig:notifs}
+\end{figure}
+
+Un compte technique dépourvu de profil de membre --- l'administrateur système --- ne
+possède pas de boîte de réception ; l'interface le détecte et affiche un état vide explicite
+plutôt qu'une erreur.
+
+\section{Audit et rapport annuel}
+
+Le journal d'audit (figure~\ref{fig:audit}) restitue la trace intégrale des actions
+sensibles : acteur, action, entité concernée, adresse IP et horodatage.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/20-audit.png}
+\caption{Journal d'audit --- traçabilité des actions du système}
+\label{fig:audit}
+\end{figure}
+
+L'écran des rapports d'activité (figure~\ref{fig:rapports}) permet de générer la synthèse
+d'une année et d'en télécharger la version PDF.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/21-rapports.png}
+\caption{Rapports d'activité annuels et export PDF}
+\label{fig:rapports}
+\end{figure}
+
+L'administration système (figure~\ref{fig:admin}) regroupe la gestion des comptes, des
+rôles techniques et de l'identité institutionnelle. L'avertissement porté en bas d'écran
+rappelle qu'une modification manuelle de rôle constitue une dérogation administrative,
+historisée au même titre qu'un changement issu d'un mandat.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/22-administration.png}
+\caption{Administration système --- comptes, rôles et identité du laboratoire}
+\label{fig:admin}
+\end{figure}
+
+\section{Portail public}
+
+Le portail public (figure~\ref{fig:portail}) constitue la vitrine institutionnelle. Il
+présente le laboratoire, ses indicateurs, ses publications récentes, ses équipes et ses
+événements, sans exiger d'authentification.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/01-portail-public.png}
+\caption{Portail public du laboratoire LIAS}
+\label{fig:portail}
+\end{figure}
+
+Ses données proviennent des mêmes tables que l'espace interne, via des endpoints
+explicitement ouverts. Le formulaire de candidature (figure~\ref{fig:apply}) permet le
+dépôt d'un dossier avec lettre de motivation et curriculum vitæ, alimentant directement le
+module de demandes d'adhésion.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/02-portail-apply.png}
+\caption{Formulaire public de candidature au laboratoire}
+\label{fig:apply}
+\end{figure}
+
+\section{Design responsive et navigation}
+
+La mise en page repose sur les grilles et utilitaires de Tailwind. Sous 1024~pixels, la
+barre latérale bascule en tiroir superposé avec voile de fond ; les grilles d'indicateurs
+passent de quatre à deux puis à une colonne ; les tableaux larges défilent horizontalement
+dans leur propre conteneur, de sorte que la page elle-même ne défile jamais latéralement.
+
+La navigation latérale est générée à partir d'une description déclarative associant à
+chaque entrée la liste des rôles autorisés, identique à celle qu'applique le garde de
+route. Un module inaccessible n'est donc pas affiché puis refusé : il est absent de la
+navigation. Cette propriété est illustrée au chapitre suivant
+(figure~\ref{fig:sidebarPhd}).

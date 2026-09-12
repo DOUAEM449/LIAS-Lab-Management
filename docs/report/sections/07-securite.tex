@@ -1,0 +1,214 @@
+\chapter{Sécurité, autorisation et traçabilité}
+\label{ch:securite}
+
+\section{Authentification JWT}
+
+L'authentification repose sur des jetons JSON Web Token signés en HMAC-SHA-512. À la
+connexion, le serveur émet un jeton d'accès valable une heure et un jeton de
+rafraîchissement valable sept jours. Le jeton d'accès porte l'identifiant du compte, son
+adresse électronique, son type et son rôle.
+
+Les mots de passe ne sont jamais stockés en clair : ils sont hachés par BCrypt avec un
+facteur de coût de~12, soit $2^{12}$ itérations. Ce paramètre rend une attaque par
+dictionnaire coûteuse tout en gardant une vérification de l'ordre de quelques centaines de
+millisecondes, acceptable pour une opération de connexion.
+
+Le mécanisme comporte un choix de conception qui mérite d'être explicité, car il va à
+l'encontre de l'usage le plus répandu.
+
+\paragraph{Le rôle inscrit dans le jeton n'est pas utilisé pour autoriser.} À chaque
+requête, \code{JwtAuthenticationFilter} vérifie la signature, puis recharge l'utilisateur
+depuis la base de données et reconstruit ses habilitations à partir de l'état courant. Le
+rôle présent dans la charge utile n'est conservé qu'à titre informatif pour le client.
+
+Ce choix a un coût --- une lecture supplémentaire par requête --- et un bénéfice
+déterminant : un jeton ne peut pas survivre à la révocation des droits qu'il transporte. Un
+membre mis à la retraite pendant la durée de vie de son jeton voit son accès refusé à la
+requête suivante, sans qu'il soit nécessaire de tenir une liste de jetons révoqués.
+
+\section{Autorisation RBAC}
+
+Le contrôle d'accès est fondé sur les rôles et s'applique à deux niveaux complémentaires.
+
+Le premier niveau, déclaré dans \code{SecurityConfig}, distingue les ressources publiques
+des ressources protégées : les endpoints d'authentification, le préfixe \code{/public/**},
+la documentation de l'API et les lectures des publications, événements, équipes et
+partenaires sont ouverts ; tout le reste exige une authentification.
+
+Le second niveau, activé par \code{@EnableMethodSecurity}, place une annotation
+\code{@PreAuthorize} sur chaque méthode ou classe de contrôleur. La règle est ainsi lisible
+à côté du code qu'elle protège. Ce niveau produit la matrice détaillée à la section
+suivante.
+
+Un troisième cas, plus rare, relève du service et non de l'annotation : lorsque
+l'autorisation dépend de l'identité de la cible et pas seulement du rôle de l'appelant. La
+modification d'un profil en est l'exemple --- un membre peut modifier le sien, la direction
+peut modifier celui d'un autre --- et la vérification est portée par
+\code{MemberService}.
+
+\section{Matrice des permissions}
+
+Le tableau~\ref{tab:matrice} présente la matrice complète, relevée des annotations du code
+et vérifiée par appels réels sur l'application en fonctionnement.
+
+\begin{landscape}
+\begin{table}[H]
+\centering
+\caption{Matrice des permissions par rôle applicatif ($\bullet$ = autorisé)}
+\label{tab:matrice}
+\footnotesize
+\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}p{7.6cm}ccccccc@{}}
+\toprule
+\textbf{Opération} & \rotatebox{0}{\textbf{ADMIN}} & \textbf{DIR} & \textbf{V-DIR} & \textbf{CHEF} & \textbf{PERM} & \textbf{ASSO} & \textbf{DOCT} \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Consultation générale} \\
+Portail public, publications, événements, équipes & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+Liste et fiches des membres & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+Calendrier, notifications, discussions, recherche & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+Modifier son propre profil & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Activité scientifique} \\
+Ajouter / modifier une publication & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+Supprimer une publication & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Créer / modifier un événement ou une réunion & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & & & \\
+Déposer un procès-verbal & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & & & \\
+Supprimer un événement, une réunion & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+S'inscrire à un événement & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Modules internes (fermés aux doctorants --- CdC §2.2.C)} \\
+Consulter documents, matériel, procès-verbaux & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & \\
+Déposer un document, créer une version & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & \\
+Supprimer un document & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Soumettre une demande de matériel & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Gestion des ressources} \\
+Gérer l'inventaire, distribuer, enregistrer un retour & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Valider ou rejeter une demande de matériel & & $\bullet$ & $\bullet$ & & & & \\
+Gérer partenaires et conventions & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Gouvernance et membres} \\
+Modifier le profil d'un autre membre & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Changer le statut d'un membre & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Transférer un membre entre équipes & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Archiver / restaurer un membre, départ, retour & $\bullet$ & $\bullet$ & & & & & \\
+Créer, modifier, archiver une équipe & $\bullet$ & $\bullet$ & & & & & \\
+Attribuer ou clôturer un mandat & $\bullet$ & $\bullet$ & & & & & \\
+Consulter les demandes d'adhésion & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+\textbf{Statuer sur une demande d'adhésion} & & $\bullet$ & & & & & \\
+\midrule
+\multicolumn{8}{@{}l}{\itshape Pilotage et administration} \\
+Générer et télécharger le rapport annuel & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Consulter le journal d'audit & $\bullet$ & $\bullet$ & $\bullet$ & & & & \\
+Gérer les comptes et les rôles techniques & $\bullet$ & & & & & & \\
+Modifier l'identité du laboratoire & $\bullet$ & & & & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{landscape}
+
+Trois asymétries de cette matrice ne sont pas des erreurs mais des traductions littérales
+du cahier des charges.
+
+La décision sur une demande d'adhésion appartient au seul directeur (§6 : « uniquement par
+le directeur en mandat »). L'administrateur système, pourtant le plus privilégié
+techniquement, n'y a pas accès : c'est une décision institutionnelle, non technique.
+
+Symétriquement, la validation d'une demande de matériel appartient au directeur et au
+vice-directeur, mais pas à l'administrateur système, pour la même raison.
+
+Enfin, l'administrateur système ne gère pas les équipes ni les mandats au même titre que le
+directeur --- il les partage avec lui --- mais il est seul à pouvoir créer un compte ou
+modifier l'identité du laboratoire.
+
+La figure~\ref{fig:sidebarPhd} illustre l'effet de cette matrice sur l'interface : la
+navigation d'un doctorant ne comporte que les six modules qui lui sont ouverts. Les
+modules internes ne sont pas grisés, ils sont absents.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\figpath/screens/24-sidebar-doctorant.png}
+\caption{Navigation réduite d'un compte doctorant --- les modules internes sont absents}
+\label{fig:sidebarPhd}
+\end{figure}
+
+\section{Gestion des statuts}
+
+Les cinq statuts d'appartenance sont portés par l'énumération \code{MemberStatus}. Un
+changement de statut est toujours historisé dans \code{MemberStatusHistory} avec sa date
+d'effet et son motif, et déclenche systématiquement la resynchronisation du rôle.
+
+Deux statuts produisent un effet de bord sur la sécurité : le passage à
+\code{RETIRED} ou \code{FORMER} clôt les mandats en cours en plus de geler le compte.
+L'archivage d'un membre applique la même règle, pour la même raison : quelle que soit la
+manière dont un membre cesse d'exercer, il ne conserve aucune responsabilité de gouvernance
+ouverte. Cette clôture explicite garantit que l'historique de gouvernance reste cohérent
+--- on ne trouve pas de mandat ouvert détenu par un membre parti ou archivé.
+
+\section{Synchronisation rôle / mandat}
+
+Le mécanisme a été décrit en §\ref{sec:srm} et illustré par la figure~\ref{fig:seqMandat}.
+Du point de vue de la sécurité, sa propriété essentielle est la suivante : il n'existe
+aucun chemin par lequel un rôle de gouvernance puisse être obtenu sans mandat
+correspondant, à l'exception de la dérogation administrative explicite
+(\code{ADMIN\_OVERRIDE}), elle-même historisée et signalée dans l'interface.
+
+La réconciliation exécutée au démarrage constitue un filet de sécurité supplémentaire.
+Elle garantit qu'un compte dont le rôle aurait dérivé --- par import, par intervention
+directe en base ou par antériorité --- est ramené à la valeur que son statut et ses mandats
+impliquent, avec une trace portant la cause \code{RECONCILIATION}. Sur le système en
+exploitation, cette procédure ne corrige plus rien et signale simplement que tous les
+comptes sont conformes.
+
+\section{Protection des comptes retraités et anciens}
+
+Le gel repose sur une seule expression, évaluée à la construction des détails
+d'authentification :
+
+\begin{lstlisting}[language=Java,caption={Règle de gel des comptes (\code{CustomUserDetails})},label={lst:frozen}]
+// Un membre RETIRED ou FORMER est gele, quelle que soit la valeur brute
+// de users.enabled (CdC section 8 : "compte gele" / "compte desactive").
+this.enabled = user.isEnabled() && !isFrozenStatus(memberStatus);
+\end{lstlisting}
+
+Cette expression est évaluée à chaque requête, puisque les détails sont reconstruits à
+chaque passage du filtre. Un compte gelé ne peut donc ni se connecter ni continuer à
+utiliser un jeton déjà émis. Son historique demeure en revanche intégralement consultable
+par la direction, conformément à la section~8 du cahier des charges.
+
+Un compte technique dépourvu de profil de membre --- l'administrateur système --- n'est pas
+concerné par ce gel : l'absence de statut n'est pas assimilée à un statut gelé.
+
+\section{Journal d'audit}
+
+Toute action sensible est consignée : création, modification, suppression, restauration,
+approbation, rejet, connexion, échec de connexion, déconnexion, réinitialisation de mot de
+passe, changement de rôle, changement de statut, dépôt et téléchargement de fichier.
+
+Chaque entrée conserve l'identité de l'acteur, son adresse électronique, l'action, le type
+et l'identifiant de l'entité concernée, un libellé, l'adresse IP et l'horodatage. L'usage
+de la propagation \code{REQUIRES\_NEW} garantit que la trace subsiste même si l'opération
+auditée est annulée.
+
+Le journal est consultable par l'administrateur système et la direction, avec filtrage par
+entité et par acteur.
+
+\section{Gestion des secrets}
+
+Aucune donnée d'authentification ne figure dans le code source suivi en gestion de version.
+Les paramètres de connexion à la base, les identifiants de messagerie, la clé de signature
+des jetons et le répertoire de stockage sont lus depuis des variables d'environnement. Un
+fichier local, exclu du dépôt, les fournit en développement ; un fichier d'exemple ne
+contenant que des valeurs fictives documente les clés attendues.
+
+Cette externalisation a été mise en place en fin de projet, après le constat que des
+identifiants de base de données figuraient dans un fichier de configuration versionné. La
+remédiation a comporté deux volets : la suppression des valeurs du code suivi, et la
+rotation effective du mot de passe concerné --- vérifiée par test de connexion : le nouvel
+identifiant est accepté, l'ancien est rejeté. L'historique de gestion de version conserve
+encore l'ancienne valeur, désormais sans effet ; la procédure de purge est documentée dans
+le dépôt et reste à la discrétion du propriétaire.
+
+Cet épisode constitue un enseignement méthodologique du projet : une configuration de
+développement est un fichier de code comme un autre, et doit être traitée comme tel dès le
+premier commit.

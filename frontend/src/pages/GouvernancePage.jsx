@@ -48,6 +48,7 @@ import {
   transferMemberTeam,
 } from '../services/governanceService';
 import { searchMembers } from '../services/memberService';
+import { GOVERNANCE_STRUCTURE_ROLES, hasRole } from '../utils/roles';
 
 const MANDATE_ROLE_OPTIONS = [
   { value: 'DIRECTOR', label: 'Directeur' },
@@ -90,9 +91,14 @@ function GovernanceNode({ role, mandate, icon: Icon, subtitle, emphasis = false 
   );
 }
 
-export default function GouvernancePage() {
+export default function GouvernancePage({ user }) {
   const [tab, setTab] = useState('structure');
   const toast = useToasts();
+
+  // The route lets SYSTEM_ADMIN / DIRECTOR / VICE_DIRECTOR in, but team CRUD and
+  // mandate assign/end are DIRECTOR + admin only on the backend. Hide those
+  // controls from a VICE_DIRECTOR rather than let them click into a 403.
+  const canManageStructure = hasRole(user, GOVERNANCE_STRUCTURE_ROLES);
 
   const [teams, setTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(true);
@@ -351,22 +357,32 @@ export default function GouvernancePage() {
             </Alert>
           )}
 
+          {!canManageStructure && (
+            <Alert tone="info" className="mb-5" icon={Info}>
+              Vous consultez la structure des équipes en lecture seule. La création, la modification et
+              l'archivage d'une équipe sont réservés au directeur en exercice ou à l'administration ;
+              le transfert d'un membre entre équipes reste à votre main.
+            </Alert>
+          )}
+
           <Card className="mb-5">
             <CardHeader
               icon={Users2}
               title="Équipes de recherche"
               description="Le responsable d'une équipe est déterminé par son mandat TEAM_LEADER actif."
               actions={
-                <Button
-                  icon={Plus}
-                  size="sm"
-                  onClick={() => {
-                    setEditingTeam(null);
-                    setFormOpen(true);
-                  }}
-                >
-                  Nouvelle équipe
-                </Button>
+                canManageStructure ? (
+                  <Button
+                    icon={Plus}
+                    size="sm"
+                    onClick={() => {
+                      setEditingTeam(null);
+                      setFormOpen(true);
+                    }}
+                  >
+                    Nouvelle équipe
+                  </Button>
+                ) : null
               }
             />
 
@@ -378,15 +394,17 @@ export default function GouvernancePage() {
                 title="Aucune équipe de recherche"
                 description="Structurez le laboratoire en créant sa première équipe de recherche."
                 action={
-                  <Button
-                    icon={Plus}
-                    onClick={() => {
-                      setEditingTeam(null);
-                      setFormOpen(true);
-                    }}
-                  >
-                    Créer une équipe
-                  </Button>
+                  canManageStructure ? (
+                    <Button
+                      icon={Plus}
+                      onClick={() => {
+                        setEditingTeam(null);
+                        setFormOpen(true);
+                      }}
+                    >
+                      Créer une équipe
+                    </Button>
+                  ) : null
                 }
               />
             ) : (
@@ -400,22 +418,24 @@ export default function GouvernancePage() {
                           {t.description || 'Aucune description renseignée.'}
                         </p>
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <IconButton
-                          icon={Pencil}
-                          label="Modifier"
-                          onClick={() => {
-                            setEditingTeam(t);
-                            setFormOpen(true);
-                          }}
-                        />
-                        <IconButton
-                          icon={Archive}
-                          label="Archiver"
-                          variant="danger"
-                          onClick={() => setArchiveTarget(t)}
-                        />
-                      </div>
+                      {canManageStructure && (
+                        <div className="flex gap-2 shrink-0">
+                          <IconButton
+                            icon={Pencil}
+                            label="Modifier"
+                            onClick={() => {
+                              setEditingTeam(t);
+                              setFormOpen(true);
+                            }}
+                          />
+                          <IconButton
+                            icon={Archive}
+                            label="Archiver"
+                            variant="danger"
+                            onClick={() => setArchiveTarget(t)}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-4 border-t border-lias-border-light">
@@ -512,6 +532,15 @@ export default function GouvernancePage() {
       {/* ---------------- Mandats ---------------- */}
       {tab === 'mandates' && (
         <>
+          {!canManageStructure && (
+            <Alert tone="info" className="mb-5" icon={Info}>
+              En tant que vice-directeur, vous pouvez <strong>consulter</strong> les mandats en cours.
+              L'attribution et la clôture d'un mandat relèvent du directeur en exercice ou de
+              l'administration.
+            </Alert>
+          )}
+
+          {canManageStructure && (
           <Card className="mb-5" padded>
             <div className="flex items-center gap-2 text-[13.5px] font-semibold text-lias-navy mb-1.5">
               <ShieldCheck size={15} className="text-lias-blue-dark" />
@@ -577,6 +606,7 @@ export default function GouvernancePage() {
               </Button>
             </form>
           </Card>
+          )}
 
           {mandatesError && (
             <Alert tone="danger" className="mb-5">
@@ -606,7 +636,7 @@ export default function GouvernancePage() {
                     'Responsabilité',
                     'Équipe',
                     'Début du mandat',
-                    { label: 'Actions', align: 'right' },
+                    ...(canManageStructure ? [{ label: 'Actions', align: 'right' }] : []),
                   ]}
                 />
                 <TBody>
@@ -620,11 +650,13 @@ export default function GouvernancePage() {
                       <TD className="text-lias-muted font-mono text-[12.5px]">
                         {new Date(m.startDate).toLocaleDateString('fr-FR')}
                       </TD>
-                      <TDActions>
-                        <Button size="sm" variant="secondary" icon={Square} onClick={() => setEndTarget(m)}>
-                          Terminer
-                        </Button>
-                      </TDActions>
+                      {canManageStructure && (
+                        <TDActions>
+                          <Button size="sm" variant="secondary" icon={Square} onClick={() => setEndTarget(m)}>
+                            Terminer
+                          </Button>
+                        </TDActions>
+                      )}
                     </TR>
                   ))}
                 </TBody>

@@ -1,0 +1,267 @@
+\chapter{Conception et modélisation}
+\label{ch:conception}
+
+Les diagrammes présentés dans ce chapitre ont été produits à partir du code final et non
+l'inverse : les classes, les attributs et les cardinalités ont été relevés dans les entités
+JPA, et les enchaînements du diagramme de séquence dans le corps des méthodes concernées.
+Ils décrivent donc le système tel qu'il est, y compris lorsque cela révèle un choix
+discutable.
+
+\section{Architecture générale}
+
+L'application adopte une architecture trois tiers classique, mais dont la couche de
+sécurité présente une particularité : elle est traversée à chaque requête, et non
+seulement à la connexion. La figure~\ref{fig:archi} en donne la vue d'ensemble.
+
+\begin{figure}[H]
+\centering
+\includegraphics[height=0.76\textheight,keepaspectratio]{\figpath/uml/02-architecture.png}
+\caption{Architecture applicative en trois tiers}
+\label{fig:archi}
+\end{figure}
+
+Le client est une application monopage React communiquant exclusivement en JSON avec le
+serveur. Un intercepteur Axios attache le jeton d'authentification à chaque appel et
+intercepte les réponses \code{401} pour ramener l'utilisateur à l'écran de connexion.
+
+Le serveur est organisé en quatre niveaux. Le filtre \code{JwtAuthenticationFilter}
+s'exécute avant tout traitement métier ; les contrôleurs REST portent les règles
+d'autorisation ; les services concentrent la logique métier et les transactions ; les
+repositories Spring~Data assurent la persistance. Deux services transversaux se
+distinguent : \code{AuditService}, qui écrit dans une transaction indépendante pour que la
+trace subsiste même si l'opération auditée échoue, et \code{FileStorageService}, qui isole
+le stockage disque derrière une abstraction unique.
+
+L'infrastructure comprend une base PostgreSQL dont le schéma est créé et versionné par
+Flyway au démarrage, un serveur SMTP pour l'envoi des identifiants et des notifications,
+et un répertoire de stockage pour les fichiers déposés. L'interprétation à retenir de
+cette figure est que le chemin de sécurité n'est pas contournable : aucune flèche ne relie
+directement le client aux contrôleurs.
+
+\section{Diagramme de cas d'utilisation}
+
+Le diagramme de cas d'utilisation a été présenté au chapitre précédent
+(figure~\ref{fig:usecase}) car il constitue le résultat direct de l'analyse des acteurs. Il
+est rappelé ici que sa construction est \emph{descendante depuis le code} : chaque
+association acteur--cas d'utilisation est adossée à une annotation d'autorisation
+existante.
+
+\section{Diagramme de classes}
+
+Le modèle comporte 31 entités persistantes. Les représenter sur une seule planche aurait
+produit une figure illisible en format A4 ; le diagramme a donc été scindé en quatre vues
+cohérentes correspondant aux trois couches identifiées lors de l'analyse. Toutes les
+entités héritent d'une classe abstraite \code{BaseEntity} portant l'identifiant UUID, les
+métadonnées d'audit JPA (dates et auteurs de création et de modification), le numéro de
+version optimiste et les deux champs de suppression logique.
+
+\subsection{Identité et gouvernance}
+
+La figure~\ref{fig:classIdent} présente la vue centrale du modèle, celle où se lit la
+séparation exigée par le cahier des charges.
+
+\begin{figure}[H]
+\centering
+\includegraphics[height=0.78\textheight,keepaspectratio]{\figpath/uml/03-class-identite-gouvernance.png}
+\caption{Diagramme de classes --- identité, membres et gouvernance}
+\label{fig:classIdent}
+\end{figure}
+
+Trois observations structurent la lecture de cette figure.
+
+D'abord, \code{User} et \code{Member} sont deux entités distinctes reliées par une
+association \emph{un à zéro-ou-un}. Un \code{User} est un compte d'authentification ; un
+\code{Member} est un profil scientifique. La cardinalité \emph{zéro-ou-un} n'est pas un
+artefact : elle autorise l'existence d'un compte purement technique, l'administrateur
+système, qui n'est pas un chercheur du laboratoire.
+
+Ensuite, trois associations partent de \code{Member} vers des tables d'historique :
+\code{MemberStatusHistory} pour le statut, \code{AffiliationHistory} pour les périodes
+d'appartenance et \code{Mandate} pour les responsabilités. Une quatrième,
+\code{UserRoleHistory}, part de \code{User} et enregistre le rôle applicatif. Cette
+disposition matérialise la séparation : le statut, le mandat et le rôle sont historisés
+\emph{séparément} parce que ce sont trois concepts distincts qui évoluent indépendamment.
+
+Enfin, la note attachée à \code{User} porte la règle la plus importante du modèle :
+l'attribut \code{role} est dérivé par \code{UserRoleSyncService} à partir du statut et des
+mandats actifs, et n'est jamais saisi manuellement. Un lecteur du seul schéma relationnel
+ne pourrait pas le deviner --- d'où sa présence explicite sur le diagramme.
+
+\subsection{Activité scientifique}
+
+La figure~\ref{fig:classActiv} regroupe les entités qui portent la production du
+laboratoire.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,keepaspectratio]{\figpath/uml/04-class-activite-scientifique.png}
+\caption{Diagramme de classes --- activité scientifique}
+\label{fig:classActiv}
+\end{figure}
+
+Deux choix de modélisation y sont visibles. \code{PublicationAuthor} est une classe
+d'association entre \code{Publication} et \code{Member} : elle porte un attribut
+\code{authorOrder} car l'ordre des signataires d'un article est une information
+scientifique significative qu'une simple relation plusieurs-à-plusieurs perdrait. De même,
+\code{EventOrganizer} et \code{EventParticipant} sont distinctes : organiser un événement
+et s'y inscrire ne sont pas la même chose et ne relèvent pas des mêmes droits.
+
+L'attribut \code{editionNumber} de \code{Event} répond à l'exigence d'archivage par édition
+du cahier des charges : deux éditions successives d'un même colloque sont deux lignes
+autonomes reliées par leur titre, et non un enregistrement écrasé.
+
+\subsection{Ressources du laboratoire}
+
+La figure~\ref{fig:classRess} couvre les documents, le matériel et les partenariats.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.97\textwidth,keepaspectratio]{\figpath/uml/05-class-ressources.png}
+\caption{Diagramme de classes --- documents, matériel et partenariats}
+\label{fig:classRess}
+\end{figure}
+
+La relation \code{DocumentEntity}~\code{1..*}~\code{DocumentVersion} traduit l'exigence
+d'historisation documentaire : un document n'est jamais remplacé, une version lui est
+ajoutée. La note portée sur \code{Equipment} rappelle l'invariant de stock
+--- \code{availableQuantity} diminue à la distribution et remonte au retour --- dont la
+vérification fait l'objet de tests dédiés (§\ref{sec:testsequip}).
+
+\subsection{Traçabilité et pilotage}
+
+La figure~\ref{fig:classTrace} rassemble les entités transverses.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,keepaspectratio]{\figpath/uml/06-class-tracabilite.png}
+\caption{Diagramme de classes --- traçabilité, notifications et pilotage}
+\label{fig:classTrace}
+\end{figure}
+
+\code{AuditLog} présente une particularité assumée, signalée par une note : cette entité
+n'a \emph{aucune} association JPA vers les entités auditées. Elle mémorise un couple
+\code{entityType}~/~\code{entityId} sous forme de chaînes. Ce couplage volontairement
+faible permet de tracer n'importe quelle entité, y compris une entité archivée, sans que
+la suppression logique de la cible ne rende la trace inexploitable. C'est un compromis :
+on renonce à l'intégrité référentielle pour garantir la pérennité de la trace.
+
+\section{Diagramme de séquence}
+
+Le scénario retenu est l'attribution d'un mandat de directeur. C'est l'opération la plus
+délicate du système : elle met en jeu deux membres, clôt un mandat, en ouvre un autre et
+recalcule deux rôles applicatifs, le tout sans qu'aucun rôle ne soit saisi. La
+figure~\ref{fig:seqMandat} en donne le déroulement exact, relevé dans
+\code{MandateService.assign()} et \code{UserRoleSyncService}.
+
+\begin{landscape}
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+  \includegraphics[width=1.42\textwidth,keepaspectratio]{\figpath/uml/07-sequence-attribution-mandat.png}}
+\caption{Diagramme de séquence --- attribution d'un mandat de directeur}
+\label{fig:seqMandat}
+\end{figure}
+\end{landscape}
+
+Le scénario se lit en deux temps, matérialisés par les deux blocs du diagramme.
+
+Le premier temps assure l'unicité du titulaire. Le service recherche le mandat de directeur
+actif ; s'il en existe un, il le \emph{clôt} en positionnant sa date de fin et son
+indicateur d'activité, sans jamais le supprimer --- la note de droite le rappelle. Il
+demande ensuite au service de synchronisation de recalculer le rôle de l'ancien titulaire.
+Celui-ci, n'ayant plus de mandat actif, retrouve le rôle dérivé de son seul statut, par
+exemple \code{PERMANENT\_MEMBER}. Le point important est que la perte des permissions de
+direction est immédiate et automatique : elle ne dépend d'aucune action d'administration.
+
+Le second temps ouvre le mandat du nouveau titulaire et déclenche le même recalcul. La note
+centrale explicite la règle de priorité appliquée par \code{computeEffectiveRole} : un
+statut gelé (retraité ou ancien membre) l'emporte sur tout, faute de quoi le mandat le plus
+élevé gagne, selon l'ordre directeur $>$ vice-directeur $>$ chef d'équipe.
+
+Chaque changement ouvre une ligne dans l'historique des rôles avec sa cause
+(\code{MANDATE\_CHANGE}), et l'opération complète est journalisée. La note finale résume
+l'invariant que ce scénario doit préserver : le statut des deux membres est inchangé, le
+mandat est clos pour l'un et ouvert pour l'autre, et seul le rôle --- donnée dérivée --- a
+été recalculé.
+
+\section{Diagramme d'états}
+
+Le cycle de vie d'un membre, de la candidature publique au départ ou à la retraite,
+est présenté en figure~\ref{fig:etats}. Les états correspondent exactement aux valeurs des
+énumérations \code{MemberStatus} et \code{RequestStatus} ; aucun état intermédiaire n'a été
+ajouté pour la beauté du schéma.
+
+\begin{figure}[H]
+\centering
+\includegraphics[height=0.74\textheight,keepaspectratio]{\figpath/uml/08-etats-cycle-vie-membre.png}
+\caption{Diagramme d'états --- cycle de vie d'un membre}
+\label{fig:etats}
+\end{figure}
+
+Trois enseignements se dégagent de cette figure.
+
+Le composite \emph{Actif} regroupe les trois statuts entre lesquels un membre peut
+librement circuler par un changement de statut. Ces transitions sont réversibles et toutes
+historisées.
+
+Les transitions vers \code{RETIRED} et \code{FORMER} sont les seules à produire un effet de
+bord sur la sécurité : elles gèlent le compte et clôturent les mandats en cours. La note
+attachée rappelle que ce gel est vérifié à chaque requête par le filtre d'authentification,
+et non uniquement à la connexion --- un jeton encore valide ne permet donc pas de
+contourner une mise à la retraite prononcée entre-temps.
+
+Les transitions de retour, déclenchées par \code{returnToLab()}, n'annulent pas le départ :
+elles ouvrent une \emph{nouvelle} période d'affiliation. C'est la traduction directe de la
+règle §4.3 du cahier des charges, selon laquelle un membre peut quitter le laboratoire et
+revenir sans que l'épisode précédent ne disparaisse.
+
+\section{Modèle de données}
+
+Le schéma relationnel compte 30 tables créées par trois migrations Flyway successives. Le
+tableau~\ref{tab:migrations} en donne la répartition.
+
+\begin{table}[H]
+\centering
+\caption{Migrations Flyway et contenu du schéma}
+\label{tab:migrations}
+\small
+\begin{tabularx}{\textwidth}{@{}p{1.6cm}p{4.6cm}X@{}}
+\toprule
+\textbf{Version} & \textbf{Objet} & \textbf{Contenu} \\
+\midrule
+V1 & Schéma initial & 28 tables : identité, membres, gouvernance, activité scientifique, ressources, notifications, audit \\
+V2 & Historique des rôles et identité du laboratoire & \code{user\_role\_history}, \code{laboratory} \\
+V3 & Source de réconciliation & Extension de la contrainte \code{CHECK} sur \code{user\_role\_history.source} pour admettre la valeur \code{RECONCILIATION} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Le schéma répond aux exigences de normalisation du document de spécification : clés
+primaires en UUID, clés étrangères explicites, index sur les colonnes de recherche
+fréquente, contraintes \code{CHECK} sur les colonnes portant des énumérations, et tables
+d'historique et d'audit dédiées. L'ORM est configuré en mode \code{validate} : Hibernate
+vérifie la concordance entre les entités et le schéma au démarrage, mais ne le modifie
+jamais. Toute évolution passe donc obligatoirement par une migration versionnée --- ce qui
+rend le schéma reproductible d'un environnement à l'autre.
+
+\section{Architecture de sécurité}
+
+La sécurité repose sur trois principes de conception, détaillés au
+chapitre~\ref{ch:securite} et introduits ici parce qu'ils relèvent de l'architecture.
+
+\paragraph{Authentification sans état.} Aucune session serveur n'est conservée. Le client
+présente un jeton signé à chaque requête. Cela simplifie le déploiement mais implique que
+la révocation ne peut pas reposer sur la destruction d'une session.
+
+\paragraph{Autorité de la base plutôt que du jeton.} C'est le choix le plus important. Le
+jeton transporte bien un rôle, mais ce rôle \emph{n'est pas utilisé} pour autoriser : à
+chaque requête, le filtre recharge l'utilisateur depuis la base et reconstruit ses
+habilitations. Un changement de rôle ou une mise à la retraite prend donc effet à la
+requête suivante, sans attendre l'expiration du jeton. Le coût est une lecture
+supplémentaire par requête ; le bénéfice est qu'un jeton ne peut pas survivre à la
+révocation des droits qu'il transportait.
+
+\paragraph{Autorisation au plus près du métier.} Les règles d'accès ne sont pas centralisées
+dans une table de correspondance URL~/~rôle, mais déclarées par annotation sur chaque
+méthode de contrôleur. La règle est ainsi lisible à côté du code qu'elle protège, ce qui
+réduit le risque de divergence lors d'une évolution.

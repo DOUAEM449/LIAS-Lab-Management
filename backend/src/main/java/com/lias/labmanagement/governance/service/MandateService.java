@@ -6,6 +6,7 @@ import com.lias.labmanagement.common.enums.MandateRoleType;
 import com.lias.labmanagement.common.enums.RoleChangeSource;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
+import com.lias.labmanagement.common.util.SoftDeleteSafe;
 import com.lias.labmanagement.governance.dto.AssignMandateRequest;
 import com.lias.labmanagement.governance.dto.EndMandateRequest;
 import com.lias.labmanagement.governance.dto.MandateResponse;
@@ -44,7 +45,26 @@ public class MandateService {
 
     @Transactional(readOnly = true)
     public List<MandateResponse> findActive() {
-        return mandateRepository.findByActiveTrueAndEndDateIsNull().stream().map(mapper::toResponse).toList();
+        return mandateRepository.findByActiveTrueAndEndDateIsNull().stream()
+                .filter(MandateService::holderIsStillVisible)
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    /**
+     * Defence in depth for the governance screens: a mandate whose holder has been archived is
+     * never presented as currently in exercise. {@code MemberService.delete()} already closes
+     * those mandates at archival time, so this only catches rows that predate that rule or were
+     * written outside the application.
+     */
+    private static boolean holderIsStillVisible(Mandate mandate) {
+        Member member = mandate.getMember();
+        if (member == null) {
+            return false;
+        }
+        // Touching a property beyond the id forces the lazy proxy to initialize; an archived
+        // row is filtered out by @SQLRestriction and throws, which resolve() turns into false.
+        return SoftDeleteSafe.resolve(member, m -> !m.isDeleted(), false);
     }
 
     @Transactional(readOnly = true)
@@ -101,20 +121,24 @@ public class MandateService {
     }
 
     /**
-     * Ends every currently active mandate held by a member (used when their status
-     * transitions to RETIRED/FORMER — a frozen account must not keep governance mandates
-     * dangling as "active" forever). Role sync is left to the caller (typically
-     * {@code MemberService}, which recomputes the role once for the status change itself).
+     * Ends every currently active mandate held by a member. Called whenever the member stops
+     * being eligible to govern — status transition to RETIRED/FORMER, or archival — because
+     * neither a frozen nor an archived account may keep governance mandates dangling as
+     * "active" forever. The mandates are closed, never deleted: their period stays in the
+     * governance history. Role sync is left to the caller (typically {@code MemberService},
+     * which recomputes the role once for the triggering change itself).
+     *
+     * @param reason recorded in the audit trail, so the journal says why the mandate ended
      */
     @Transactional
-    public void endAllActiveMandatesForMember(UUID memberId, LocalDate effectiveDate) {
+    public void endAllActiveMandatesForMember(UUID memberId, LocalDate effectiveDate, String reason) {
         mandateRepository.findByMemberIdAndActiveTrueAndEndDateIsNull(memberId)
                 .forEach(m -> {
                     m.setEndDate(effectiveDate);
                     m.setActive(false);
                     mandateRepository.save(m);
                     auditService.record(AuditAction.ROLE_CHANGE, "Mandate", m.getId(),
-                            "Mandate auto-ended: member status became RETIRED/FORMER");
+                            "Mandate auto-ended: " + reason);
                 });
     }
 

@@ -1,0 +1,116 @@
+%=======================================================================
+%  Rapport de projet de fin de module — JEE
+%  Plateforme de gestion du laboratoire LIAS
+%  Master Data Science & Big Data — FS Ben M'Sik, Université Hassan II
+%  Compilation : pdflatex -> pdflatex -> pdflatex (table des matières)
+%=======================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{a4paper,top=2.6cm,bottom=2.4cm,left=2.7cm,right=2.4cm,headheight=15pt}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{pdflscape}
+\usepackage{listings}
+\usepackage{float}
+\usepackage[hidelinks,breaklinks=true]{hyperref}
+
+%-------------------- palette ------------------------------------------
+\definecolor{liasnavy}{HTML}{1C2638}
+\definecolor{liasblue}{HTML}{2D5CA0}
+\definecolor{liasgrey}{HTML}{5A6472}
+\definecolor{liasrule}{HTML}{BFC8D4}
+\definecolor{liaslight}{HTML}{EEF3FB}
+
+%-------------------- titres -------------------------------------------
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{liasnavy}}
+  {\normalsize\sffamily\color{liasblue}\MakeUppercase{\chaptertitlename}\ \thechapter}
+  {6pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{-18pt}{26pt}
+\titleformat{\section}{\normalfont\Large\bfseries\color{liasnavy}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{liasnavy}}{\thesubsection}{0.7em}{}
+
+%-------------------- en-têtes / pieds ---------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhead[L]{\small\color{liasgrey}\nouppercase{\leftmark}}
+\fancyhead[R]{\small\color{liasgrey}LIAS --- Plateforme de gestion}
+\fancyfoot[C]{\small\color{liasgrey}\thepage}
+\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}%
+  \fancyfoot[C]{\small\color{liasgrey}\thepage}}
+\renewcommand{\chaptermark}[1]{\markboth{\chaptername\ \thechapter\ --- #1}{}}
+
+%-------------------- légendes -----------------------------------------
+\captionsetup{font=small,labelfont={bf,color=liasblue},labelsep=endash,
+              justification=centering,width=0.92\textwidth}
+\captionsetup[table]{skip=6pt}
+
+%-------------------- code ---------------------------------------------
+\lstdefinestyle{lias}{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{liasblue}\bfseries,
+  commentstyle=\color{liasgrey}\itshape,
+  stringstyle=\color{teal},
+  numbers=left,numberstyle=\tiny\color{liasgrey},numbersep=8pt,
+  frame=single,rulecolor=\color{liasrule},framesep=5pt,
+  backgroundcolor=\color{liaslight!45},
+  breaklines=true,showstringspaces=false,tabsize=2,
+  captionpos=b,xleftmargin=14pt,
+  literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1 {ç}{{\c c}}1 {É}{{\'E}}1 {î}{{\^\i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+}
+\lstset{style=lias}
+
+%-------------------- raccourcis ---------------------------------------
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\srt}{\textsc{statut}}
+\newcommand{\rol}{\textsc{rôle}}
+\newcommand{\man}{\textsc{mandat}}
+\newcommand{\neqq}{$\neq$}
+\newcommand{\figpath}{figures}
+\setlist{itemsep=2pt,topsep=4pt,parsep=0pt}
+\renewcommand{\arraystretch}{1.25}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+
+\hypersetup{
+  pdftitle={Plateforme de gestion du laboratoire LIAS},
+  pdfsubject={Projet de fin de module JEE --- Master Data Science \& Big Data},
+  pdfkeywords={JEE, Spring Boot, React, RBAC, JWT, PostgreSQL, gouvernance, traçabilité}
+}
+
+\begin{document}
+
+\input{sections/00-preliminaires}
+
+\input{sections/01-introduction}
+\input{sections/02-besoins}
+\input{sections/03-conception}
+\input{sections/04-technologies}
+\input{sections/05-backend}
+\input{sections/06-frontend}
+\input{sections/07-securite}
+\input{sections/08-tests}
+\input{sections/09-resultats}
+\input{sections/10-conclusion}
+
+\input{sections/11-bibliographie}
+\input{sections/12-annexes}
+
+\end{document}

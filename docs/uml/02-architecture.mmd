@@ -34,7 +34,7 @@ flowchart TB
 
   subgraph INFRA[Infrastructure]
     DB[("PostgreSQL<br/>Neon Cloud / Docker")]:::data
-    FLY["Flyway<br/>V1 schema, V2 role history + laboratory"]:::data
+    FLY["Flyway<br/>V1 schema, V2 role history + laboratory,<br/>V3 reconciliation source"]:::data
     MAIL["SMTP<br/>spring-boot-starter-mail"]:::ext
     DISK[("Systeme de fichiers<br/>documents, PV, CV, rapports")]:::ext
   end

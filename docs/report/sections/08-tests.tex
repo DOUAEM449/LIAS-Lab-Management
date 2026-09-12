@@ -1,0 +1,255 @@
+\chapter{Tests et validation}
+\label{ch:tests}
+
+\section{Stratégie de test}
+
+La stratégie retenue n'a pas visé une couverture maximale du code mais la protection des
+règles métier dont une régression serait à la fois plausible et grave. Trois critères ont
+guidé la sélection : la règle est-elle une exigence explicite du cahier des charges ?
+Une erreur y serait-elle silencieuse ? Le code correspondant est-il susceptible d'évoluer ?
+
+Cinq domaines satisfont ces trois critères et concentrent l'effort de test : la dérivation
+du rôle effectif, le gel des comptes, l'arithmétique du stock de matériel, le ciblage des
+notifications, et la matrice d'autorisation.
+
+Deux niveaux de test coexistent. Les tests unitaires isolent un service au moyen de doubles
+(Mockito) et s'exécutent sans contexte applicatif ni base de données ; ils sont rapides et
+déterministes. Les tests d'intégration démarrent le contexte Spring complet sur une base
+H2 en mémoire, avec le schéma dérivé des entités et les migrations désactivées ; ils
+valident la chaîne de sécurité réelle. Ces derniers sont configurés pour ne jamais atteindre
+la base de production : l'import du fichier de configuration local est explicitement
+neutralisé dans le profil de test.
+
+Le tableau~\ref{tab:suites} récapitule les suites.
+
+\begin{table}[H]
+\centering
+\caption{Suites de tests automatisés}
+\label{tab:suites}
+\small
+\begin{tabularx}{\textwidth}{@{}p{4.9cm}c p{2.2cm} X@{}}
+\toprule
+\textbf{Classe de test} & \textbf{Tests} & \textbf{Nature} & \textbf{Objet} \\
+\midrule
+\code{UserRoleSyncServiceTest} & 17 & Unitaire & Dérivation \srt{}~/~\rol{}~/~\man{}, réconciliation \\
+\code{AuthorizationMatrixTest} & 9 & Intégration & Matrice d'autorisation des 9 rôles \\
+\code{EquipmentServiceTest} & 8 & Unitaire & Invariant de stock du matériel \\
+\code{NotificationServiceTest} & 5 & Unitaire & Ciblage des destinataires \\
+\code{CustomUserDetailsTest} & 5 & Unitaire & Gel des comptes retraités et anciens \\
+\code{BadRequestParamTest} & 4 & Intégration & Validation des paramètres de requête \\
+\code{MemberServiceTest} & 4 & Unitaire & Clôture des mandats à l'archivage d'un membre \\
+\code{MandateServiceTest} & 3 & Unitaire & Gouvernance : exclusion des titulaires archivés \\
+\midrule
+\textbf{Total} & \textbf{55} & & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Tests unitaires de la dérivation des rôles}
+
+C'est la suite la plus fournie, parce que la règle qu'elle protège est la plus structurante
+du projet. Elle vérifie successivement :
+
+\begin{itemize}
+  \item la correspondance entre chacun des cinq statuts et son rôle dérivé, en l'absence de
+        mandat ;
+  \item la promotion par mandat, pour les trois types de mandats ;
+  \item la priorité stricte entre mandats cumulés : un membre détenant simultanément un
+        mandat de chef d'équipe et un mandat de directeur obtient le rôle de directeur ;
+  \item la primauté du statut gelé : un membre retraité conservant par anomalie un mandat
+        de directeur actif obtient malgré tout le rôle de retraité ;
+  \item l'écriture systématique d'une ligne d'historique portant la cause du changement ;
+  \item l'absence d'écriture lorsque le rôle calculé est déjà celui enregistré ;
+  \item la correction d'une dérive par \code{reconcileAll()}, son \textbf{idempotence}
+        --- une seconde exécution sur un système cohérent n'écrit rien --- et le
+        complètement des historiques manquants.
+\end{itemize}
+
+Le test d'idempotence mérite d'être souligné : il garantit que la procédure de
+réconciliation exécutée à chaque démarrage ne pollue pas l'historique en y ajoutant une
+ligne à chaque redémarrage.
+
+\section{Tests d'intégration}
+
+Les deux suites d'intégration démarrent le contexte complet. Elles vérifient donc, au-delà
+de la logique métier, que la configuration de sécurité, la chaîne de filtres, la
+sérialisation JSON et le gestionnaire d'exceptions fonctionnent ensemble.
+
+L'exécution de ces suites a d'ailleurs révélé un défaut qu'aucun test unitaire n'aurait
+détecté, décrit en~§\ref{sec:defauts}.
+
+\section{Tests d'autorisation}
+
+\code{AuthorizationMatrixTest} vérifie la matrice du
+tableau~\ref{tab:matrice} selon trois assertions systématiques par endpoint :
+
+\begin{enumerate}
+  \item une requête anonyme sur une ressource protégée reçoit un code~401 ;
+  \item une requête portant un rôle insuffisant reçoit un code~403 ;
+  \item une requête portant un rôle autorisé n'est jamais rejetée par 401 ni 403.
+\end{enumerate}
+
+La troisième assertion est volontairement formulée en négatif. Un rôle autorisé peut
+légitimement recevoir un~404 --- l'entité visée n'existe pas dans la base de test --- ou un
+400 ; ce qui importe est qu'il ne soit pas \emph{refusé}. Formuler l'assertion ainsi évite
+de faire dépendre un test d'autorisation de la présence d'un jeu de données.
+
+Les neuf tests couvrent les endpoints publics, une ressource ouverte à tout compte
+authentifié, l'administration réservée à l'administrateur système, le journal d'audit et
+les rapports réservés à la direction, les suppressions de niveau gouvernance, la fermeture
+des modules internes aux doctorants, et l'accès explicite des doctorants à la création de
+publications --- une autorisation qui pourrait sembler une erreur et qui est bien une
+exigence du cahier des charges.
+
+\section{Tests de validation des paramètres}
+
+\code{BadRequestParamTest} verrouille une correction issue de l'audit : un paramètre de
+requête absent ou inconvertible doit produire un code~400 et non un code~500. Les quatre
+cas couverts sont un paramètre obligatoire manquant, une valeur d'énumération inconnue, un
+identifiant UUID mal formé et un paramètre numérique non numérique.
+
+\section{Tests du cycle de vie des membres}
+
+Le gel des comptes est vérifié par \code{CustomUserDetailsTest} : un membre retraité ou
+ancien n'est pas actif quelle que soit la valeur brute du champ correspondant en base ; un
+compte technique dépourvu de profil de membre reste utilisable ; un compte
+administrativement désactivé reste inactif indépendamment de son statut. La cohérence des
+transitions elles-mêmes --- départ, retour, nouvelle période d'affiliation --- a été
+validée par l'audit fonctionnel décrit en~§\ref{sec:e2e}.
+
+\code{MemberServiceTest} verrouille la règle d'archivage : archiver un membre clôture tous
+les mandats qu'il détient encore, recalcule son rôle effectif, et ne réécrit aucune donnée
+historisée. Un quatrième test fixe l'ordre des opérations --- les mandats sont clôturés
+\emph{avant} que la ligne ne soit marquée comme supprimée, faute de quoi la restriction de
+suppression logique masquerait les enregistrements à clôturer. \code{MandateServiceTest}
+couvre le versant lecture : un mandat dont le titulaire est archivé n'est pas restitué
+parmi les mandats en exercice, ceux des membres actifs le restent, et une clôture met à
+jour la ligne sans jamais la supprimer.
+
+\section{Tests des équipements}
+\label{sec:testsequip}
+
+\code{EquipmentServiceTest} vérifie l'invariant de stock sous huit angles, dont trois
+méritent d'être cités : la distribution de l'intégralité du stock restant est autorisée et
+amène la disponibilité à zéro ; une distribution excédant le stock est refusée \emph{sans
+modifier l'état} ; un cycle complet de distribution puis de retour laisse le stock
+exactement dans son état initial. Les deux derniers tests portent sur le rééquilibrage de
+la disponibilité lors d'un changement de quantité totale, y compris le cas limite où la
+diminution devrait produire une valeur négative --- le résultat est alors ramené à zéro.
+
+\section{Tests des notifications}
+
+\code{NotificationServiceTest} valide le ciblage. Le test le plus significatif vérifie que
+la notification de la gouvernance atteint le directeur et le vice-directeur
+\emph{actuellement en mandat}, destinataires résolus dynamiquement et non lus dans un champ
+de rôle. Les autres cas couvrent la persistance d'une notification non lue, l'ignorance
+silencieuse d'un destinataire inconnu, l'absence d'envoi lorsqu'aucun mandat n'est pourvu,
+et la déduplication d'une liste de destinataires.
+
+\section{Résultats des 55 tests}
+
+L'exécution complète, sur le commit final, donne le résultat reproduit
+au tableau~\ref{tab:resultats}.
+
+\begin{table}[H]
+\centering
+\caption{Résultats d'exécution de la suite de tests}
+\label{tab:resultats}
+\small
+\begin{tabularx}{\textwidth}{@{}p{5.2cm}p{2.8cm}X@{}}
+\toprule
+\textbf{Commande} & \textbf{Résultat} & \textbf{Détail} \\
+\midrule
+\code{mvn clean test} & \textbf{BUILD SUCCESS} & 55 tests exécutés, 0 échec, 0 erreur, 0 ignoré \\
+\code{mvn clean compile} & \textbf{BUILD SUCCESS} & Compilation du backend sans avertissement bloquant \\
+\code{npm run build} & \textbf{Succès} & 1\,919 modules transformés \\
+\code{npx oxlint} & \textbf{0 erreur} & 6 avertissements préexistants sur l'export de constantes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Aucune mesure de couverture de code n'est rapportée : aucun outil de couverture n'a été
+configuré sur le projet. Annoncer un pourcentage serait une invention. Ce que l'on peut
+affirmer est plus limité et plus vérifiable : les cinq règles métier identifiées comme
+critiques disposent chacune d'une suite dédiée, et la matrice d'autorisation est vérifiée
+pour l'ensemble des rôles.
+
+\section{Validation fonctionnelle de bout en bout}
+\label{sec:e2e}
+
+Les tests automatisés ont été précédés d'un audit fonctionnel manuel, conduit sur
+l'application en fonctionnement. Il a porté sur les 21 routes de l'interface, les 9 rôles,
+et 47 endpoints de l'API, chaque page étant parcourue et chaque commande déclenchée.
+
+\subsection{Défauts détectés et corrigés}
+\label{sec:defauts}
+
+Cet audit a mis au jour cinq défauts réels, tous corrigés et, pour trois d'entre eux,
+verrouillés par un test.
+
+\paragraph{Dérive du rôle sur des comptes antérieurs.} Des comptes créés avant
+l'introduction du service de dérivation conservaient un rôle obsolète, le service n'étant
+invoqué que sur les chemins d'écriture. La correction a consisté à ajouter la procédure
+\code{reconcileAll()} exécutée au démarrage, ainsi qu'une migration étendant la contrainte
+de la colonne de cause pour admettre la valeur \code{RECONCILIATION}.
+
+\paragraph{Commandes visibles mais refusées pour le vice-directeur.} La page de gouvernance
+étant ouverte à trois rôles alors que la gestion des équipes et des mandats n'en autorise
+que deux, un vice-directeur voyait des commandes que le serveur lui refusait. Les contrôles
+concernés sont désormais masqués pour ce rôle, avec un encart expliquant ce qui lui reste
+ouvert. Le test \code{deleteTeamIsAdminOrDirectorOnly} verrouille la règle côté serveur.
+
+\paragraph{Paramètre de requête invalide traité en erreur serveur.} Un paramètre manquant
+ou inconvertible aboutissait au gestionnaire d'exception générique et produisait un
+code~500 au lieu d'un~400. Des gestionnaires dédiés ont été ajoutés ; la suite
+\code{BadRequestParamTest} verrouille les quatre cas.
+
+\paragraph{Corps de réponse malformé sur les erreurs d'authentification.} Défaut découvert
+pendant l'écriture des tests d'autorisation, et invisible jusque-là. Les deux gestionnaires
+d'erreur de la couche de filtrage sérialisaient leur réponse avec un convertisseur JSON
+construit manuellement, dépourvu du module de gestion des dates. La sérialisation de
+l'horodatage échouait : le client recevait bien un code~401, mais avec un corps vide, et
+une exception était journalisée à chaque requête anonyme. La correction consiste à injecter
+le convertisseur configuré par le contexte applicatif. Ce défaut illustre l'intérêt des
+tests d'intégration : le code de statut, seul élément observé jusqu'alors, était correct.
+
+\paragraph{Mandat actif conservé par un membre archivé.} L'archivage d'un membre
+(\code{MemberService.delete()}) se contentait de marquer la ligne comme supprimée, sans
+clôturer les mandats en cours de l'intéressé, alors que la transition vers les statuts
+\emph{retraité} et \emph{ancien membre} le faisait déjà. Un membre archivé restait
+donc titulaire d'un mandat de directeur : les écrans de gouvernance, qui déduisent
+l'organigramme des mandats actifs, affichaient « Direction en exercice --- Membre archivé ».
+La correction aligne l'archivage sur la logique existante --- clôture de tous les mandats
+actifs, puis recalcul du rôle effectif --- et ajoute un garde-fou en lecture : un mandat
+dont le titulaire est archivé n'est plus présenté comme en exercice. Les suites
+\code{MemberServiceTest} et \code{MandateServiceTest} verrouillent les deux règles. La
+figure~\ref{fig:gouvStruct} montre l'état obtenu après correction : le poste de directeur,
+laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
+vérification finale, reportée au tableau~\ref{tab:e2e}, ne trouve plus aucun mandat actif
+rattaché à un membre archivé ou supprimé, et les 55 tests s'exécutent sans échec.
+
+\subsection{Résultats de la validation}
+
+Le tableau~\ref{tab:e2e} synthétise les vérifications finales.
+
+\begin{table}[H]
+\centering
+\caption{Résultats de la validation fonctionnelle de bout en bout}
+\label{tab:e2e}
+\small
+\begin{tabularx}{\textwidth}{@{}p{6.2cm}X@{}}
+\toprule
+\textbf{Vérification} & \textbf{Résultat} \\
+\midrule
+Routes de l'interface parcourues & 21 / 21 rendues, aucun écran vide ni blocage \\
+Gardes de route par rôle & Conformes : un doctorant est redirigé depuis les 8 routes qui lui sont fermées \\
+Cohérence navigation / autorisation serveur & Conforme : la navigation d'un doctorant se limite à ses 6 modules \\
+Dérive de rôle sur les comptes actifs & \textbf{0} --- le rôle dérivé coïncide avec le rôle stocké pour tous les membres \\
+Mandats actifs détenus par un membre archivé & \textbf{0} après correction --- aucun mandat ouvert ne référence un membre archivé ou supprimé \\
+Réconciliation au démarrage & Idempotente : « tous les comptes sont déjà cohérents » \\
+Comptes gelés & Authentification refusée (401) pour un statut retraité \\
+Requête anonyme sur ressource protégée & 401 avec corps JSON complet \\
+Exceptions non gérées côté serveur & 0 sur l'ensemble du parcours \\
+\bottomrule
+\end{tabularx}
+\end{table}

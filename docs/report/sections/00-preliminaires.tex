@@ -1,0 +1,204 @@
+%======================= PAGES PRÉLIMINAIRES ===========================
+\begin{titlepage}
+\centering
+\thispagestyle{empty}
+
+{\large\scshape Université Hassan II de Casablanca\par}
+{\large\scshape Faculté des Sciences Ben M'Sik\par}
+\vspace{4mm}
+{\normalsize Master Data Science \& Big Data\par}
+{\normalsize Année universitaire 2025--2026\par}
+
+\vspace{18mm}
+{\color{liasrule}\rule{\textwidth}{0.8pt}}
+\vspace{8mm}
+
+{\Large\bfseries\color{liasblue} Projet de fin de module\par}
+\vspace{3mm}
+{\Large\bfseries\color{liasblue} Java Enterprise Edition\par}
+
+\vspace{10mm}
+{\Huge\bfseries\color{liasnavy} Plateforme de gestion\\[3mm] du laboratoire LIAS\par}
+
+\vspace{7mm}
+{\large\itshape Laboratoire d'Informatique et Automatique\\ pour les Systèmes\par}
+
+\vspace{8mm}
+{\color{liasrule}\rule{\textwidth}{0.8pt}}
+
+\vspace{14mm}
+{\normalsize Site institutionnel public et système d'information interne\\
+pour la gestion des membres, de la gouvernance, de l'activité\\
+scientifique et de la mémoire administrative du laboratoire\par}
+
+\vfill
+
+\begin{minipage}{0.46\textwidth}
+\raggedright
+{\small\bfseries\color{liasgrey} Réalisé par\par}
+\vspace{1mm}
+{\normalsize Douae Moussaoui\par}
+\end{minipage}
+\hfill
+\begin{minipage}{0.46\textwidth}
+\raggedleft
+{\small\bfseries\color{liasgrey} Encadrement\par}
+\vspace{1mm}
+{\normalsize Équipe pédagogique du module JEE\par}
+\end{minipage}
+
+\vspace{12mm}
+{\small\color{liasgrey} Casablanca --- Septembre 2026\par}
+
+\end{titlepage}
+
+%----------------------------------------------------------------------
+\cleardoublepage
+\pagenumbering{roman}
+\pagestyle{plain}
+
+\chapter*{Remerciements}
+\addcontentsline{toc}{chapter}{Remerciements}
+\markboth{Remerciements}{}
+
+Je tiens à exprimer ma reconnaissance à l'équipe pédagogique du module Java Enterprise
+Edition du Master Data Science \& Big Data de la Faculté des Sciences Ben M'Sik, pour la
+qualité de l'encadrement et pour un énoncé de projet suffisamment exigeant pour imposer
+de véritables décisions d'architecture plutôt qu'un simple exercice de programmation.
+
+Mes remerciements vont également au laboratoire LIAS, dont le fonctionnement réel ---
+statuts d'appartenance, mandats de gouvernance, mémoire documentaire --- a servi de
+cadre métier à ce travail et lui a donné sa consistance.
+
+Je remercie enfin l'ensemble du corps enseignant du Master pour la formation dispensée
+tout au long de l'année.
+
+%----------------------------------------------------------------------
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\markboth{Résumé}{}
+
+Ce rapport présente la conception et la réalisation d'une plateforme web de gestion pour
+le laboratoire de recherche LIAS, développée dans le cadre du module Java Enterprise
+Edition du Master Data Science \& Big Data. L'application remplit simultanément deux
+fonctions : celle de site institutionnel public et celle de système d'information interne
+couvrant l'ensemble du cycle de vie administratif et scientifique du laboratoire.
+
+La difficulté centrale du sujet n'est pas la quantité de modules mais une exigence
+structurelle du cahier des charges : la séparation stricte entre le \srt{} d'appartenance
+d'un membre, son \man{} de gouvernance et le \rol{} applicatif qui gouverne ses
+permissions. Cette contrainte a orienté toute la conception. Le rôle n'est jamais saisi
+manuellement : il est \emph{dérivé} du statut et des mandats actifs par un service
+dédié, historisé à chaque changement, et réconcilié automatiquement au démarrage de
+l'application.
+
+La solution repose sur une architecture trois tiers : un backend Spring~Boot~3.3
+(Java~21) exposant 22 contrôleurs REST adossés à 31 entités JPA et à une base
+PostgreSQL versionnée par Flyway ; une interface React~19 de 21 pages construite sur un
+système de composants interne ; une couche de sécurité stateless fondée sur JWT,
+BCrypt et un contrôle d'accès par rôle appliqué méthode par méthode. La traçabilité est
+assurée par un journal d'audit et quatre tables d'historique, conformément à la règle du
+cahier des charges selon laquelle aucune donnée n'est jamais perdue.
+
+La validation combine 55 tests automatisés (aucun échec) et un audit fonctionnel de bout
+en bout portant sur 21 routes et les 9 rôles du système. Les 21 sections du cahier des
+charges sont couvertes ; les limites résiduelles, notamment l'absence de thème sombre et
+de mesure de couverture de code, sont explicitement identifiées.
+
+\vspace{4mm}
+\noindent\textbf{Mots-clés} --- Java Enterprise Edition ; Spring Boot ; JPA / Hibernate ;
+React ; PostgreSQL ; JWT ; contrôle d'accès par rôle (RBAC) ; gouvernance de laboratoire ;
+traçabilité ; historisation ; architecture trois tiers.
+
+%----------------------------------------------------------------------
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\markboth{Abstract}{}
+
+This report describes the design and implementation of a web management platform for the
+LIAS research laboratory, carried out as the final project of the Java Enterprise Edition
+module of the Data Science \& Big Data Master's programme. The application serves two
+purposes at once: a public institutional website and an internal information system
+covering the whole administrative and scientific lifecycle of the laboratory.
+
+The core difficulty of the assignment is not the number of modules but a structural
+requirement of the specification: the strict separation between a member's membership
+\emph{status}, their governance \emph{mandate}, and the application \emph{role} that
+drives their permissions. This constraint shaped the entire design. The role is never set
+by hand: it is \emph{derived} from status and active mandates by a dedicated service,
+historised on every change, and automatically reconciled at application start-up.
+
+The solution follows a three-tier architecture: a Spring~Boot~3.3 backend (Java~21)
+exposing 22 REST controllers over 31 JPA entities and a PostgreSQL database versioned with
+Flyway; a React~19 front end of 21 pages built on an in-house component system; and a
+stateless security layer based on JWT, BCrypt and method-level role-based access control.
+Traceability relies on an audit journal and four history tables, in line with the
+specification rule that no data is ever lost.
+
+Validation combines 55 automated tests (no failures) with an end-to-end functional audit
+covering 21 routes and the 9 system roles. All 21 sections of the specification are
+covered; remaining limitations --- notably the absence of a dark theme and of a measured
+code-coverage figure --- are explicitly stated.
+
+\vspace{4mm}
+\noindent\textbf{Keywords} --- Java Enterprise Edition; Spring Boot; JPA / Hibernate;
+React; PostgreSQL; JWT; role-based access control; laboratory governance; traceability;
+auditability; three-tier architecture.
+
+%----------------------------------------------------------------------
+\cleardoublepage
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\addcontentsline{toc}{chapter}{Liste des figures}
+\cleardoublepage
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des tableaux}
+
+%----------------------------------------------------------------------
+\cleardoublepage
+\chapter*{Liste des acronymes}
+\addcontentsline{toc}{chapter}{Liste des acronymes}
+\markboth{Liste des acronymes}{}
+
+\begin{longtable}{@{}p{2.6cm}p{11.6cm}@{}}
+\toprule
+\textbf{Acronyme} & \textbf{Signification} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Acronyme} & \textbf{Signification} \\
+\midrule
+\endhead
+API      & \emph{Application Programming Interface} --- interface de programmation \\
+BCrypt   & Fonction de hachage de mots de passe à coût paramétrable \\
+CdC      & Cahier des charges \\
+CDP      & \emph{Chrome DevTools Protocol} \\
+CORS     & \emph{Cross-Origin Resource Sharing} \\
+CRUD     & \emph{Create, Read, Update, Delete} \\
+DTO      & \emph{Data Transfer Object} --- objet de transfert \\
+E2E      & \emph{End-to-End} --- de bout en bout \\
+HS512    & HMAC-SHA-512, algorithme de signature des jetons JWT \\
+JEE      & \emph{Java Enterprise Edition} (aujourd'hui Jakarta EE) \\
+JPA      & \emph{Jakarta Persistence API} \\
+JPQL     & \emph{Jakarta Persistence Query Language} \\
+JSON     & \emph{JavaScript Object Notation} \\
+JWT      & \emph{JSON Web Token} \\
+LIAS     & Laboratoire d'Informatique et Automatique pour les Systèmes \\
+ORM      & \emph{Object-Relational Mapping} --- correspondance objet-relationnel \\
+PV       & Procès-verbal (de réunion) \\
+RBAC     & \emph{Role-Based Access Control} --- contrôle d'accès fondé sur les rôles \\
+REST     & \emph{Representational State Transfer} \\
+SGBD     & Système de gestion de base de données \\
+SPA      & \emph{Single-Page Application} \\
+SMTP     & \emph{Simple Mail Transfer Protocol} \\
+SQL      & \emph{Structured Query Language} \\
+UML      & \emph{Unified Modeling Language} \\
+UUID     & \emph{Universally Unique Identifier} \\
+\bottomrule
+\end{longtable}
+
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\pagestyle{fancy}

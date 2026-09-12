@@ -144,7 +144,7 @@ export default function App() {
                     path="/governance"
                     element={
                       <RequireRole user={user} roles={MANAGEMENT_ROLES}>
-                        <GouvernancePage />
+                        <GouvernancePage user={user} />
                       </RequireRole>
                     }
                   />

@@ -1,0 +1,181 @@
+\chapter{Analyse des besoins et cahier des charges}
+\label{ch:besoins}
+
+\section{Présentation du contexte}
+
+Le cahier des charges se compose de 21 sections décrivant, dans l'ordre, les objectifs du
+système, la typologie des utilisateurs, la gestion des profils, les données temporelles,
+la gouvernance, puis quinze modules fonctionnels, et se termine par un ensemble de règles
+générales. Sa lecture fait apparaître une structure en trois couches : une couche
+d'identité et de gouvernance, une couche d'activité scientifique, et une couche de
+ressources et de traçabilité. Ce découpage a été conservé jusque dans l'organisation des
+packages Java et dans la répartition des diagrammes de classes.
+
+Une caractéristique de l'énoncé mérite d'être relevée : il ne décrit jamais d'écran. Il
+décrit des règles de fonctionnement institutionnel --- « historique complet conservé »,
+« uniquement par le directeur en mandat », « qui a reçu / qui n'a pas reçu ». L'analyse a
+donc consisté à traduire des règles de gestion en contraintes vérifiables par le système,
+et non à transposer une maquette.
+
+\section{Acteurs du système}
+
+Le cahier des charges distingue les visiteurs des membres, et détaille cinq catégories de
+membres ainsi que trois responsabilités de gouvernance et un administrateur technique. Le
+tableau~\ref{tab:acteurs} recense les acteurs effectivement implémentés, avec le rôle
+applicatif correspondant dans l'énumération \code{RoleName}.
+
+\begin{table}[H]
+\centering
+\caption{Acteurs du système et rôles applicatifs correspondants}
+\label{tab:acteurs}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.1cm}p{3.5cm}X@{}}
+\toprule
+\textbf{Acteur} & \textbf{\code{RoleName}} & \textbf{Périmètre d'accès} \\
+\midrule
+Visiteur & --- (anonyme) & Portail public, dépôt d'une candidature d'adhésion \\
+Doctorant & \code{PHD\_STUDENT} & Profil, membres, publications (ajout et consultation), événements, calendrier, notifications. \emph{Aucun accès aux modules internes} \\
+Membre associé & \code{ASSOCIATE\_MEMBER} & Le précédent, plus documents, matériel et procès-verbaux \\
+Membre permanent & \code{PERMANENT\_MEMBER} & Identique au membre associé \\
+Chef d'équipe & \code{TEAM\_LEADER} & Le précédent, plus création d'événements et de réunions, dépôt de procès-verbaux \\
+Vice-directeur & \code{VICE\_DIRECTOR} & Le précédent, plus validation des demandes de matériel, statuts, conventions, rapports, journal d'audit, inventaire \\
+Directeur & \code{DIRECTOR} & Le précédent, plus décision sur les adhésions, gestion des équipes et attribution des mandats \\
+Retraité & \code{RETIRED\_MEMBER} & Compte gelé : authentification refusée, historique conservé \\
+Ancien membre & \code{FORMER\_MEMBER} & Compte désactivé, réactivable \\
+Administrateur système & \code{SYSTEM\_ADMIN} & Administration technique : comptes, rôles, identité du laboratoire. Pas de compétence métier \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La distinction entre l'administrateur système et le directeur mérite d'être soulignée : le
+cahier des charges leur attribue des responsabilités de nature différente (§5.1 et §5.2).
+L'administrateur gère la technique, le directeur gouverne le laboratoire. Cette séparation
+a été conservée jusque dans les annotations de sécurité : l'administrateur système ne peut
+pas statuer sur une demande d'adhésion, et le directeur ne peut pas créer de compte
+technique.
+
+La figure~\ref{fig:usecase} présente le diagramme de cas d'utilisation. Il a été construit
+à partir des annotations \code{@PreAuthorize} réellement présentes sur les contrôleurs et
+du fichier de garde \code{utils/roles.js} côté client : chaque flèche correspond donc à un
+endpoint effectivement exposé et autorisé, et non à une intention.
+
+\begin{figure}[H]
+\centering
+\includegraphics[height=0.80\textheight,keepaspectratio]{\figpath/uml/01-use-case.png}
+\caption{Diagramme de cas d'utilisation du système LIAS}
+\label{fig:usecase}
+\end{figure}
+
+L'organisation du diagramme traduit une relation d'héritage entre acteurs : le membre
+hérite du visiteur, le chef d'équipe du membre, le vice-directeur du chef d'équipe et le
+directeur du vice-directeur. Chaque niveau ajoute des cas d'utilisation sans en retirer.
+L'administrateur système est délibérément placé hors de cette chaîne, avec ses deux seuls
+cas d'utilisation propres.
+
+\section{Besoins fonctionnels}
+
+Les besoins fonctionnels sont issus des sections~3 à~20 du cahier des charges. Le
+tableau~\ref{tab:besoinsfonc} les regroupe en huit domaines et précise l'exigence
+caractéristique de chacun --- celle qui, si elle n'était pas satisfaite, rendrait le
+module non conforme.
+
+\begin{table}[H]
+\centering
+\caption{Besoins fonctionnels par domaine et exigence caractéristique}
+\label{tab:besoinsfonc}
+\small
+\begin{tabularx}{\textwidth}{@{}p{1.1cm}p{3.5cm}X@{}}
+\toprule
+\textbf{§ CdC} & \textbf{Domaine} & \textbf{Exigence caractéristique} \\
+\midrule
+3, 4    & Profils et données temporelles & Un membre peut quitter le laboratoire et revenir ; chaque période d'affiliation est conservée séparément \\
+5, 7    & Gouvernance et rôles & Les mandats définissent des périodes datées ; l'historique complet des rôles est conservé \\
+6       & Demandes d'adhésion & La décision revient \emph{uniquement} au directeur en mandat ; l'acceptation crée le compte \\
+8       & Départ et retraite & Le compte est gelé ou désactivé, jamais supprimé ; la réactivation reste possible \\
+9, 12, 17, 20 & Activité scientifique & Les événements sont archivés \emph{par édition} ; les publications sont classables par auteur, année et équipe \\
+10      & Archivage documentaire & Les documents sont structurés par événement et par date, et historisés en versions \\
+11      & Rapport annuel & Génération \emph{automatique} à partir des événements, publications et activités \\
+13--16, 18, 19 & Ressources et communication & Le suivi du matériel doit indiquer qui a reçu \emph{et qui n'a pas reçu} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Deux exigences ont eu un effet structurant disproportionné par rapport à leur longueur
+dans l'énoncé. La première est l'archivage par édition (§9) : elle impose que deux
+occurrences successives d'un même colloque coexistent sans écrasement, ce qui se traduit
+par un attribut \code{editionNumber} et un endpoint dédié. La seconde est le suivi des
+non-bénéficiaires de matériel (§14) : elle exige une requête calculant un complément
+d'ensemble --- les membres actifs n'ayant pas reçu un article donné --- et non une simple
+lecture de table.
+
+\section{Besoins non fonctionnels}
+
+Le document de spécification associé au cahier des charges énumère un ensemble d'exigences
+non fonctionnelles. Le tableau~\ref{tab:nonfonc} en donne l'état réel, sans complaisance :
+une exigence non satisfaite y est déclarée comme telle et reprise dans les limites
+(§\ref{sec:limites}).
+
+\begin{table}[H]
+\centering
+\caption{Besoins non fonctionnels et niveau de satisfaction atteint}
+\label{tab:nonfonc}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.9cm}p{1.9cm}X@{}}
+\toprule
+\textbf{Exigence} & \textbf{État} & \textbf{Élément justificatif} \\
+\midrule
+Sécurité & Satisfait & JWT signé HS512, BCrypt (coût 12), contrôle d'accès par rôle appliqué méthode par méthode, gel des comptes vérifié à chaque requête \\
+Architecture propre & Satisfait & 18 packages métier, séparation contrôleur~/~service~/~repository~/~DTO systématique \\
+API REST & Satisfait & 22 contrôleurs sous \code{/api/v1}, documentation OpenAPI générée \\
+Composants réutilisables & Satisfait & Système de composants interne (7 modules) réutilisé par les 21 pages \\
+Design responsive & Satisfait & Navigation en tiroir sous 1024~px, tables à défilement horizontal encapsulé \\
+Interface professionnelle & Satisfait & Identité visuelle unique appliquée à l'ensemble des écrans \\
+Maintenabilité & Satisfait & Découpage constant, 55 tests verrouillant les règles critiques \\
+Performance & Partiel & \code{open-in-view} désactivé, pagination serveur, index SQL ; aucune campagne de charge menée \\
+Accessibilité & Partiel & Libellés accessibles sur les boutons-icônes, focus visible, fermeture clavier des modales ; pas d'audit WCAG formel \\
+Thème sombre & \textbf{Non satisfait} & Non implémenté --- limite assumée (§\ref{sec:limites}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Contraintes}
+
+Quatre contraintes ont encadré la réalisation.
+
+\paragraph{Contrainte académique.} Le projet relève d'un module Java Enterprise Edition :
+la plateforme technique du backend est imposée dans son principe. Le choix de Spring~Boot
+comme implémentation des spécifications JEE est justifié au chapitre~\ref{ch:techno}.
+
+\paragraph{Contrainte de conservation.} La règle « aucun membre ne perd ses données »
+interdit la suppression physique. Elle se traduit par une suppression logique généralisée
+au niveau de la classe de base des entités, et impose de traiter partout le cas d'une
+entité archivée encore référencée par une autre.
+
+\paragraph{Contrainte d'authenticité des données.} Le document de spécification proscrit
+explicitement les maquettes, les données fictives et les pages de remplissage. Chaque
+écran présenté dans ce rapport est connecté à des endpoints réels interrogeant la base de
+données.
+
+\paragraph{Contrainte d'exécution.} L'application devait fonctionner sur une base
+PostgreSQL hébergée, avec un schéma versionné et validé au démarrage --- ce qui interdit
+la génération automatique du schéma par l'ORM et impose des migrations explicites.
+
+\section{Critères de réussite}
+
+Les critères retenus pour juger le projet abouti, et vérifiés au chapitre~\ref{ch:tests},
+sont les suivants :
+
+\begin{enumerate}
+  \item les 21 sections du cahier des charges sont couvertes par une fonctionnalité
+        opérationnelle, et non par une page vide ;
+  \item la séparation \srt{}~\neqq{}~\rol{}~\neqq{}~\man{} est vérifiable : aucun compte
+        ne présente d'écart entre son rôle stocké et le rôle que son statut et ses mandats
+        impliquent ;
+  \item les permissions du client et celles du serveur coïncident : aucune commande
+        visible ne doit aboutir à un refus, aucune opération autorisée ne doit être
+        masquée ;
+  \item un compte retraité ou ancien ne peut plus accéder au système, alors que son
+        historique demeure consultable ;
+  \item la compilation, la construction du client et la suite de tests s'exécutent sans
+        erreur.
+\end{enumerate}
