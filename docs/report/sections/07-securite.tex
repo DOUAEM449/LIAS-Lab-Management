@@ -139,9 +139,11 @@ changement de statut est toujours historisé dans \code{MemberStatusHistory} ave
 d'effet et son motif, et déclenche systématiquement la resynchronisation du rôle.
 
 Deux statuts produisent un effet de bord sur la sécurité : le passage à
-\code{RETIRED} ou \code{FORMER} clôt les mandats en cours en plus de geler le compte. Cette
-clôture explicite garantit que l'historique de gouvernance reste cohérent --- on ne trouve
-pas de mandat ouvert détenu par un membre parti.
+\code{RETIRED} ou \code{FORMER} clôt les mandats en cours en plus de geler le compte.
+L'archivage d'un membre applique la même règle, pour la même raison : quelle que soit la
+manière dont un membre cesse d'exercer, il ne conserve aucune responsabilité de gouvernance
+ouverte. Cette clôture explicite garantit que l'historique de gouvernance reste cohérent
+--- on ne trouve pas de mandat ouvert détenu par un membre parti ou archivé.
 
 \section{Synchronisation rôle / mandat}
 

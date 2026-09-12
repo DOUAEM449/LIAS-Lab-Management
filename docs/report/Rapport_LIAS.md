@@ -95,7 +95,7 @@ BCrypt et un contrôle d'accès par rôle appliqué méthode par méthode. La tr
 assurée par un journal d'audit et quatre tables d'historique, conformément à la règle du
 cahier des charges selon laquelle aucune donnée n'est jamais perdue.
 
-La validation combine 48 tests automatisés (aucun échec) et un audit fonctionnel de bout
+La validation combine 55 tests automatisés (aucun échec) et un audit fonctionnel de bout
 en bout portant sur 21 routes et les 9 rôles du système. Les 21 sections du cahier des
 charges sont couvertes ; les limites résiduelles, notamment l'absence de thème sombre et
 de mesure de couverture de code, sont explicitement identifiées.
@@ -131,7 +131,7 @@ stateless security layer based on JWT, BCrypt and method-level role-based access
 Traceability relies on an audit journal and four history tables, in line with the
 specification rule that no data is ever lost.
 
-Validation combines 48 automated tests (no failures) with an end-to-end functional audit
+Validation combines 55 automated tests (no failures) with an end-to-end functional audit
 covering 21 routes and the 9 system roles. All 21 sections of the specification are
 covered; remaining limitations — notably the absence of a dark theme and of a measured
 code-coverage figure — are explicitly stated.
@@ -443,7 +443,7 @@ une exigence non satisfaite y est déclarée comme telle et reprise dans les lim
 | Composants réutilisables | Satisfait | Système de composants interne (7 modules) réutilisé par les 21 pages |
 | Design responsive | Satisfait | Navigation en tiroir sous 1024 px, tables à défilement horizontal encapsulé |
 | Interface professionnelle | Satisfait | Identité visuelle unique appliquée à l'ensemble des écrans |
-| Maintenabilité | Satisfait | Découpage constant, 48 tests verrouillant les règles critiques |
+| Maintenabilité | Satisfait | Découpage constant, 55 tests verrouillant les règles critiques |
 | Performance | Partiel | `open-in-view` désactivé, pagination serveur, index SQL ; aucune campagne de charge menée |
 | Accessibilité | Partiel | Libellés accessibles sur les boutons-icônes, focus visible, fermeture clavier des modales ; pas d'audit WCAG formel |
 | Thème sombre | **Non satisfait** | Non implémenté — limite assumée (§9.4) |
@@ -1778,9 +1778,11 @@ changement de statut est toujours historisé dans `MemberStatusHistory` avec sa 
 d'effet et son motif, et déclenche systématiquement la resynchronisation du rôle.
 
 Deux statuts produisent un effet de bord sur la sécurité : le passage à
-`RETIRED` ou `FORMER` clôt les mandats en cours en plus de geler le compte. Cette
-clôture explicite garantit que l'historique de gouvernance reste cohérent — on ne trouve
-pas de mandat ouvert détenu par un membre parti.
+`RETIRED` ou `FORMER` clôt les mandats en cours en plus de geler le compte.
+L'archivage d'un membre applique la même règle, pour la même raison : quelle que soit la
+manière dont un membre cesse d'exercer, il ne conserve aucune responsabilité de gouvernance
+ouverte. Cette clôture explicite garantit que l'historique de gouvernance reste cohérent
+— on ne trouve pas de mandat ouvert détenu par un membre parti ou archivé.
 
 
 ## Synchronisation rôle / mandat
@@ -1900,7 +1902,9 @@ Le tableau 8.1 récapitule les suites.
 | `NotificationServiceTest` | 5 | Unitaire | Ciblage des destinataires |
 | `CustomUserDetailsTest` | 5 | Unitaire | Gel des comptes retraités et anciens |
 | `BadRequestParamTest` | 4 | Intégration | Validation des paramètres de requête |
-| **Total** | **48** |  |  |
+| `MemberServiceTest` | 4 | Unitaire | Clôture des mandats à l'archivage d'un membre |
+| `MandateServiceTest` | 3 | Unitaire | Gouvernance : exclusion des titulaires archivés |
+| **Total** | **55** |  |  |
 
 
 ## Tests unitaires de la dérivation des rôles
@@ -1984,6 +1988,15 @@ administrativement désactivé reste inactif indépendamment de son statut. La c
 transitions elles-mêmes — départ, retour, nouvelle période d'affiliation — a été
 validée par l'audit fonctionnel décrit en §8.10.
 
+`MemberServiceTest` verrouille la règle d'archivage : archiver un membre clôture tous
+les mandats qu'il détient encore, recalcule son rôle effectif, et ne réécrit aucune donnée
+historisée. Un quatrième test fixe l'ordre des opérations — les mandats sont clôturés
+*avant* que la ligne ne soit marquée comme supprimée, faute de quoi la restriction de
+suppression logique masquerait les enregistrements à clôturer. `MandateServiceTest`
+couvre le versant lecture : un mandat dont le titulaire est archivé n'est pas restitué
+parmi les mandats en exercice, ceux des membres actifs le restent, et une clôture met à
+jour la ligne sans jamais la supprimer.
+
 
 ## Tests des équipements
 
@@ -2008,7 +2021,7 @@ silencieuse d'un destinataire inconnu, l'absence d'envoi lorsqu'aucun mandat n'e
 et la déduplication d'une liste de destinataires.
 
 
-## Résultats des 48 tests
+## Résultats des 55 tests
 
 
 L'exécution complète, sur le commit final, donne le résultat reproduit
@@ -2019,7 +2032,7 @@ au tableau 8.2.
 
 | **Commande** | **Résultat** | **Détail** |
 | --- | --- | --- |
-| `mvn clean test` | **BUILD SUCCESS** | 48 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
+| `mvn clean test` | **BUILD SUCCESS** | 55 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
 | `mvn clean compile` | **BUILD SUCCESS** | Compilation du backend sans avertissement bloquant |
 | `npm run build` | **Succès** | 1 919 modules transformés |
 | `npx oxlint` | **0 erreur** | 6 avertissements préexistants sur l'export de constantes |
@@ -2043,7 +2056,7 @@ et 47 endpoints de l'API, chaque page étant parcourue et chaque commande décle
 ### Défauts détectés et corrigés
 
 
-Cet audit a mis au jour quatre défauts réels, tous corrigés et, pour deux d'entre eux,
+Cet audit a mis au jour cinq défauts réels, tous corrigés et, pour trois d'entre eux,
 verrouillés par un test.
 
 
@@ -2077,6 +2090,22 @@ le convertisseur configuré par le contexte applicatif. Ce défaut illustre l'in
 tests d'intégration : le code de statut, seul élément observé jusqu'alors, était correct.
 
 
+**Mandat actif conservé par un membre archivé.**  L'archivage d'un membre
+(`MemberService.delete()`) se contentait de marquer la ligne comme supprimée, sans
+clôturer les mandats en cours de l'intéressé, alors que la transition vers les statuts
+*retraité* et *ancien membre* le faisait déjà. Un membre archivé restait
+donc titulaire d'un mandat de directeur : les écrans de gouvernance, qui déduisent
+l'organigramme des mandats actifs, affichaient « Direction en exercice — Membre archivé ».
+La correction aligne l'archivage sur la logique existante — clôture de tous les mandats
+actifs, puis recalcul du rôle effectif — et ajoute un garde-fou en lecture : un mandat
+dont le titulaire est archivé n'est plus présenté comme en exercice. Les suites
+`MemberServiceTest` et `MandateServiceTest` verrouillent les deux règles. La
+figure 6.6 montre l'état obtenu après correction : le poste de directeur,
+laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
+vérification finale, reportée au tableau 8.3, ne trouve plus aucun mandat actif
+rattaché à un membre archivé ou supprimé, et les 55 tests s'exécutent sans échec.
+
+
 ### Résultats de la validation
 
 
@@ -2091,6 +2120,7 @@ Le tableau 8.3 synthétise les vérifications finales.
 | Gardes de route par rôle | Conformes : un doctorant est redirigé depuis les 8 routes qui lui sont fermées |
 | Cohérence navigation / autorisation serveur | Conforme : la navigation d'un doctorant se limite à ses 6 modules |
 | Dérive de rôle sur les comptes actifs | **0** — le rôle dérivé coïncide avec le rôle stocké pour tous les membres |
+| Mandats actifs détenus par un membre archivé | **0** après correction — aucun mandat ouvert ne référence un membre archivé ou supprimé |
 | Réconciliation au démarrage | Idempotente : « tous les comptes sont déjà cohérents » |
 | Comptes gelés | Authentification refusée (401) pour un statut retraité |
 | Requête anonyme sur ressource protégée | 401 avec corps JSON complet |
@@ -2121,8 +2151,8 @@ le commit final.
 | Énumérations métier | 10 |  |  |
 | Migrations Flyway | 3 |  |  |
 | Tables relationnelles | 30 |  |  |
-| Lignes de Java (sources) | 9 908 | Lignes de JavaScript / JSX | 13 112 |
-| Lignes de Java (tests) | 863 | Lignes SQL de migration | 750 |
+| Lignes de Java (sources) | 9 942 | Lignes de JavaScript / JSX | 13 112 |
+| Lignes de Java (tests) | 1 092 | Lignes SQL de migration | 750 |
 
 
 ## Correspondance avec le cahier des charges
@@ -2218,7 +2248,7 @@ n'a pas été fait.
 
 
 **Aucune mesure de couverture de code.**  Aucun outil de couverture n'est configuré.
-Les 48 tests protègent les règles identifiées comme critiques, mais la proportion du code
+Les 55 tests protègent les règles identifiées comme critiques, mais la proportion du code
 exercée n'est pas connue et n'est pas estimée dans ce rapport.
 
 
@@ -2295,7 +2325,7 @@ le cycle de vie des membres, la gouvernance, l'activité scientifique, les resso
 matérielles et documentaires, la communication interne et le pilotage annuel. Sur le plan
 technique, le système compte 31 entités persistantes, 22 contrôleurs REST et 21 pages
 d'interface, soit environ 23 000 lignes de code applicatif. Sur le plan de la validation,
-48 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
+55 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
 des routes et des rôles.
 
 La difficulté centrale du sujet — la séparation stricte entre le STATUT d'appartenance,
@@ -2473,7 +2503,7 @@ constitue, à ce titre, une base sur laquelle il est possible de construire.
 # Détail des tests automatisés
 
 
-Les 48 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+Les 55 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
 par `mvn clean test` se termine sans échec ni erreur.
 
 
@@ -2537,6 +2567,15 @@ par `mvn clean test` se termine sans échec ni erreur.
 | 46 | `discussionsWithAnUnknownScopeEnumIs400NotServerError` | Énumération invalide |
 | 47 | `aMalformedUuidPathVariableIs400NotServerError` | UUID mal formé |
 | 48 | `aNonNumericYearPathVariableIs400NotServerError` | Type incompatible |
+| {3}{@{}l}{ MemberServiceTest — archivage d'un membre (4)} |  |  |
+| 49 | `archivingAMemberClosesEveryMandateTheyStillHold` | Archivage → clôture |
+| 50 | `archivingAMemberRecomputesTheirEffectiveRole` | Resynchronisation du rôle |
+| 51 | `archivingSoftDeletesWithoutTouchingHistorizedData` | Historique préservé |
+| 52 | `mandatesAreClosedBeforeTheMemberRowIsArchived` | Ordre des opérations |
+| {3}{@{}l}{ MandateServiceTest — gouvernance en exercice (3)} |  |  |
+| 53 | `anArchivedMembersMandateIsNotReportedAsInExercise` | Titulaire archivé exclu |
+| 54 | `mandatesOfLiveMembersAreStillReported` | Non-régression |
+| 55 | `endingAllMandatesOfAMemberClosesThemWithoutDeletingThem` | Clôture sans suppression |
 
 
 # Principaux endpoints de l'API
@@ -2657,7 +2696,7 @@ chapitre 8.
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 48 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 55 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

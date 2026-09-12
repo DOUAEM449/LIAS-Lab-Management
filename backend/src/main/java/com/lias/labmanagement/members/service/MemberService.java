@@ -183,6 +183,14 @@ public class MemberService {
     @Transactional
     public void delete(UUID id) {
         Member member = findMemberOrThrow(id);
+
+        // An archived member holds no governance responsibility any more: close their active
+        // mandates first, exactly as the RETIRED/FORMER transition does, so no governance
+        // screen can still present an archived member as a sitting officer. The mandates are
+        // closed (end date set), never deleted -- the governance history stays intact.
+        mandateService.endAllActiveMandatesForMember(id, LocalDate.now(), "member archived");
+        userRoleSyncService.syncForMember(member, RoleChangeSource.MANDATE_CHANGE);
+
         member.markDeleted();
         memberRepository.save(member);
         auditService.record(AuditAction.DELETE, "Member", id, "Member archived (soft delete)");
@@ -227,7 +235,8 @@ public class MemberService {
         // "active" governance mandates, then recompute their effective role either way
         // (P0.1/P0.2 — Statut change can also promote/demote independently of Mandate).
         if (request.newStatus() == MemberStatus.RETIRED || request.newStatus() == MemberStatus.FORMER) {
-            mandateService.endAllActiveMandatesForMember(id, request.effectiveDate());
+            mandateService.endAllActiveMandatesForMember(id, request.effectiveDate(),
+                    "member status became " + request.newStatus());
         }
         userRoleSyncService.syncForMember(saved, RoleChangeSource.STATUS_CHANGE);
 
@@ -278,7 +287,8 @@ public class MemberService {
         member.setCurrentStatus(MemberStatus.FORMER);
         Member saved = memberRepository.save(member);
 
-        mandateService.endAllActiveMandatesForMember(memberId, request.leaveDate());
+        mandateService.endAllActiveMandatesForMember(memberId, request.leaveDate(),
+                "member left the laboratory");
         userRoleSyncService.syncForMember(saved, RoleChangeSource.STATUS_CHANGE);
 
         auditService.record(AuditAction.STATUS_CHANGE, "Member", memberId, oldStatus, MemberStatus.FORMER,

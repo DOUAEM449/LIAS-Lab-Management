@@ -37,8 +37,10 @@ Le tableau~\ref{tab:suites} récapitule les suites.
 \code{NotificationServiceTest} & 5 & Unitaire & Ciblage des destinataires \\
 \code{CustomUserDetailsTest} & 5 & Unitaire & Gel des comptes retraités et anciens \\
 \code{BadRequestParamTest} & 4 & Intégration & Validation des paramètres de requête \\
+\code{MemberServiceTest} & 4 & Unitaire & Clôture des mandats à l'archivage d'un membre \\
+\code{MandateServiceTest} & 3 & Unitaire & Gouvernance : exclusion des titulaires archivés \\
 \midrule
-\textbf{Total} & \textbf{48} & & \\
+\textbf{Total} & \textbf{55} & & \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -115,6 +117,15 @@ administrativement désactivé reste inactif indépendamment de son statut. La c
 transitions elles-mêmes --- départ, retour, nouvelle période d'affiliation --- a été
 validée par l'audit fonctionnel décrit en~§\ref{sec:e2e}.
 
+\code{MemberServiceTest} verrouille la règle d'archivage : archiver un membre clôture tous
+les mandats qu'il détient encore, recalcule son rôle effectif, et ne réécrit aucune donnée
+historisée. Un quatrième test fixe l'ordre des opérations --- les mandats sont clôturés
+\emph{avant} que la ligne ne soit marquée comme supprimée, faute de quoi la restriction de
+suppression logique masquerait les enregistrements à clôturer. \code{MandateServiceTest}
+couvre le versant lecture : un mandat dont le titulaire est archivé n'est pas restitué
+parmi les mandats en exercice, ceux des membres actifs le restent, et une clôture met à
+jour la ligne sans jamais la supprimer.
+
 \section{Tests des équipements}
 \label{sec:testsequip}
 
@@ -135,7 +146,7 @@ de rôle. Les autres cas couvrent la persistance d'une notification non lue, l'i
 silencieuse d'un destinataire inconnu, l'absence d'envoi lorsqu'aucun mandat n'est pourvu,
 et la déduplication d'une liste de destinataires.
 
-\section{Résultats des 48 tests}
+\section{Résultats des 55 tests}
 
 L'exécution complète, sur le commit final, donne le résultat reproduit
 au tableau~\ref{tab:resultats}.
@@ -149,7 +160,7 @@ au tableau~\ref{tab:resultats}.
 \toprule
 \textbf{Commande} & \textbf{Résultat} & \textbf{Détail} \\
 \midrule
-\code{mvn clean test} & \textbf{BUILD SUCCESS} & 48 tests exécutés, 0 échec, 0 erreur, 0 ignoré \\
+\code{mvn clean test} & \textbf{BUILD SUCCESS} & 55 tests exécutés, 0 échec, 0 erreur, 0 ignoré \\
 \code{mvn clean compile} & \textbf{BUILD SUCCESS} & Compilation du backend sans avertissement bloquant \\
 \code{npm run build} & \textbf{Succès} & 1\,919 modules transformés \\
 \code{npx oxlint} & \textbf{0 erreur} & 6 avertissements préexistants sur l'export de constantes \\
@@ -173,7 +184,7 @@ et 47 endpoints de l'API, chaque page étant parcourue et chaque commande décle
 \subsection{Défauts détectés et corrigés}
 \label{sec:defauts}
 
-Cet audit a mis au jour quatre défauts réels, tous corrigés et, pour deux d'entre eux,
+Cet audit a mis au jour cinq défauts réels, tous corrigés et, pour trois d'entre eux,
 verrouillés par un test.
 
 \paragraph{Dérive du rôle sur des comptes antérieurs.} Des comptes créés avant
@@ -202,6 +213,21 @@ une exception était journalisée à chaque requête anonyme. La correction cons
 le convertisseur configuré par le contexte applicatif. Ce défaut illustre l'intérêt des
 tests d'intégration : le code de statut, seul élément observé jusqu'alors, était correct.
 
+\paragraph{Mandat actif conservé par un membre archivé.} L'archivage d'un membre
+(\code{MemberService.delete()}) se contentait de marquer la ligne comme supprimée, sans
+clôturer les mandats en cours de l'intéressé, alors que la transition vers les statuts
+\emph{retraité} et \emph{ancien membre} le faisait déjà. Un membre archivé restait
+donc titulaire d'un mandat de directeur : les écrans de gouvernance, qui déduisent
+l'organigramme des mandats actifs, affichaient « Direction en exercice --- Membre archivé ».
+La correction aligne l'archivage sur la logique existante --- clôture de tous les mandats
+actifs, puis recalcul du rôle effectif --- et ajoute un garde-fou en lecture : un mandat
+dont le titulaire est archivé n'est plus présenté comme en exercice. Les suites
+\code{MemberServiceTest} et \code{MandateServiceTest} verrouillent les deux règles. La
+figure~\ref{fig:gouvStruct} montre l'état obtenu après correction : le poste de directeur,
+laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
+vérification finale, reportée au tableau~\ref{tab:e2e}, ne trouve plus aucun mandat actif
+rattaché à un membre archivé ou supprimé, et les 55 tests s'exécutent sans échec.
+
 \subsection{Résultats de la validation}
 
 Le tableau~\ref{tab:e2e} synthétise les vérifications finales.
@@ -219,6 +245,7 @@ Routes de l'interface parcourues & 21 / 21 rendues, aucun écran vide ni blocage
 Gardes de route par rôle & Conformes : un doctorant est redirigé depuis les 8 routes qui lui sont fermées \\
 Cohérence navigation / autorisation serveur & Conforme : la navigation d'un doctorant se limite à ses 6 modules \\
 Dérive de rôle sur les comptes actifs & \textbf{0} --- le rôle dérivé coïncide avec le rôle stocké pour tous les membres \\
+Mandats actifs détenus par un membre archivé & \textbf{0} après correction --- aucun mandat ouvert ne référence un membre archivé ou supprimé \\
 Réconciliation au démarrage & Idempotente : « tous les comptes sont déjà cohérents » \\
 Comptes gelés & Authentification refusée (401) pour un statut retraité \\
 Requête anonyme sur ressource protégée & 401 avec corps JSON complet \\
