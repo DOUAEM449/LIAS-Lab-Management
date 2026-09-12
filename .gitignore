@@ -40,3 +40,6 @@ docs/report/*.toc
 docs/report/*.lof
 docs/report/*.lot
 docs/report/*.synctex.gz
+# Caches de compilation latexmk/pdflatex (chemins absolus de la machine de build)
+docs/report/*.fdb_latexmk
+docs/report/*.fls
