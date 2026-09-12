@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowRight } from 'lucide-react';
+
+/** Hauteur de la barre de navigation collante, laissée libre au-dessus de la section visée. */
+const NAV_OFFSET = 76;
 
 const ANCHORS = [
   { href: '#about', label: 'Recherche' },
@@ -13,6 +16,60 @@ const ANCHORS = [
 export default function PublicNavbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const onLanding = location.pathname === '/';
+
+  /*
+   * Ces sections n'existent que sur la page d'accueil. Depuis une autre page
+   * publique (/apply), une ancre nue ne fait que modifier l'URL. On route donc
+   * vers « /#section », puis on défile une fois la cible montée — la page
+   * d'accueil chargeant ses données de façon asynchrone, l'élément peut
+   * n'apparaître qu'après la navigation.
+   */
+  useEffect(() => {
+    if (!location.hash) return;
+    let cancelled = false;
+    const deadline = Date.now() + 5000;
+    const abort = () => {
+      cancelled = true;
+    };
+
+    // L'utilisateur reprend la main à tout moment : dès qu'il défile lui-même,
+    // on cesse de repositionner la page.
+    window.addEventListener('wheel', abort, { passive: true });
+    window.addEventListener('touchstart', abort, { passive: true });
+    window.addEventListener('keydown', abort);
+
+    function lock() {
+      if (cancelled) return;
+      const target = document.querySelector(location.hash);
+      if (target) {
+        // L'accueil charge ses données et ses images après la navigation : la
+        // hauteur du document change encore plusieurs secondes durant, et la
+        // section se déplace avec elle. On réaligne à chaque dérive pendant
+        // toute la fenêtre de chargement — s'arrêter au premier bon alignement
+        // laisserait la cible dériver ensuite.
+        const top = target.getBoundingClientRect().top;
+        if (Math.abs(top - NAV_OFFSET) > 4) {
+          window.scrollTo({ top: top + window.scrollY - NAV_OFFSET, behavior: 'auto' });
+        }
+      }
+      if (Date.now() < deadline) setTimeout(lock, 100);
+    }
+    lock();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('wheel', abort);
+      window.removeEventListener('touchstart', abort);
+      window.removeEventListener('keydown', abort);
+    };
+  }, [location.pathname, location.hash]);
+
+  // Sur l'accueil une ancre native suffit ; ailleurs il faut revenir à l'accueil.
+  function anchorProps(href) {
+    return onLanding ? { href } : { to: `/${href}` };
+  }
 
   // A hairline shadow appears only once the page has scrolled, so the navbar
   // sits flat against the hero at rest.
@@ -41,16 +98,19 @@ export default function PublicNavbar() {
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
-          {ANCHORS.map((a) => (
-            <a
-              key={a.href}
-              href={a.href}
-              className="text-[13.5px] font-medium text-lias-ink-soft no-underline hover:text-lias-blue-dark
-                transition-colors duration-150"
-            >
-              {a.label}
-            </a>
-          ))}
+          {ANCHORS.map((a) => {
+            const Tag = onLanding ? 'a' : Link;
+            return (
+              <Tag
+                key={a.href}
+                {...anchorProps(a.href)}
+                className="text-[13.5px] font-medium text-lias-ink-soft no-underline hover:text-lias-blue-dark
+                  transition-colors duration-150"
+              >
+                {a.label}
+              </Tag>
+            );
+          })}
         </nav>
 
         <div className="hidden lg:flex items-center gap-2 shrink-0">
@@ -83,16 +143,19 @@ export default function PublicNavbar() {
 
       {open && (
         <div className="lg:hidden border-t border-lias-border px-5 py-5 flex flex-col gap-4 bg-white lias-enter">
-          {ANCHORS.map((a) => (
-            <a
-              key={a.href}
-              href={a.href}
-              onClick={() => setOpen(false)}
-              className="text-[14px] font-medium text-lias-ink no-underline"
-            >
-              {a.label}
-            </a>
-          ))}
+          {ANCHORS.map((a) => {
+            const Tag = onLanding ? 'a' : Link;
+            return (
+              <Tag
+                key={a.href}
+                {...anchorProps(a.href)}
+                onClick={() => setOpen(false)}
+                className="text-[14px] font-medium text-lias-ink no-underline"
+              >
+                {a.label}
+              </Tag>
+            );
+          })}
           <div className="flex flex-col gap-2.5 mt-2 pt-4 border-t border-lias-border-light">
             <Link
               to="/login"

@@ -54,15 +54,22 @@ public class ReportService {
     private final AnnualReportPdfGenerator pdfGenerator;
     private final FileStorageService fileStorageService;
 
-    /** True when the report for that year already exists — used by the yearly scheduler. */
+    /**
+     * True when a <em>live</em> report already covers that year — used by the yearly
+     * scheduler. An archived report does not count: the year must remain regenerable.
+     */
     @Transactional(readOnly = true)
     public boolean existsForYear(int year) {
-        return reportRepository.existsByYear(year);
+        return reportRepository.existsByYearAndDeletedFalse(year);
     }
 
     @Transactional
     public AnnualReportResponse generate(int year) {
-        if (reportRepository.existsByYear(year)) {
+        // An archived report still holds the UNIQUE(report_year) slot, so it has to be
+        // looked up explicitly and reused — otherwise the insert below would fail on the
+        // constraint and surface as an unexplained conflict.
+        AnnualReport archived = reportRepository.findByYearIncludingArchived(year).orElse(null);
+        if (archived != null && !archived.isDeleted()) {
             throw new ConflictException("A report for year " + year + " already exists");
         }
 
@@ -81,15 +88,27 @@ public class ReportService {
         );
 
         Instant generatedDate = Instant.now();
-        AnnualReport report;
+        String statisticsJson;
         try {
+            statisticsJson = objectMapper.writeValueAsString(statistics);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize report statistics", e);
+        }
+
+        AnnualReport report;
+        if (archived != null) {
+            // Reprise de la ligne archivée : l'identifiant et l'historique d'audit du
+            // rapport restent stables, et la contrainte d'unicité est respectée.
+            archived.restore();
+            archived.setGeneratedDate(generatedDate);
+            archived.setStatisticsJson(statisticsJson);
+            report = archived;
+        } else {
             report = AnnualReport.builder()
                     .year(year)
                     .generatedDate(generatedDate)
-                    .statisticsJson(objectMapper.writeValueAsString(statistics))
+                    .statisticsJson(statisticsJson)
                     .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize report statistics", e);
         }
 
         // CdC §2.11: the report is the deliverable conditioning the yearly budget —
@@ -100,7 +119,8 @@ public class ReportService {
         report.setPdfPath(stored.relativePath());
 
         AnnualReport saved = reportRepository.save(report);
-        auditService.record(AuditAction.CREATE, "AnnualReport", saved.getId(), "Annual report generated for " + year);
+        auditService.record(AuditAction.CREATE, "AnnualReport", saved.getId(),
+                (archived != null ? "Annual report regenerated for " : "Annual report generated for ") + year);
         return toResponse(saved, statistics);
     }
 
