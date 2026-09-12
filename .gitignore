@@ -43,3 +43,6 @@ docs/report/*.synctex.gz
 # Caches de compilation latexmk/pdflatex (chemins absolus de la machine de build)
 docs/report/*.fdb_latexmk
 docs/report/*.fls
+
+# --- Fichiers verrous Office (crees a l'ouverture d'un .pptx / .docx) --------
+~$*
