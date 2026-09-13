@@ -7,7 +7,10 @@ export default function DashboardLayout({ user, avatarUrl, children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-lias-bg text-lias-ink">
+    /* UI — le canevas porte deux halos colorés très diffus (.lias-mesh) au lieu
+       d'un gris uni : l'écran a une profondeur de fond, les cartes blanches s'y
+       détachent nettement. */
+    <div className="flex min-h-screen lias-mesh text-lias-ink">
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}

@@ -13,9 +13,12 @@ import { Loader2 } from 'lucide-react';
    La variante primaire porte en plus un liseré interne clair en haut, qui donne
    au bouton un relief léger sans recourir à un dégradé. */
 const VARIANTS = {
+  /* UI — l'action principale passe en dégradé de marque avec lueur colorée :
+     c'est l'élément le plus fort de l'écran, il ne se confond plus avec un
+     bouton secondaire bleu. */
   primary:
-    'bg-lias-blue text-white border border-lias-blue-hover shadow-card hover:bg-lias-blue-hover ' +
-    'hover:shadow-raised active:translate-y-px active:shadow-card',
+    'lias-gradient-brand text-white border border-transparent shadow-glow ' +
+    'hover:shadow-glow-strong hover:brightness-110 active:translate-y-px active:shadow-glow',
   secondary:
     'bg-lias-surface text-lias-ink border border-lias-border shadow-card ' +
     'hover:border-lias-border-strong hover:bg-lias-surface-muted active:translate-y-px',

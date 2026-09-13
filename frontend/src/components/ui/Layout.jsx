@@ -13,18 +13,19 @@ export function PageHeader({ eyebrow, title, description, actions, className = '
     <div className={`flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7 ${className}`}>
       <div className="min-w-0">
         {eyebrow && (
-          /* UI — le sur-titre est rattaché au titre par un court filet : il se lit
-             comme une étiquette de rubrique plutôt que comme une ligne flottante. */
-          <div className="flex items-center gap-2 mb-2">
-            <span className="h-3 w-[3px] rounded-full bg-lias-blue" aria-hidden="true" />
-            <span className="text-micro font-semibold uppercase tracking-[0.09em] text-lias-blue-dark">
+          /* UI — le sur-titre devient une puce teintée à part entière : il se lit
+             comme une étiquette de rubrique et non comme une ligne flottante. */
+          <div className="inline-flex items-center gap-2 mb-3 rounded-full bg-lias-blue-tint-solid px-3 py-1">
+            <span className="lias-gradient-brand h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+            <span className="text-micro font-bold uppercase tracking-[0.1em] text-lias-blue-dark">
               {eyebrow}
             </span>
           </div>
         )}
-        <h1 className="m-0 text-display font-bold text-lias-navy tracking-[-0.015em]">{title}</h1>
+        {/* Le titre de page monte en puissance : plus grand, plus gras, plus serré. */}
+        <h1 className="m-0 text-display font-extrabold text-lias-navy tracking-[-0.03em]">{title}</h1>
         {description && (
-          <p className="mt-2 mb-0 text-body-sm text-lias-muted max-w-2xl">{description}</p>
+          <p className="mt-2.5 mb-0 text-body-sm text-lias-muted max-w-2xl">{description}</p>
         )}
       </div>
       {actions && <div className="flex items-center gap-2.5 shrink-0">{actions}</div>}
@@ -55,8 +56,8 @@ export function CardHeader({ icon: Icon, title, description, actions, className 
         {/* UI — l'icône est posée sur une pastille teintée : elle devient un repère
             de section au lieu d'un glyphe isolé perdu à côté du titre. */}
         {Icon && (
-          <span className="w-7 h-7 rounded-control bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
-            <Icon size={15} className="text-lias-blue-dark" />
+          <span className="lias-gradient-brand w-8 h-8 rounded-control flex items-center justify-center shrink-0 shadow-glow">
+            <Icon size={15} className="text-white" strokeWidth={2.2} />
           </span>
         )}
         <div className="min-w-0">
@@ -149,28 +150,44 @@ export function StatTile({ label, value, hint, hintTone = 'muted', icon: Icon, l
   }[hintTone];
 
   return (
-    /* UI — la tuile est désormais une colonne flex : le libellé et le chiffre
-       restent groupés en haut et l'indice est poussé en bas, de sorte que des
-       tuiles avec et sans indice s'alignent au lieu de laisser un vide flottant.
-       Le survol la soulève légèrement pour signaler qu'elle forme un bloc. */
+    /* UI — la tuile devient l'élément le plus affirmé de l'écran : chiffre en
+       dégradé de marque, pastille d'icône pleine avec lueur colorée, et un
+       liseré supérieur qui s'illumine au survol. Colonne flex pour que l'indice
+       soit poussé en bas et que les tuiles s'alignent, avec ou sans indice. */
     <div
-      className={`flex flex-col bg-lias-surface border border-lias-border rounded-card shadow-card p-5 h-full
-        transition-[border-color,box-shadow,transform] duration-150
-        hover:border-lias-border-strong hover:shadow-raised hover:-translate-y-px ${className}`}
+      className={`group relative flex flex-col overflow-hidden bg-lias-surface border border-lias-border
+        rounded-card shadow-card p-5 h-full
+        transition-[border-color,box-shadow,transform] duration-200
+        hover:border-lias-blue/35 hover:shadow-raised hover:-translate-y-0.5 ${className}`}
     >
+      {/* Liseré supérieur : invisible au repos, révélé au survol. */}
+      <span
+        className="lias-gradient-brand absolute inset-x-0 top-0 h-[3px] opacity-0
+          transition-opacity duration-200 group-hover:opacity-100"
+        aria-hidden="true"
+      />
       <div className="flex items-start justify-between gap-3">
-        <span className="text-meta text-lias-muted font-medium leading-snug">{label}</span>
+        <span className="text-meta text-lias-muted font-semibold leading-snug uppercase tracking-[0.04em]">
+          {label}
+        </span>
         {Icon && (
-          <div className="w-9 h-9 rounded-control bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
-            <Icon size={16} className="text-lias-blue-dark" strokeWidth={2} />
+          <div
+            className="lias-gradient-brand w-10 h-10 rounded-control flex items-center justify-center shrink-0
+              shadow-glow transition-transform duration-200 group-hover:scale-105"
+          >
+            <Icon size={17} className="text-white" strokeWidth={2.2} />
           </div>
         )}
       </div>
       {/* tabular-nums : les chiffres gardent la même chasse d'une tuile à l'autre. */}
-      <div className="text-metric font-bold text-lias-navy mt-3 tracking-[-0.025em] tabular-nums">
-        {loading ? <span className="lias-shimmer inline-block w-14 h-7 rounded align-middle" /> : value}
+      <div className="text-metric font-extrabold mt-3.5 tracking-[-0.03em] tabular-nums">
+        {loading ? (
+          <span className="lias-shimmer inline-block w-14 h-8 rounded align-middle" />
+        ) : (
+          <span className="lias-gradient-text">{value}</span>
+        )}
       </div>
-      {hint && !loading && <div className={`text-meta mt-auto pt-2 font-medium ${hintColor}`}>{hint}</div>}
+      {hint && !loading && <div className={`text-meta mt-auto pt-2.5 font-medium ${hintColor}`}>{hint}</div>}
     </div>
   );
 }

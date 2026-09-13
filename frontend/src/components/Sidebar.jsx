@@ -106,14 +106,14 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
       <aside
         className={`${collapsed ? 'lg:w-[74px]' : 'lg:w-[248px]'} w-[248px]
           fixed lg:sticky inset-y-0 left-0 top-0 h-screen z-50 lg:z-auto shrink-0
-          bg-gradient-to-b from-lias-navy to-lias-navy-deep
+          bg-gradient-to-b from-lias-navy via-lias-navy to-lias-navy-deep
           flex flex-col transition-[width,transform] duration-200
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div className="flex items-center gap-3 px-4 h-[68px] shrink-0 border-b border-white/[0.07]">
           {/* Le monogramme reçoit un liseré clair : il se lit comme une pastille
               posée sur le panneau, et non comme un carré de couleur à plat. */}
-          <div className="w-9 h-9 rounded-control bg-lias-blue ring-1 ring-inset ring-white/20 shadow-card flex items-center justify-center shrink-0">
+          <div className="lias-gradient-brand w-9 h-9 rounded-control ring-1 ring-inset ring-white/25 shadow-glow flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-title-sm font-mono">L</span>
           </div>
           {!collapsed && (
@@ -150,20 +150,23 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
                       `relative flex items-center gap-3 px-3 py-2.5 rounded-control text-body-sm no-underline
                        transition-[background-color,color] duration-150 ${collapsed ? 'lg:justify-center' : ''} ${
                         isActive
-                          ? 'bg-white/[0.09] text-white font-semibold'
-                          : 'text-lias-navy-text font-medium hover:bg-white/[0.05] hover:text-white'
+                          ? 'bg-lias-blue/25 text-white font-semibold shadow-glow'
+                          : 'text-lias-navy-text font-medium hover:bg-white/[0.06] hover:text-white'
                       }`
                     }
                   >
                     {({ isActive }) => (
                       <>
+                        {/* UI — l'entrée active est marquée par un rail en dégradé
+                            de marque et un fond indigo translucide : la sélection
+                            se repère instantanément dans la colonne. */}
                         {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-lias-blue" />
+                          <span className="lias-gradient-brand absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full" />
                         )}
                         <Icon
                           size={18}
-                          strokeWidth={2}
-                          className={`shrink-0 ${isActive ? 'text-lias-blue' : ''}`}
+                          strokeWidth={2.2}
+                          className={`shrink-0 ${isActive ? 'text-white' : ''}`}
                         />
                         {!collapsed && <span className="truncate">{label}</span>}
                       </>

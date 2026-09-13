@@ -138,7 +138,7 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
   return (
     /* UI — barre translucide avec flou d'arrière-plan : au défilement, le contenu
        se devine sous l'en-tête au lieu de disparaître derrière un bandeau opaque. */
-    <header className="h-[68px] shrink-0 bg-lias-surface/85 backdrop-blur-md border-b border-lias-border flex items-center justify-between px-5 sm:px-7 gap-4 sticky top-0 z-30">
+    <header className="h-[68px] shrink-0 bg-lias-surface/70 backdrop-blur-xl border-b border-lias-border/70 flex items-center justify-between px-5 sm:px-7 gap-4 sticky top-0 z-30">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={onToggleSidebar}
@@ -199,8 +199,8 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
                         text-left bg-transparent border-x-0 border-t-0 w-full transition-colors duration-150
                         ${category.to ? 'cursor-pointer hover:bg-lias-surface-muted' : 'cursor-default'}`}
                     >
-                      <div className="w-8 h-8 rounded-control bg-lias-blue-tint-solid flex items-center justify-center shrink-0">
-                        <Icon size={14} className="text-lias-blue-dark" />
+                      <div className="lias-gradient-brand w-8 h-8 rounded-control flex items-center justify-center shrink-0">
+                        <Icon size={14} className="text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-meta font-medium text-lias-ink truncate">{r.title}</div>
