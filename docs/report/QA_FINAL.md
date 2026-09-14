@@ -226,3 +226,37 @@ Aucune limite n'a été transformée en fonctionnalité satisfaite.
 | `npx oxlint` | 0 erreur, 6 avertissements préexistants |
 | Compilation LaTeX (3 passes) | 0 erreur fatale, 0 référence non résolue |
 | PDF | 82 pages A4, 35 figures, 19 tableaux |
+
+---
+
+## 9. Audit avant soutenance — suite
+
+Un contrôle complémentaire, conduit après la remise du rapport, a mis au jour un
+défaut fonctionnel supplémentaire et dressé un classement P0/P1/P2/P3 de l'état
+de l'interface. Le détail figure dans `docs/FINAL_PRE_SOUTENANCE_AUDIT.md`.
+
+### P0-01 — Formulaire de discussion proposé à un compte sans profil membre (corrigé)
+
+| Rubrique | Contenu |
+|---|---|
+| **Cause** | `DiscussionController` exige un profil membre comme auteur d'un fil. `NotificationsPage` gardait le chargement des notifications mais rendait le formulaire « Nouvelle discussion » sans condition |
+| **Impact** | 7 comptes sur 18 sont sans profil membre, dont `director@lias.ma`. L'utilisateur remplissait un formulaire voué à l'échec et recevait un message brut en anglais dans une interface française |
+| **Correction** | Frontend seul : encart explicatif à la place du formulaire, garde défensive sur la soumission, états vides cohérents, helper d'erreurs partagé traduisant les messages backend connus. Backend, règles métier, permissions et base de données inchangés |
+| **Validation** | Les deux branches exercées par interception réseau : sans profil membre, aucun `POST /discussions` n'est émis et aucun message anglais n'apparaît ; avec profil membre, le formulaire et l'appel fonctionnent. `npm run build` vert, `oxlint` inchangé, 55/55 tests backend |
+| **Priorité** | P0 — visible en démonstration |
+
+### P0-02 — Base de données injoignable (ouvert, hors code)
+
+La résolution DNS de l'hôte Neon expire sur la machine de développement, y
+compris via un résolveur public ; le domaine parent ne résout pas non plus alors
+que le reste d'Internet répond. Le backend ne démarre plus. Il ne s'agit pas d'un
+défaut applicatif mais d'un filtrage réseau à lever avant toute démonstration.
+
+### Régression associée
+
+| Contrôle | Résultat |
+|---|---|
+| `mvn test` | **55 tests — 0 échec, 0 erreur, 0 ignoré** — BUILD SUCCESS |
+| `npm run build` | succès — 1 920 modules |
+| `npx oxlint` | 0 erreur, 6 avertissements préexistants |
+| Erreurs console navigateur | aucune sur les deux branches testées |

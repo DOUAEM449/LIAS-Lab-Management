@@ -43,11 +43,10 @@ import {
 } from '../services/discussionService';
 import { listTeams } from '../services/governanceService';
 import { listEventOptions } from '../services/eventService';
+import { friendlyError } from '../utils/errors';
 
-function friendlyError(err, fallback) {
-  if (err.response?.status === 403) return "Vous n'avez pas les droits nécessaires pour cette action.";
-  return err.response?.data?.message || fallback;
-}
+/* La copie locale de friendlyError a été remplacée par l'helper partagé
+   (src/utils/errors.js), qui traduit en plus les messages backend connus. */
 
 /* Each notification type gets an icon and, where it makes sense, a destination
    so a notice is a way into the work rather than a dead end. */
@@ -72,7 +71,11 @@ const SCOPES = [
 ];
 
 export default function NotificationsPage({ user }) {
-  const hasInbox = Boolean(user?.status);
+  /* `status` ne porte une valeur que si un profil membre vivant est lié au
+     compte — c'est exactement le prédicat que le backend applique avant
+     d'autoriser une discussion ou une boîte de notifications. Un compte
+     technique (director@lias.ma, admin@lias.ma) n'en a pas. */
+  const hasMemberProfile = Boolean(user?.status);
   const [tab, setTab] = useState('notifications');
   const toast = useToasts();
   const navigate = useNavigate();
@@ -97,7 +100,7 @@ export default function NotificationsPage({ user }) {
   const [creating, setCreating] = useState(false);
 
   const loadNotifications = useCallback(() => {
-    if (!hasInbox) {
+    if (!hasMemberProfile) {
       setNotifications([]);
       setNotifLoading(false);
       return;
@@ -108,7 +111,7 @@ export default function NotificationsPage({ user }) {
       .then((res) => setNotifications(res.content))
       .catch((err) => setNotifError(friendlyError(err, 'Échec du chargement des notifications')))
       .finally(() => setNotifLoading(false));
-  }, [hasInbox]);
+  }, [hasMemberProfile]);
 
   // Team/event pickers feed both the listing and the creation form.
   useEffect(() => {
@@ -174,6 +177,10 @@ export default function NotificationsPage({ user }) {
 
   async function handleCreateDiscussion(e) {
     e.preventDefault();
+    /* Garde défensive : le formulaire n'est pas rendu sans profil membre, mais
+       on s'assure ici qu'aucun chemin (soumission clavier, rendu concurrent)
+       ne puisse déclencher un appel que le serveur rejettera forcément. */
+    if (!hasMemberProfile) return;
     if (!newTitle.trim()) return;
     if (scope === 'TEAM' && !selectedTeam) {
       toast.error('Sélectionnez une équipe pour cette discussion.');
@@ -274,6 +281,14 @@ export default function NotificationsPage({ user }) {
 
             {notifLoading ? (
               <LoadingBlock label="Chargement des notifications..." />
+            ) : !hasMemberProfile ? (
+              /* Sans profil membre il n'y a pas de boîte de réception : annoncer
+                 « vous serez averti ici » serait une promesse jamais tenue. */
+              <EmptyState
+                icon={Info}
+                title="Pas de boîte de réception pour ce compte"
+                description="Les notifications sont adressées aux membres du laboratoire. Ce compte technique n'étant lié à aucun profil membre, il n'en reçoit aucune."
+              />
             ) : notifications.length === 0 ? (
               <EmptyState
                 icon={Bell}
@@ -358,6 +373,31 @@ export default function NotificationsPage({ user }) {
             })}
           </div>
 
+          {/* Un compte technique n'a pas de profil membre : ouvrir une discussion
+              lui est structurellement impossible, puisque l'auteur d'un fil est un
+              membre. On l'explique à la place d'un formulaire voué à l'échec. */}
+          {!hasMemberProfile ? (
+            <Card className="mb-5" padded>
+              <div className="flex items-start gap-3">
+                <span className="w-9 h-9 rounded-control bg-lias-surface-muted border border-lias-border flex items-center justify-center shrink-0">
+                  <Info size={17} className="text-lias-muted" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-title-sm font-semibold text-lias-navy">
+                    Ouverture de discussion indisponible pour ce compte
+                  </div>
+                  <p className="m-0 mt-1.5 text-body-sm text-lias-muted max-w-2xl">
+                    Ce compte est un compte technique : il n'est associé à aucun profil membre du
+                    laboratoire. Or l'auteur d'une discussion est toujours un membre. La consultation
+                    des échanges ci-dessous reste ouverte.
+                  </p>
+                  <p className="m-0 mt-2 text-meta text-lias-faint">
+                    Pour ouvrir un fil, connectez-vous avec un compte rattaché à un profil membre.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ) : (
           <Card className="mb-5" padded>
             <div className="flex items-center gap-2 text-[13.5px] font-semibold text-lias-navy mb-4">
               <Plus size={15} className="text-lias-blue-dark" />
@@ -412,6 +452,7 @@ export default function NotificationsPage({ user }) {
               </Button>
             </form>
           </Card>
+          )}
 
           {discError && (
             <Alert tone="danger" className="mb-5">
@@ -442,7 +483,13 @@ export default function NotificationsPage({ user }) {
               <EmptyState
                 icon={MessageSquare}
                 title="Aucune discussion"
-                description="Aucun échange n'a encore été ouvert dans cet espace. Créez la première discussion ci-dessus."
+                /* Sans profil membre, le formulaire n'est pas rendu : inviter à
+                   « créer ci-dessus » désignerait un élément absent de l'écran. */
+                description={
+                  hasMemberProfile
+                    ? "Aucun échange n'a encore été ouvert dans cet espace. Créez la première discussion ci-dessus."
+                    : "Aucun échange n'a encore été ouvert dans cet espace."
+                }
               />
             ) : (
               <ul className="list-none p-0 m-0">
