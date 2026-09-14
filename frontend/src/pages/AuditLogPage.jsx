@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { History, ShieldCheck, Activity, Fingerprint, RefreshCw, Lock } from 'lucide-react';
 import { ToastStack, useToasts } from '../components/Toast';
+import { auditDetailsFr } from '../utils/auditText';
 import {
   PageHeader,
   Card,
@@ -94,7 +95,11 @@ export default function AuditLogPage() {
         !q ||
         l.actorEmail?.toLowerCase().includes(q) ||
         l.entityType?.toLowerCase().includes(q) ||
+        /* Le libellé est stocké en anglais mais affiché en français : la
+           recherche doit porter sur les deux, faute de quoi taper un mot vu à
+           l'écran ne trouverait rien. */
         l.details?.toLowerCase().includes(q) ||
+        auditDetailsFr(l.details).toLowerCase().includes(q) ||
         l.ipAddress?.toLowerCase().includes(q);
       return matchesAction && matchesQuery;
     });
@@ -220,9 +225,15 @@ export default function AuditLogPage() {
                       <span className="text-lias-faint"> #{String(l.entityId).slice(0, 8)}</span>
                     ) : null}
                   </TD>
-                  <TD className="text-[12.5px] max-w-md">
-                    <span className="block truncate" title={l.details}>
-                      {l.details || '—'}
+                  {/* En disposition table-auto, un max-width sur la cellule est
+                      ignoré : la colonne grandissait avec son contenu et poussait
+                      la table hors du conteneur, si bien que le texte se coupait
+                      au bord de l'écran sans ellipse. Une largeur définie sur le
+                      bloc interne force l'ellipse ; le libellé complet reste
+                      accessible au survol. */}
+                  <TD className="text-[12.5px]">
+                    <span className="block truncate w-[34ch]" title={l.details}>
+                      {auditDetailsFr(l.details)}
                     </span>
                   </TD>
                   <TD className="text-lias-faint font-mono text-[11.5px] whitespace-nowrap">

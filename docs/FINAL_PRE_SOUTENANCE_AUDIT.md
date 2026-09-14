@@ -90,8 +90,8 @@ sur le poste et le réseau de la soutenance.
 
 | # | Constat | Emplacement |
 |---|---|---|
-| **P1-01** | Colonne « Détails » tronquée au bord droit de l'écran | Journal d'audit |
-| **P1-02** | Libellés d'audit en anglais dans une interface française — écrits côté Java, donc à mapper côté client plutôt qu'à traduire dans le backend | Journal d'audit |
+| **P1-01** ✅ | Colonne « Détails » coupée au bord de l'écran. En disposition *table-auto*, le `max-width` posé sur la cellule est ignoré : la colonne grandissait avec son contenu et poussait la table hors du conteneur. Corrigé par une largeur définie sur le bloc interne — ellipse propre, libellé complet au survol | Journal d'audit |
+| **P1-02** ✅ | Libellés d'audit en anglais dans une interface française. Ils sont écrits côté Java et **font partie de la trace conservée** : ils ne doivent pas être réécrits dans le backend. Traduction d'affichage ajoutée (`src/utils/auditText.js`), à règles ordonnées et **repli sur la chaîne d'origine** — une règle qui ne s'applique pas laisse le texte intact plutôt que de le déformer. Le filtre de recherche porte désormais sur les deux langues | Journal d'audit |
 | **P1-03** | Identifiants techniques bruts affichés (`Member #ceea0850`) au lieu du nom de l'entité | Journal d'audit |
 | **P1-04** | Aucune pagination : les listes sont plafonnées à `size: 100`/`200` et rendues entières. `totalElements` est récupéré puis utilisé comme simple chiffre de tuile. L'API expose déjà `page`, `size`, `sort` — **aucune adaptation backend nécessaire** | Toutes les pages de liste |
 | **P1-05** | Le détail d'un membre est une modale contenant un formulaire d'édition : consultation et édition confondues, pas d'URL, pas de lien profond. Aucune route de détail n'existe dans l'application | Membres |
