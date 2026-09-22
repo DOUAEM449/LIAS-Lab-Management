@@ -28,6 +28,7 @@ import {
 } from '../utils/roles';
 import { logout } from '../services/authService';
 import { ROLE_LABEL } from './ui/Badge';
+import BrandMark from './ui/BrandMark';
 
 /*
  * Navigation is grouped by what the laboratory actually does, rather than being
@@ -111,11 +112,10 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div className="flex items-center gap-3 px-4 h-[68px] shrink-0 border-b border-white/[0.07]">
-          {/* Le monogramme reçoit un liseré clair : il se lit comme une pastille
-              posée sur le panneau, et non comme un carré de couleur à plat. */}
-          <div className="lias-gradient-brand w-9 h-9 rounded-control ring-1 ring-inset ring-white/25 shadow-glow flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-title-sm font-mono">L</span>
-          </div>
+          {/* UI — la lettre « L » en monospace cède la place à la marque du
+              laboratoire : le même « L » tracé en piste de circuit que le
+              logotype, en cyan sur le noir bleuté de la coquille. */}
+          <BrandMark size={36} className="text-lias-cyan shrink-0 shadow-glow rounded-control" />
           {!collapsed && (
             <div className="min-w-0">
               <div className="text-white font-semibold text-title-sm tracking-wide leading-tight">LIAS</div>
@@ -158,7 +158,7 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
                     {({ isActive }) => (
                       <>
                         {/* UI — l'entrée active est marquée par un rail en dégradé
-                            de marque et un fond indigo translucide : la sélection
+                            de marque et un fond bleu translucide : la sélection
                             se repère instantanément dans la colonne. */}
                         {isActive && (
                           <span className="lias-gradient-brand absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full" />

@@ -42,27 +42,27 @@
   --radius-panel: 1.25rem;              /* 20px — modales et panneaux latéraux */
 
   /* Sidebar / brand.
-     UI — le navy neutre vire vers l'indigo profond : la coquille cesse d'être un
-     gris bleuté administratif et porte une couleur assumée. */
-  --color-lias-navy: oklch(21% 0.055 272);
-  --color-lias-navy-light: oklch(31% 0.05 272);
-  --color-lias-navy-deep: oklch(14% 0.045 274);
-  --color-lias-navy-text: oklch(80% 0.025 272);
-  --color-lias-navy-text-dim: oklch(70% 0.03 272);
+     UI — la coquille reprend le noir bleuté du logotype LIAS : froide et neutre,
+     sans dérive violette. Elle sert de fond au cyan du logo. */
+  --color-lias-navy: oklch(23% 0.032 245);
+  --color-lias-navy-light: oklch(33% 0.028 245);
+  --color-lias-navy-deep: oklch(15% 0.028 248);
+  --color-lias-navy-text: oklch(81% 0.018 245);
+  --color-lias-navy-text-dim: oklch(71% 0.022 245);
 
-  /* Primary brand.
-     UI — l'accent passe d'un bleu désaturé (chroma 0.09) à un indigo franc
-     (chroma 0.20). C'est le seul endroit où la couleur monte le ton, et tout
-     l'écran en dépend : boutons, états actifs, liens, pastilles. */
-  --color-lias-blue: oklch(56% 0.20 268);
-  --color-lias-blue-hover: oklch(50% 0.21 268);
-  --color-lias-blue-dark: oklch(45% 0.19 268);
-  --color-lias-blue-tint: oklch(92% 0.06 268 / 0.5);
-  --color-lias-blue-tint-solid: oklch(95% 0.045 268);
+  /* Primary brand — repris du cyan électrique du logotype LIAS.
+     L'indigo précédent (teinte 268) tirait sur le mauve et jurait avec le bleu
+     du reste de l'écran ; toute la gamme est ramenée sur la teinte du logo. */
+  --color-lias-blue: oklch(55% 0.145 242);
+  --color-lias-blue-hover: oklch(49% 0.15 242);
+  --color-lias-blue-dark: oklch(43% 0.14 242);
+  --color-lias-blue-tint: oklch(93% 0.05 242 / 0.5);
+  --color-lias-blue-tint-solid: oklch(95% 0.038 242);
 
-  /* Second accent, utilisé uniquement en dégradé avec l'indigo. */
-  --color-lias-violet: oklch(58% 0.21 305);
-  --color-lias-violet-dark: oklch(47% 0.20 305);
+  /* Le cyan du logo lui-même : réservé aux dégradés et aux points d'éclat.
+     Analogue du bleu primaire (14° d'écart), donc jamais en conflit avec lui. */
+  --color-lias-cyan: oklch(70% 0.125 228);
+  --color-lias-cyan-dark: oklch(57% 0.125 228);
 
   /* Neutrals / surfaces.
      UI — le fond applicatif est légèrement assombri et refroidi (98% -> 96.8%)
@@ -92,28 +92,30 @@
   --color-lias-danger: oklch(58% 0.20 22);
   --color-lias-danger-bg: oklch(93% 0.08 22);
   --color-lias-danger-text: oklch(46% 0.18 22);
-  /* L'information suit désormais l'indigo de marque. */
-  --color-lias-info: oklch(56% 0.20 268);
-  --color-lias-info-bg: oklch(94% 0.07 268);
-  --color-lias-info-text: oklch(45% 0.19 268);
+  /* L'information suit désormais le bleu de marque. */
+  --color-lias-info: oklch(55% 0.145 242);
+  --color-lias-info-bg: oklch(94% 0.055 242);
+  --color-lias-info-text: oklch(43% 0.14 242);
 
-  /* Accent used to mark governance / mandate concepts (see GouvernancePage) */
-  --color-lias-mandate: oklch(58% 0.21 305);
-  --color-lias-mandate-bg: oklch(94% 0.08 305);
-  --color-lias-mandate-text: oklch(46% 0.20 305);
+  /* Accent des concepts de gouvernance / mandat (cf. GouvernancePage).
+     Passe du mauve au sarcelle : distinct du bleu primaire (42° d'écart) et du
+     vert de succès (45°), sans réintroduire la teinte qui jurait. */
+  --color-lias-mandate: oklch(54% 0.095 198);
+  --color-lias-mandate-bg: oklch(94% 0.045 198);
+  --color-lias-mandate-text: oklch(42% 0.095 198);
 
   /* Elevation — institutional, not "app-store glossy".
      UI — l'ancienne ombre de carte (1px à 4 %) était pratiquement invisible :
      les cartes se lisaient comme de simples filets. Chaque niveau combine
      désormais un liseré de contact net et une diffusion large, ce qui donne de
      la profondeur sans effet brillant. */
-  --shadow-card: 0 1px 2px oklch(21% 0.055 272 / 0.05), 0 4px 12px oklch(21% 0.055 272 / 0.06);
-  --shadow-raised: 0 2px 4px oklch(21% 0.055 272 / 0.07), 0 12px 28px oklch(21% 0.055 272 / 0.11);
-  --shadow-overlay: 0 4px 10px oklch(21% 0.055 272 / 0.12), 0 24px 60px oklch(21% 0.055 272 / 0.24);
+  --shadow-card: 0 1px 2px oklch(23% 0.032 245 / 0.05), 0 4px 12px oklch(23% 0.032 245 / 0.06);
+  --shadow-raised: 0 2px 4px oklch(23% 0.032 245 / 0.07), 0 12px 28px oklch(23% 0.032 245 / 0.11);
+  --shadow-overlay: 0 4px 10px oklch(23% 0.032 245 / 0.12), 0 24px 60px oklch(23% 0.032 245 / 0.24);
   /* UI — lueur colorée : c'est elle qui donne aux actions principales leur
      présence, sans recourir à une bordure épaisse. */
-  --shadow-glow: 0 4px 14px -3px oklch(56% 0.20 268 / 0.45);
-  --shadow-glow-strong: 0 8px 24px -4px oklch(56% 0.20 268 / 0.55);
+  --shadow-glow: 0 4px 14px -3px oklch(55% 0.145 242 / 0.40);
+  --shadow-glow-strong: 0 8px 24px -4px oklch(55% 0.145 242 / 0.50);
   --shadow-inset-top: inset 0 1px 0 oklch(100% 0 0 / 0.08);
 }
 
@@ -168,8 +170,8 @@
   .lias-mesh {
     background-color: var(--color-lias-bg);
     background-image:
-      radial-gradient(42rem 32rem at 12% -8%, oklch(56% 0.20 268 / 0.10), transparent 60%),
-      radial-gradient(38rem 30rem at 100% 0%, oklch(58% 0.21 305 / 0.08), transparent 62%);
+      radial-gradient(42rem 32rem at 12% -8%, oklch(55% 0.145 242 / 0.09), transparent 60%),
+      radial-gradient(38rem 30rem at 100% 0%, oklch(70% 0.125 228 / 0.08), transparent 62%);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
@@ -180,7 +182,7 @@
     background-image: linear-gradient(
       135deg,
       var(--color-lias-blue) 0%,
-      var(--color-lias-violet) 100%
+      var(--color-lias-cyan) 100%
     );
   }
 
@@ -190,7 +192,7 @@
       135deg,
       var(--color-lias-navy) 0%,
       var(--color-lias-blue) 55%,
-      var(--color-lias-violet) 100%
+      var(--color-lias-cyan-dark) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -202,8 +204,8 @@
   .lias-ring-gradient {
     background-image: linear-gradient(
       135deg,
-      oklch(56% 0.20 268 / 0.55),
-      oklch(58% 0.21 305 / 0.30)
+      oklch(55% 0.145 242 / 0.55),
+      oklch(70% 0.125 228 / 0.30)
     );
   }
 
