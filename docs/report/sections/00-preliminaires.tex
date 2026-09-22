@@ -3,13 +3,29 @@
 \centering
 \thispagestyle{empty}
 
+% Bandeau institutionnel : l'établissement à gauche, la filière à droite.
+% Ces deux logos priment visuellement sur celui du laboratoire, placé plus bas
+% à côté de sa dénomination.
+\noindent
+\begin{minipage}[c]{0.46\textwidth}
+  \raggedright
+  \includegraphics[height=16mm]{\figpath/logos/fsbm.png}
+\end{minipage}
+\hfill
+\begin{minipage}[c]{0.46\textwidth}
+  \raggedleft
+  \includegraphics[height=16mm]{\figpath/logos/dsbd.png}
+\end{minipage}
+
+\vspace{9mm}
+
 {\large\scshape Université Hassan II de Casablanca\par}
 {\large\scshape Faculté des Sciences Ben M'Sik\par}
 \vspace{4mm}
 {\normalsize Master Data Science \& Big Data\par}
 {\normalsize Année universitaire 2025--2026\par}
 
-\vspace{18mm}
+\vspace{11mm}
 {\color{liasrule}\rule{\textwidth}{0.8pt}}
 \vspace{8mm}
 
@@ -17,13 +33,17 @@
 \vspace{3mm}
 {\Large\bfseries\color{liasblue} Java Enterprise Edition\par}
 
-\vspace{10mm}
+\vspace{8mm}
 {\Huge\bfseries\color{liasnavy} Plateforme de gestion\\[3mm] du laboratoire LIAS\par}
 
-\vspace{7mm}
-{\large\itshape Laboratoire d'Informatique et Automatique\\ pour les Systèmes\par}
+% Logotype officiel du laboratoire, adossé à sa dénomination.
+\vspace{6mm}
+\includegraphics[height=17mm]{\figpath/logos/lias.png}
 
-\vspace{8mm}
+\vspace{2mm}
+{\large\itshape Laboratoire d'Intelligence Artificielle\\ et Systèmes\par}
+
+\vspace{7mm}
 {\color{liasrule}\rule{\textwidth}{0.8pt}}
 
 \vspace{14mm}
@@ -184,7 +204,7 @@ JPA      & \emph{Jakarta Persistence API} \\
 JPQL     & \emph{Jakarta Persistence Query Language} \\
 JSON     & \emph{JavaScript Object Notation} \\
 JWT      & \emph{JSON Web Token} \\
-LIAS     & Laboratoire d'Informatique et Automatique pour les Systèmes \\
+LIAS     & Laboratoire d'Intelligence Artificielle et Systèmes \\
 ORM      & \emph{Object-Relational Mapping} --- correspondance objet-relationnel \\
 PV       & Procès-verbal (de réunion) \\
 RBAC     & \emph{Role-Based Access Control} --- contrôle d'accès fondé sur les rôles \\

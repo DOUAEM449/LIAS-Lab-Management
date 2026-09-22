@@ -26,7 +26,7 @@ public class LaboratoryInitializer implements CommandLineRunner {
         // foundingDate intentionally left null — SYSTEM_ADMIN sets the real date via
         // PUT /api/v1/laboratory rather than the seed guessing at an institutional fact.
         laboratoryRepository.save(Laboratory.builder()
-                .name("LIAS — Laboratoire d'Informatique et Automatique pour les Systèmes")
+                .name("LIAS — Laboratoire d'Intelligence Artificielle et Systèmes")
                 .description("Laboratoire de recherche de la Faculté des Sciences Ben M'Sik, Casablanca.")
                 .build());
         log.info("Seeded default Laboratory record");

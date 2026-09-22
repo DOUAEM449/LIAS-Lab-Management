@@ -14,7 +14,7 @@ export default function PublicFooter() {
             <span className="text-white font-semibold">LIAS</span>
           </div>
           <p className="text-[13px] leading-relaxed">
-            Laboratoire de recherche en Informatique &amp; Automatique pour les Systèmes —
+            Laboratoire d'Intelligence Artificielle et Systèmes —
             Faculté des Sciences Ben M'Sik, Université Hassan II de Casablanca.
           </p>
         </div>

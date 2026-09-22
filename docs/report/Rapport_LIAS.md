@@ -3,13 +3,25 @@
 
 
 
+[c]{0.46}
+  
+[height=16mm]{/logos/fsbm.png}
+
+
+[c]{0.46}
+  
+[height=16mm]{/logos/dsbd.png}
+
+
+{9mm}
+
 Université Hassan II de Casablanca}
 Faculté des Sciences Ben M'Sik}
 {4mm}
 Master Data Science & Big Data}
 Année universitaire 2025–2026}
 
-{18mm}
+{11mm}
 {}
 {8mm}
 
@@ -17,13 +29,16 @@ Projet de fin de module}
 {3mm}
 Java Enterprise Edition}
 
-{10mm}
+{8mm}
 Plateforme de gestion[3mm] du laboratoire LIAS}
 
-{7mm}
-Laboratoire d'Informatique et Automatique\ pour les Systèmes}
+{6mm}
+[height=17mm]{/logos/lias.png}
 
-{8mm}
+{2mm}
+Laboratoire d'Intelligence Artificielle\ et Systèmes}
+
+{7mm}
 {}
 
 {14mm}
@@ -170,7 +185,7 @@ auditability; three-tier architecture.
 | JPQL | *Jakarta Persistence Query Language* |
 | JSON | *JavaScript Object Notation* |
 | JWT | *JSON Web Token* |
-| LIAS | Laboratoire d'Informatique et Automatique pour les Systèmes |
+| LIAS | Laboratoire d'Intelligence Artificielle et Systèmes |
 | ORM | *Object-Relational Mapping* — correspondance objet-relationnel |
 | PV | Procès-verbal (de réunion) |
 | RBAC | *Role-Based Access Control* — contrôle d'accès fondé sur les rôles |
@@ -195,7 +210,7 @@ auditability; three-tier architecture.
 ## Contexte général
 
 
-Le LIAS — Laboratoire d'Informatique et Automatique pour les Systèmes — est une
+Le LIAS — Laboratoire d'Intelligence Artificielle et Systèmes — est une
 structure de recherche rattachée à la Faculté des Sciences Ben M'Sik de l'Université
 Hassan II de Casablanca. Comme toute unité de recherche, il fonctionne sur deux plans
 distincts et rarement outillés ensemble.
@@ -2146,12 +2161,12 @@ le commit final.
 | --- | --- | --- | --- |
 | Entités JPA | 31 | Pages React | 21 |
 | Services métier | 28 | Composants | 27 |
-| Contrôleurs REST | 22 | Modules de design system | 7 |
+| Contrôleurs REST | 22 | Modules de design system | 8 |
 | Repositories | 30 | Services d'appel API | 19 |
 | Énumérations métier | 10 |  |  |
 | Migrations Flyway | 3 |  |  |
 | Tables relationnelles | 30 |  |  |
-| Lignes de Java (sources) | 9 942 | Lignes de JavaScript / JSX | 13 112 |
+| Lignes de Java (sources) | 9 942 | Lignes de JavaScript / JSX | 13 471 |
 | Lignes de Java (tests) | 1 092 | Lignes SQL de migration | 750 |
 
 

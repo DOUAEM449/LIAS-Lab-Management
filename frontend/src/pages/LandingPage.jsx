@@ -166,7 +166,7 @@ export default function LandingPage() {
             </span>
 
             <h1 className="text-white text-[34px] sm:text-[46px] font-bold leading-[1.1] tracking-[-0.025em] mb-5">
-              {lab?.name || "Laboratoire d'Informatique & Automatique pour les Systèmes"}
+              {lab?.name || "Laboratoire d'Intelligence Artificielle et Systèmes"}
             </h1>
 
             <p className="text-white/70 text-[16px] leading-relaxed mb-3 max-w-2xl">
@@ -246,7 +246,7 @@ export default function LandingPage() {
             <Quote size={32} className="text-lias-blue/25 mb-6" />
             <blockquote className="m-0 text-[15.5px] sm:text-[16.5px] text-lias-ink leading-[1.75] font-light">
               {lab?.directorMessage ||
-                "Bienvenue au Laboratoire d'Informatique et Automatique pour les Systèmes. Depuis sa création, le LIAS s'engage à produire une recherche d'excellence au service de l'innovation scientifique et de la formation des jeunes chercheurs. Notre mission est de fédérer nos équipes autour de projets ambitieux, en intelligence artificielle, systèmes distribués et automatique, tout en cultivant des collaborations fortes avec nos partenaires académiques et industriels."}
+                "Bienvenue au Laboratoire d'Intelligence Artificielle et Systèmes. Depuis sa création, le LIAS s'engage à produire une recherche d'excellence au service de l'innovation scientifique et de la formation des jeunes chercheurs. Notre mission est de fédérer nos équipes autour de projets ambitieux, en intelligence artificielle, systèmes distribués et automatique, tout en cultivant des collaborations fortes avec nos partenaires académiques et industriels."}
             </blockquote>
             <footer className="flex items-center gap-4 mt-8 pt-8 border-t border-lias-border-light">
               <div className="w-11 h-11 rounded-full bg-lias-navy flex items-center justify-center shrink-0">
