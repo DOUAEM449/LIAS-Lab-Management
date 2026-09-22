@@ -1,4 +1,5 @@
 import { MapPin, Mail, Phone } from 'lucide-react';
+import BrandMark from './ui/BrandMark';
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();
@@ -8,9 +9,8 @@ export default function PublicFooter() {
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-lias-blue flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-xs font-mono">L</span>
-            </div>
+            {/* Fond sombre : icône officielle détourée + nom en blanc. */}
+            <BrandMark height={30} />
             <span className="text-white font-semibold">LIAS</span>
           </div>
           <p className="text-[13px] leading-relaxed">

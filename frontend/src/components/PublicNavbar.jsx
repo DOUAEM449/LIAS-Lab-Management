@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import BrandMark from './ui/BrandMark';
 import { Menu, X, ArrowRight } from 'lucide-react';
 
 /** Hauteur de la barre de navigation collante, laissée libre au-dessus de la section visée. */
@@ -88,13 +89,8 @@ export default function PublicNavbar() {
     >
       <div className="max-w-6xl mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-3 no-underline shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-lias-navy flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-[15px] font-mono">L</span>
-          </div>
-          <div>
-            <div className="text-lias-navy font-semibold text-[16px] leading-none tracking-tight">LIAS</div>
-            <div className="text-lias-muted text-[10.5px] mt-1">Laboratoire de recherche</div>
-          </div>
+          {/* Portail public, fond clair : logotype officiel complet. */}
+          <BrandMark variant="full" height={46} />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">

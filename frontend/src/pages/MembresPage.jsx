@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Users, GraduationCap, UserCheck, Users2, Building2 } from 'lucide-react';
 import { ToastStack, useToasts } from '../components/Toast';
+import Avatar from '../components/ui/Avatar';
 import MemberDetailsModal from '../components/MemberDetailsModal';
 import {
   PageHeader,
@@ -29,12 +30,6 @@ const STATUS_TABS = [
   { key: 'RETIRED', label: 'Retraités' },
   { key: 'FORMER', label: 'Anciens' },
 ];
-
-function avatarHue(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return Math.abs(hash) % 360;
-}
 
 export default function MembresPage({ currentUser, myMemberId }) {
   const [members, setMembers] = useState([]);
@@ -112,7 +107,11 @@ export default function MembresPage({ currentUser, myMemberId }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatTile
-          label="Membres correspondants"
+          /* « Membre correspondant » désigne en usage académique un affilié
+             externe : le terme suggérait un statut qui n'existe pas au cahier
+             des charges (permanent, associé, doctorant, retraité, ancien).
+             Le chiffre est le total renvoyé par le filtre courant. */
+          label="Membres trouvés"
           value={totalElements}
           hint={activeTab === 'ALL' ? 'Tous statuts confondus' : 'Sur le filtre actif'}
           icon={Users}
@@ -156,26 +155,10 @@ export default function MembresPage({ currentUser, myMemberId }) {
                   <TR key={m.id} onClick={() => setSelectedId(m.id)}>
                     <TD>
                       <div className="flex items-center gap-3">
-                        {m.photoUrl ? (
-                          <img
-                            src={m.photoUrl}
-                            alt=""
-                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-lias-border"
-                          />
-                        ) : (
-                          /* UI — correction de contraste : à L=58 % certaines teintes
-                             (vert, cyan, jaune) rendaient les initiales blanches
-                             illisibles. À 48 % avec un peu plus de chroma, le rapport
-                             de contraste reste suffisant sur les 360 teintes possibles. */
-                          <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-meta font-semibold shrink-0 uppercase"
-                            style={{ background: `oklch(48% 0.12 ${avatarHue(fullName)})` }}
-                            aria-hidden="true"
-                          >
-                            {m.firstName?.[0]}
-                            {m.lastName?.[0]}
-                          </div>
-                        )}
+                        {/* Une photo absente ou un service de fichiers indisponible
+                            affichait l'icône d'image cassée du navigateur. Avatar
+                            bascule sur les initiales, puis sur une silhouette. */}
+                        <Avatar src={m.photoUrl} name={fullName} email={m.email} size={36} />
                         <div className="min-w-0">
                           <div className="text-[13px] font-medium text-lias-ink truncate">{fullName}</div>
                           <div className="text-[11.5px] text-lias-muted truncate">{m.email}</div>

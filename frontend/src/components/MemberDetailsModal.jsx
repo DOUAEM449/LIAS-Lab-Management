@@ -29,6 +29,7 @@ import {
 } from '../services/memberService';
 import { getMemberMandates } from '../services/governanceService';
 import { MEMBER_ADMIN_ROLES, MEMBER_PROFILE_EDIT_ROLES, hasRole } from '../utils/roles';
+import Avatar from './ui/Avatar';
 
 const STATUS_OPTIONS = Object.entries(MEMBER_STATUS_LABEL).map(([value, label]) => ({ value, label }));
 
@@ -234,13 +235,12 @@ export default function MemberDetailsModal({
           <div>
             {/* --- Identity header: STATUT / RÔLE / MANDAT side by side ------- */}
             <div className="flex items-start gap-4 pb-5 mb-5 border-b border-lias-border-light">
-              <div className="w-16 h-16 rounded-full bg-lias-navy flex items-center justify-center text-white font-semibold text-[18px] overflow-hidden shrink-0">
-                {form.photoUrl ? (
-                  <img src={form.photoUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  `${form.firstName?.[0] ?? ''}${form.lastName?.[0] ?? ''}`.toUpperCase()
-                )}
-              </div>
+              <Avatar
+                src={form.photoUrl}
+                name={`${form.firstName ?? ''} ${form.lastName ?? ''}`}
+                email={form.email}
+                size={64}
+              />
 
               <div className="min-w-0 flex-1">
                 <div className="text-[16px] font-semibold text-lias-navy">

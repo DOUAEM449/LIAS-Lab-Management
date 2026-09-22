@@ -115,7 +115,7 @@ export default function Sidebar({ collapsed, onToggle, user, mobileOpen, onClose
           {/* UI — la lettre « L » en monospace cède la place à la marque du
               laboratoire : le même « L » tracé en piste de circuit que le
               logotype, en cyan sur le noir bleuté de la coquille. */}
-          <BrandMark size={36} className="text-lias-cyan shrink-0 shadow-glow rounded-control" />
+          <BrandMark height={34} />
           {!collapsed && (
             <div className="min-w-0">
               <div className="text-white font-semibold text-title-sm tracking-wide leading-tight">LIAS</div>

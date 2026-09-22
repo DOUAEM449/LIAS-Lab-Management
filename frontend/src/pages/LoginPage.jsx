@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import BrandMark from '../components/ui/BrandMark';
 import { ArrowLeft, Mail, Lock, Building2, ShieldCheck, Archive, Eye, EyeOff } from 'lucide-react';
 import { login } from '../services/authService';
 import Button from '../components/ui/Button';
@@ -73,9 +74,9 @@ export default function LoginPage({ onLoggedIn }) {
 
         <div className="relative">
           <Link to="/" className="inline-flex items-center gap-3 no-underline">
-            <div className="w-10 h-10 rounded-lg bg-lias-blue flex items-center justify-center">
-              <span className="text-white font-bold text-[16px] font-mono">L</span>
-            </div>
+            {/* Panneau sombre : le logotype complet a un texte noir, on
+                utilise donc l'icône officielle détourée. */}
+            <BrandMark height={40} />
             <div>
               <div className="text-white font-semibold text-[17px] leading-none tracking-tight">LIAS</div>
               <div className="text-white/50 text-[11px] mt-1">Plateforme du laboratoire</div>
@@ -131,13 +132,9 @@ export default function LoginPage({ onLoggedIn }) {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-[400px]">
             <div className="lg:hidden flex items-center gap-3 mb-8">
-              <div className="w-11 h-11 rounded-lg bg-lias-navy flex items-center justify-center">
-                <span className="text-white font-bold text-[16px] font-mono">L</span>
-              </div>
-              <div>
-                <div className="text-lias-navy font-semibold text-[17px] leading-none">LIAS</div>
-                <div className="text-lias-muted text-[11.5px] mt-1">Espace membres</div>
-              </div>
+              {/* Colonne claire (mobile) : logotype officiel complet. */}
+              <BrandMark variant="full" height={46} />
+              <div className="text-lias-muted text-[11.5px]">Espace membres</div>
             </div>
 
             <h1 className="text-[24px] font-bold text-lias-navy tracking-[-0.02em] m-0">Connexion</h1>

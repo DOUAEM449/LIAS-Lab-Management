@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { KeyRound, UserCircle, Camera, Trash2, BookOpen, ShieldCheck, Info } from 'lucide-react';
 import { TextField, TextAreaField, FieldRow } from '../components/FormField';
 import { ToastStack, useToasts } from '../components/Toast';
+import Avatar from '../components/ui/Avatar';
 import {
   PageHeader,
   Card,
@@ -156,7 +157,6 @@ export default function ProfilePage({ user, onAvatarUpdated }) {
     }
   }
 
-  const initials = `${form?.firstName?.[0] ?? ''}${form?.lastName?.[0] ?? ''}`.toUpperCase() || '--';
   const activeMandates = mandates.filter((m) => m.active && !m.endDate);
 
   return (
@@ -174,13 +174,12 @@ export default function ProfilePage({ user, onAvatarUpdated }) {
         <Card className="mb-5 p-6">
           <div className="flex flex-col sm:flex-row items-start gap-6">
             <div className="relative shrink-0">
-              <div className="w-24 h-24 rounded-full bg-lias-navy flex items-center justify-center text-white font-semibold text-[26px] overflow-hidden">
-                {form.photoUrl ? (
-                  <img src={form.photoUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </div>
+              <Avatar
+                src={form.photoUrl}
+                name={`${form.firstName ?? ''} ${form.lastName ?? ''}`}
+                email={form.email}
+                size={96}
+              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}

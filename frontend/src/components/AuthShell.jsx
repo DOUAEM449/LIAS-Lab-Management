@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandMark from './ui/BrandMark';
 import { ArrowLeft } from 'lucide-react';
 
 /**
@@ -20,14 +21,10 @@ export default function AuthShell({ title, subtitle, backTo = '/login', backLabe
         </Link>
 
         <div className="bg-lias-surface border border-lias-border rounded-card shadow-raised p-8">
-          <div className="flex items-center gap-3 mb-7">
-            <div className="w-10 h-10 rounded-lg bg-lias-navy flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-[15px] font-mono">L</span>
-            </div>
-            <div>
-              <div className="font-semibold text-lias-navy text-[15px] leading-none">LIAS</div>
-              <div className="text-[11px] text-lias-muted mt-1">{subtitle}</div>
-            </div>
+          {/* Fond clair : le logotype officiel complet, texte compris. */}
+          <div className="mb-7">
+            <BrandMark variant="full" height={44} />
+            <div className="text-[11px] text-lias-muted mt-2">{subtitle}</div>
           </div>
 
           <h1 className="text-[19px] font-bold text-lias-navy tracking-[-0.01em] m-0 mb-5">{title}</h1>

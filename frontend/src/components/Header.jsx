@@ -17,6 +17,7 @@ import {
 import api from '../services/api';
 import { logout } from '../services/authService';
 import { ROLE_LABEL_FR } from '../utils/roles';
+import Avatar from './ui/Avatar';
 
 // CdC §2.19 "recherche globale": every result category now deep-links into the
 // page that owns it — documents and equipment included, since both have a
@@ -132,8 +133,6 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
     await logout();
     navigate('/login', { replace: true });
   }
-
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '--';
 
   return (
     /* UI — barre translucide avec flou d'arrière-plan : au défilement, le contenu
@@ -286,13 +285,8 @@ export default function Header({ user, avatarUrl, onToggleSidebar }) {
             onClick={() => setUserMenuOpen((o) => !o)}
             className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none p-0 rounded-control"
           >
-            <div className="w-[38px] h-[38px] rounded-full bg-lias-navy flex items-center justify-center text-white font-semibold text-[13px] shrink-0 overflow-hidden">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                initials
-              )}
-            </div>
+            {/* Repli photo -> initiales -> silhouette (cf. ui/Avatar). */}
+            <Avatar src={avatarUrl} email={user?.email} size={38} />
             <div className="leading-tight text-left hidden md:block max-w-[180px]">
               <div className="text-meta font-semibold text-lias-ink truncate">
                 {user?.email ?? 'Utilisateur'}
