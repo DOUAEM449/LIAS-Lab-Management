@@ -126,8 +126,8 @@ exact qui produisait l'image cassée.
 | # | Constat | Décision |
 |---|---|---|
 | 1 | Le sous-titre embarqué dans le logotype (« LABORATOIRE D'INTELLIGENCE ARTIFICIELLE ET SYSTEMES ») reste petit à 46 px de haut | L'agrandir davantage déséquilibrerait la navbar. Le logo est utilisé tel que fourni, sans retouche — conforme à la règle de non-réinterprétation |
-| 2 | **Écart de nom non tranché** : le logo officiel dit « Intelligence Artificielle et Systèmes », l'application, la base et le rapport disent « Informatique et Automatique pour les Systèmes » | **En attente d'arbitrage.** Rien n'a été modifié : le nom figure dans le PDF, sur le portail public et dans la table `laboratory` |
-| 3 | Base injoignable : aucun écran n'a pu être vu avec des données réelles | Hors code (P0-02). À lever avant la soutenance |
+| 2 | **Écart de nom** ✅ **tranché** : le nom de référence est celui du logotype officiel, « Laboratoire d'Intelligence Artificielle et Systèmes » | Appliqué partout — rapport, portail public, titre de page, libellé d'amorçage du backend et ligne `laboratory` en base. Aucune occurrence de l'ancien nom ne subsiste dans les sources |
+| 3 | Base injoignable | ✅ **résolu** : la résolution DNS est revenue. Les 27 captures du rapport ont été refaites sur la base réelle, sans donnée simulée |
 
 ---
 
