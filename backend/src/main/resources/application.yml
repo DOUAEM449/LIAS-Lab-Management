@@ -70,7 +70,13 @@ server:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:c2VjdXJlLWxpYXMtbGFib3JhdG9yeS1tYW5hZ2VtZW50LXN5c3RlbS1zZWNyZXQta2V5LWNoYW5nZS1pbi1wcm9kdWN0aW9uLTI1Ng==}
+    # Clé de signature HS512, obligatoire et sans valeur de repli : application.yml
+    # s'applique à TOUS les profils, une valeur par défaut serait donc active en
+    # production. En son absence le démarrage échoue, ce qui est le comportement
+    # voulu — mieux vaut un serveur qui refuse de démarrer qu'un serveur qui signe
+    # ses jetons avec une clé publiée dans le dépôt.
+    # Générer : openssl rand -base64 72
+    secret: ${JWT_SECRET}
     access-token-expiration-ms: 3600000        # 1 hour
     refresh-token-expiration-ms: 604800000     # 7 days
     issuer: lias-lab-management

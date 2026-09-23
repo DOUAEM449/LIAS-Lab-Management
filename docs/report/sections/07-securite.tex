@@ -205,14 +205,17 @@ des jetons et le répertoire de stockage sont lus depuis des variables d'environ
 fichier local, exclu du dépôt, les fournit en développement ; un fichier d'exemple ne
 contenant que des valeurs fictives documente les clés attendues.
 
-Une réserve doit être faite, car l'exactitude prime ici sur l'effet : le fichier de
-configuration conserve une \emph{valeur de repli} pour la clé de signature, chaîne de
-démonstration portant en toutes lettres la mention \code{change-in-production}. Elle est
-surchargée par la variable d'environnement dans tous les environnements du projet, mais
-elle s'appliquerait à un déploiement qui omettrait de la définir. Son retrait --- la
-variable devenant obligatoire, et le démarrage échouant bruyamment en son absence ---
-est identifié en~§\ref{sec:limites} et n'a pas été effectué : il modifierait la
-configuration des tests d'intégration, hors du périmètre de la correction menée ici.
+\paragraph{La clé de signature est obligatoire.} Le fichier de configuration de base
+s'applique à \emph{tous} les profils : une valeur par défaut qui y figurerait serait
+active en production. La clé y est donc déclarée sans valeur de repli, et son absence
+arrête le démarrage. Trois contrôles sont appliqués avant que le premier jeton ne soit
+émis : la clé doit être présente, être un base64 décodable, et peser au moins 64~octets
+une fois décodée --- faute de quoi la bibliothèque de signature retomberait
+silencieusement sur HS256 au lieu du HS512 annoncé plus haut. Le profil de test fournit
+sa propre clé, sans valeur de secret et identifiée comme telle dans son contenu même.
+
+Ce point a été corrigé tardivement : il est décrit parmi les défauts relevés
+en~§\ref{sec:defauts}.
 
 Cette externalisation a été mise en place en fin de projet, après le constat que des
 identifiants de base de données figuraient dans un fichier de configuration versionné. La

@@ -9,3 +9,11 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+
+app:
+  jwt:
+    # Clé de signature propre aux tests d'intégration. Ce n'est pas un secret : elle
+    # ne protège aucune donnée, n'est utilisée par aucun environnement réel, et son
+    # contenu l'annonce. Elle existe parce que la clé de production n'a plus de
+    # valeur de repli et que le contexte Spring doit tout de même démarrer ici.
+    secret: bGlhcy1pbnRlZ3JhdGlvbi10ZXN0LXNpZ25pbmcta2V5LW5vdC1hLXNlY3JldC1kby1ub3QtdXNlLW91dHNpZGUtdGVzdHMtMDEyMzQ1Njc4OQ==

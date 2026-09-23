@@ -5,7 +5,7 @@
 \chapter{Détail des tests automatisés}
 \label{ann:tests}
 
-Les 60 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+Les 66 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
 par \code{mvn clean test} se termine sans échec ni erreur.
 
 % Les noms de méthode de test sont longs : on réduit la fonte du code dans cette
@@ -102,6 +102,14 @@ par \code{mvn clean test} se termine sans échec ni erreur.
 58 & \code{anExistingAdministratorIsNeverOverwritten} & Compte existant préservé \\
 59 & \code{theSeededAdministratorIsHashedAndMustRotateItsPassword} & Hachage et rotation imposée \\
 60 & \code{theComponentIsRegisteredInDevAndNowhereElse} & Profil \code{dev} uniquement \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries JwtSigningKeyTest --- clé de signature (6)}\\
+61 & \code{aMissingOrBlankSecretIsRejectedWithAnActionableMessage} & Clé absente refusée \\
+62 & \code{anUnresolvedPlaceholderIsReportedAsAMissingVariable} & Variable non définie \\
+63 & \code{aSecretTooShortForHs512IsRejected} & 64 octets exigés \\
+64 & \code{aSecretThatIsNotBase64IsRejected} & Encodage invalide \\
+65 & \code{aProperlySizedSecretIsAcceptedAndNeverEchoedBack} & Secret jamais journalisé \\
+66 & \code{noConfigurationFileDeclaresAFallbackForTheSigningKey} & Aucune valeur de repli \\
 \end{longtable}
 \endgroup
 
@@ -223,13 +231,14 @@ chapitre~\ref{ch:tests}.
 #                    MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD,
 #                    JWT_SECRET, FILE_STORAGE_DIR
 #                    (optionnel) BOOTSTRAP_ADMIN_PASSWORD
+#   JWT_SECRET est obligatoire : sans elle le demarrage echoue.
 #   Le modele complet se trouve dans backend/.env.example
 
 # --- Backend : compilation et tests ---
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 60 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 66 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

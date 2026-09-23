@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -24,11 +25,53 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JwtService {
 
+    /**
+     * Taille minimale de la clé, en octets. HS512 signe sur 512 bits : en deçà,
+     * {@link Keys#hmacShaKeyFor} choisirait silencieusement HS256 ou HS384.
+     */
+    static final int MIN_KEY_BYTES = 64;
+
     private final JwtProperties jwtProperties;
 
+    /**
+     * Vérifie la clé au démarrage plutôt qu'à la première connexion : une clé
+     * absente, mal encodée ou trop courte doit empêcher l'application de démarrer,
+     * et non produire une erreur au premier utilisateur qui tente de se connecter.
+     */
+    @PostConstruct
+    void verifySigningKey() {
+        validateSecret(jwtProperties.getSecret());
+    }
+
+    /** Décode et contrôle la clé. Lève une erreur explicite, jamais la valeur elle-même. */
+    static byte[] validateSecret(String secret) {
+        // Spring ne leve rien sur un placeholder non resolu : il transmet le texte brut
+        // « ${JWT_SECRET} ». Sans ce cas explicite, l'erreur remontee serait un
+        // « base64 invalide » trompeur alors que la variable est simplement absente.
+        boolean unresolved = secret != null
+                && secret.trim().startsWith("${") && secret.trim().endsWith("}");
+        if (secret == null || secret.isBlank() || unresolved) {
+            throw new IllegalStateException(
+                    "app.jwt.secret n'est pas configure : definissez la variable "
+                    + "d'environnement JWT_SECRET (base64, 64 octets minimum une fois decodee). "
+                    + "Generer : openssl rand -base64 72");
+        }
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secret.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT_SECRET n'est pas un base64 valide.", e);
+        }
+        if (keyBytes.length < MIN_KEY_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET est trop courte : " + keyBytes.length + " octets une fois decodee, "
+                    + MIN_KEY_BYTES + " requis pour HS512.");
+        }
+        return keyBytes;
+    }
+
     private SecretKey signingKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(jwtProperties.getSecret());
-        return Keys.hmacShaKeyFor(keyBytes);
+        return Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtProperties.getSecret()));
     }
 
     public String generateAccessToken(CustomUserDetails userDetails) {
