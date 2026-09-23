@@ -62,9 +62,9 @@ scientifique et de la mémoire administrative du laboratoire\par}
 \hfill
 \begin{minipage}{0.46\textwidth}
 \raggedleft
-{\small\bfseries\color{liasgrey} Encadrement\par}
+{\small\bfseries\color{liasgrey} Encadrant\par}
 \vspace{1mm}
-{\normalsize Équipe pédagogique du module JEE\par}
+{\normalsize Pr.~Abdessamad Belangour\par}
 \end{minipage}
 
 \vspace{12mm}
@@ -81,10 +81,10 @@ scientifique et de la mémoire administrative du laboratoire\par}
 \addcontentsline{toc}{chapter}{Remerciements}
 \markboth{Remerciements}{}
 
-Je tiens à exprimer ma reconnaissance à l'équipe pédagogique du module Java Enterprise
-Edition du Master Data Science \& Big Data de la Faculté des Sciences Ben M'Sik, pour la
-qualité de l'encadrement et pour un énoncé de projet suffisamment exigeant pour imposer
-de véritables décisions d'architecture plutôt qu'un simple exercice de programmation.
+Je tiens à exprimer ma reconnaissance à mon encadrant, \textbf{Pr.~Abdessamad Belangour},
+pour la qualité de son encadrement tout au long du module Java Enterprise Edition et pour un
+énoncé de projet suffisamment exigeant pour imposer de véritables décisions d'architecture
+plutôt qu'un simple exercice de programmation.
 
 Mes remerciements vont également au laboratoire LIAS, dont le fonctionnement réel ---
 statuts d'appartenance, mandats de gouvernance, mémoire documentaire --- a servi de
@@ -113,14 +113,14 @@ dédié, historisé à chaque changement, et réconcilié automatiquement au dé
 l'application.
 
 La solution repose sur une architecture trois tiers : un backend Spring~Boot~3.3
-(Java~21) exposant 22 contrôleurs REST adossés à 31 entités JPA et à une base
+(Java~21) exposant 22 contrôleurs REST adossés à 30 entités JPA et à une base
 PostgreSQL versionnée par Flyway ; une interface React~19 de 21 pages construite sur un
 système de composants interne ; une couche de sécurité stateless fondée sur JWT,
 BCrypt et un contrôle d'accès par rôle appliqué méthode par méthode. La traçabilité est
 assurée par un journal d'audit et quatre tables d'historique, conformément à la règle du
 cahier des charges selon laquelle aucune donnée n'est jamais perdue.
 
-La validation combine 55 tests automatisés (aucun échec) et un audit fonctionnel de bout
+La validation combine 60 tests automatisés (aucun échec) et un audit fonctionnel de bout
 en bout portant sur 21 routes et les 9 rôles du système. Les 21 sections du cahier des
 charges sont couvertes ; les limites résiduelles, notamment l'absence de thème sombre et
 de mesure de couverture de code, sont explicitement identifiées.
@@ -149,13 +149,13 @@ by hand: it is \emph{derived} from status and active mandates by a dedicated ser
 historised on every change, and automatically reconciled at application start-up.
 
 The solution follows a three-tier architecture: a Spring~Boot~3.3 backend (Java~21)
-exposing 22 REST controllers over 31 JPA entities and a PostgreSQL database versioned with
+exposing 22 REST controllers over 30 JPA entities and a PostgreSQL database versioned with
 Flyway; a React~19 front end of 21 pages built on an in-house component system; and a
 stateless security layer based on JWT, BCrypt and method-level role-based access control.
 Traceability relies on an audit journal and four history tables, in line with the
 specification rule that no data is ever lost.
 
-Validation combines 55 automated tests (no failures) with an end-to-end functional audit
+Validation combines 60 automated tests (no failures) with an end-to-end functional audit
 covering 21 routes and the 9 system roles. All 21 sections of the specification are
 covered; remaining limitations --- notably the absence of a dark theme and of a measured
 code-coverage figure --- are explicitly stated.

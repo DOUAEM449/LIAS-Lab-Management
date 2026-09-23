@@ -52,9 +52,9 @@ Réalisé par}
 Douae Moussaoui}
 
 
-Encadrement}
+Encadrant}
 {1mm}
-Équipe pédagogique du module JEE}
+Pr. Abdessamad Belangour}
 
 
 {12mm}
@@ -70,10 +70,10 @@ Casablanca — Septembre 2026}
 {Remerciements}
 
 
-Je tiens à exprimer ma reconnaissance à l'équipe pédagogique du module Java Enterprise
-Edition du Master Data Science & Big Data de la Faculté des Sciences Ben M'Sik, pour la
-qualité de l'encadrement et pour un énoncé de projet suffisamment exigeant pour imposer
-de véritables décisions d'architecture plutôt qu'un simple exercice de programmation.
+Je tiens à exprimer ma reconnaissance à mon encadrant, **Pr. Abdessamad Belangour**,
+pour la qualité de son encadrement tout au long du module Java Enterprise Edition et pour un
+énoncé de projet suffisamment exigeant pour imposer de véritables décisions d'architecture
+plutôt qu'un simple exercice de programmation.
 
 Mes remerciements vont également au laboratoire LIAS, dont le fonctionnement réel —
 statuts d'appartenance, mandats de gouvernance, mémoire documentaire — a servi de
@@ -103,14 +103,14 @@ dédié, historisé à chaque changement, et réconcilié automatiquement au dé
 l'application.
 
 La solution repose sur une architecture trois tiers : un backend Spring Boot 3.3
-(Java 21) exposant 22 contrôleurs REST adossés à 31 entités JPA et à une base
+(Java 21) exposant 22 contrôleurs REST adossés à 30 entités JPA et à une base
 PostgreSQL versionnée par Flyway ; une interface React 19 de 21 pages construite sur un
 système de composants interne ; une couche de sécurité stateless fondée sur JWT,
 BCrypt et un contrôle d'accès par rôle appliqué méthode par méthode. La traçabilité est
 assurée par un journal d'audit et quatre tables d'historique, conformément à la règle du
 cahier des charges selon laquelle aucune donnée n'est jamais perdue.
 
-La validation combine 55 tests automatisés (aucun échec) et un audit fonctionnel de bout
+La validation combine 60 tests automatisés (aucun échec) et un audit fonctionnel de bout
 en bout portant sur 21 routes et les 9 rôles du système. Les 21 sections du cahier des
 charges sont couvertes ; les limites résiduelles, notamment l'absence de thème sombre et
 de mesure de couverture de code, sont explicitement identifiées.
@@ -140,13 +140,13 @@ by hand: it is *derived* from status and active mandates by a dedicated service,
 historised on every change, and automatically reconciled at application start-up.
 
 The solution follows a three-tier architecture: a Spring Boot 3.3 backend (Java 21)
-exposing 22 REST controllers over 31 JPA entities and a PostgreSQL database versioned with
+exposing 22 REST controllers over 30 JPA entities and a PostgreSQL database versioned with
 Flyway; a React 19 front end of 21 pages built on an in-house component system; and a
 stateless security layer based on JWT, BCrypt and method-level role-based access control.
 Traceability relies on an audit journal and four history tables, in line with the
 specification rule that no data is ever lost.
 
-Validation combines 55 automated tests (no failures) with an end-to-end functional audit
+Validation combines 60 automated tests (no failures) with an end-to-end functional audit
 covering 21 routes and the 9 system roles. All 21 sections of the specification are
 covered; remaining limitations — notably the absence of a dark theme and of a measured
 code-coverage figure — are explicitly stated.
@@ -287,9 +287,9 @@ interne, protégée par authentification, donne accès à dix-huit modules de ge
 l'étendue dépend du rôle effectif de l'utilisateur connecté.
 
 Le système reconnaît neuf rôles applicatifs et cinq statuts d'appartenance, articulés par
-trois types de mandats de gouvernance. Il gère 31 entités persistantes réparties en 30
+trois types de mandats de gouvernance. Il gère 30 entités persistantes réparties en 30
 tables, dont quatre tables d'historique et une table d'audit. L'ensemble représente
-environ 9 900 lignes de Java côté serveur et 13 100 lignes de JavaScript côté client.
+environ 10 000 lignes de Java côté serveur et 13 500 lignes de JavaScript côté client.
 
 
 ## Méthodologie de travail
@@ -455,10 +455,10 @@ une exigence non satisfaite y est déclarée comme telle et reprise dans les lim
 | Sécurité | Satisfait | JWT signé HS512, BCrypt (coût 12), contrôle d'accès par rôle appliqué méthode par méthode, gel des comptes vérifié à chaque requête |
 | Architecture propre | Satisfait | 18 packages métier, séparation contrôleur / service / repository / DTO systématique |
 | API REST | Satisfait | 22 contrôleurs sous `/api/v1`, documentation OpenAPI générée |
-| Composants réutilisables | Satisfait | Système de composants interne (7 modules) réutilisé par les 21 pages |
+| Composants réutilisables | Satisfait | Système de composants interne (8 modules) réutilisé par les 21 pages |
 | Design responsive | Satisfait | Navigation en tiroir sous 1024 px, tables à défilement horizontal encapsulé |
 | Interface professionnelle | Satisfait | Identité visuelle unique appliquée à l'ensemble des écrans |
-| Maintenabilité | Satisfait | Découpage constant, 55 tests verrouillant les règles critiques |
+| Maintenabilité | Satisfait | Découpage constant, 60 tests verrouillant les règles critiques |
 | Performance | Partiel | `open-in-view` désactivé, pagination serveur, index SQL ; aucune campagne de charge menée |
 | Accessibilité | Partiel | Libellés accessibles sur les boutons-icônes, focus visible, fermeture clavier des modales ; pas d'audit WCAG formel |
 | Thème sombre | **Non satisfait** | Non implémenté — limite assumée (§9.4) |
@@ -570,7 +570,7 @@ existante.
 ## Diagramme de classes
 
 
-Le modèle comporte 31 entités persistantes. Les représenter sur une seule planche aurait
+Le modèle comporte 30 entités persistantes. Les représenter sur une seule planche aurait
 produit une figure illisible en format A4 ; le diagramme a donc été scindé en quatre vues
 cohérentes correspondant aux trois couches identifiées lors de l'analyse. Toutes les
 entités héritent d'une classe abstraite `BaseEntity` portant l'identifiant UUID, les
@@ -830,7 +830,7 @@ les sources, l'usage réel de chaque spécification.
 
 | **Spécification** | **Imports** | **Implémentation** | **Usage dans LIAS** |
 | --- | --- | --- | --- |
-| Jakarta Persistence (JPA) | 224 | Hibernate 6.5, via Spring Data JPA | `@Entity`, `@Table`, `@Column`, `@ManyToOne`, `@Enumerated` sur les 31 entités ; JPQL dans les repositories |
+| Jakarta Persistence (JPA) | 224 | Hibernate 6.5, via Spring Data JPA | `@Entity`, `@Table`, `@Column`, `@ManyToOne`, `@Enumerated` sur les 30 entités ; JPQL dans les repositories |
 | Jakarta Bean Validation | 70 | Hibernate Validator | `@NotBlank`, `@NotNull`, `@Email`, `@Size`, `@Min` sur les DTO ; `@Valid` sur 35 paramètres de contrôleur |
 | Jakarta Servlet | 8 | Tomcat 10 embarqué | `HttpServletRequest`, `FilterChain` dans le filtre d'authentification et le gestionnaire d'erreurs |
 | Injection de dépendances | — | Conteneur Spring (compatible JSR-330) | Injection par constructeur dans l'ensemble des services et contrôleurs |
@@ -840,7 +840,7 @@ les sources, l'usage réel de chaque spécification.
 Trois points méritent d'être développés.
 
 
-**La persistance est de la JPA, pas une abstraction propriétaire.**  Les 31 entités
+**La persistance est de la JPA, pas une abstraction propriétaire.**  Les 30 entités
 du modèle sont annotées exclusivement avec l'API `jakarta.persistence`. Spring Data
 n'ajoute qu'une couche de génération de requêtes au-dessus d'un `EntityManager`
 standard ; les entités elles-mêmes seraient déployables telles quelles sur un serveur
@@ -935,7 +935,7 @@ plutôt que de le taire. Le tableau 4.4 expose les écarts et leurs motifs.
 | --- | --- | --- |
 | MySQL | PostgreSQL | Type `uuid` natif, contraintes `CHECK` expressives, hébergement managé disponible ; le cahier des charges n'impose pas de SGBD |
 | TypeScript | JavaScript (ES2022) | Le périmètre du module porte sur le backend ; le contrat d'interface est déjà typé côté serveur par les DTO Java |
-| Shadcn UI | Système de composants interne | Sept modules écrits pour le projet ; aucune dépendance externe à maintenir, cohérence visuelle entièrement maîtrisée |
+| Shadcn UI | Système de composants interne | Huit modules écrits pour le projet ; aucune dépendance externe à maintenir, cohérence visuelle entièrement maîtrisée |
 | Recharts | Composant `Chart.jsx` interne | Un seul type de graphique est nécessaire ; évite d'embarquer une bibliothèque complète pour un usage marginal |
 | Framer Motion | Transitions CSS | Les micro-interactions requises sont couvertes sans dépendance supplémentaire |
 
@@ -1017,8 +1017,8 @@ Elle évite deux écueils classiques — la divulgation involontaire d'attributs
 les initialisations paresseuses déclenchées pendant la sérialisation — au prix d'une
 étape de conversion, prise en charge par MapStruct lorsqu'elle est répétitive.
 
-Le volume réalisé s'établit à 22 contrôleurs, 28 services, 30 repositories et 31 entités,
-soit environ 9 900 lignes de Java.
+Le volume réalisé s'établit à 22 contrôleurs, 28 services, 30 repositories et 30 entités,
+soit environ 10 000 lignes de Java.
 
 
 ## Organisation des packages
@@ -1291,8 +1291,8 @@ L'interface est une application monopage organisée en quatre niveaux. Les *page
 — 21 au total — correspondent aux routes et orchestrent le chargement des données. Les
 *composants* — 27 — encapsulent les fragments réutilisables, principalement les
 formulaires modaux. Le *système de composants*, rassemblé dans
-`components/ui/`, fournit sept modules de primitives : boutons, badges, tables,
-retours d'état, mise en page, graphiques. Les *services* — 19 modules — isolent
+`components/ui/`, fournit huit modules de primitives : boutons, badges, tables,
+retours d'état, mise en page, graphiques, avatars et marque institutionnelle. Les *services* — 19 modules — isolent
 tous les appels HTTP ; aucune page n'appelle directement Axios.
 
 Cette séparation a une conséquence pratique vérifiée lors de l'audit : lorsqu'un contrat
@@ -1861,11 +1861,20 @@ entité et par acteur.
 ## Gestion des secrets
 
 
-Aucune donnée d'authentification ne figure dans le code source suivi en gestion de version.
-Les paramètres de connexion à la base, les identifiants de messagerie, la clé de signature
+Aucun identifiant réel ne figure dans le code source suivi en gestion de version. Les
+paramètres de connexion à la base, les identifiants de messagerie, la clé de signature
 des jetons et le répertoire de stockage sont lus depuis des variables d'environnement. Un
 fichier local, exclu du dépôt, les fournit en développement ; un fichier d'exemple ne
 contenant que des valeurs fictives documente les clés attendues.
+
+Une réserve doit être faite, car l'exactitude prime ici sur l'effet : le fichier de
+configuration conserve une *valeur de repli* pour la clé de signature, chaîne de
+démonstration portant en toutes lettres la mention `change-in-production`. Elle est
+surchargée par la variable d'environnement dans tous les environnements du projet, mais
+elle s'appliquerait à un déploiement qui omettrait de la définir. Son retrait — la
+variable devenant obligatoire, et le démarrage échouant bruyamment en son absence —
+est identifié en §9.4 et n'a pas été effectué : il modifierait la
+configuration des tests d'intégration, hors du périmètre de la correction menée ici.
 
 Cette externalisation a été mise en place en fin de projet, après le constat que des
 identifiants de base de données figuraient dans un fichier de configuration versionné. La
@@ -1878,6 +1887,21 @@ le dépôt et reste à la discrétion du propriétaire.
 Cet épisode constitue un enseignement méthodologique du projet : une configuration de
 développement est un fichier de code comme un autre, et doit être traitée comme tel dès le
 premier commit.
+
+**Le cas particulier du compte d'amorçage.**  Une base de données neuve ne contient
+aucun compte, et toutes les routes d'administration sont protégées : le tout premier
+administrateur système doit donc être créé par le programme lui-même. Ce privilège est le
+plus étendu du système et il est encadré par quatre garde-fous. Le composant d'amorçage
+est restreint au profil `dev`, de sorte qu'un déploiement de production n'obtient
+jamais un compte qu'il n'a pas explicitement créé. Le mot de passe est lu dans une variable
+d'environnement dépourvue de valeur de repli : en son absence, rien n'est créé plutôt
+qu'un compte à secret par défaut. Un secret de moins de douze caractères est refusé.
+Enfin le compte ainsi créé porte l'indicateur de changement de mot de passe obligatoire,
+comme tout compte provisionné par l'administration ou par l'acceptation d'une demande
+d'adhésion. Un compte déjà présent n'est jamais réécrit : la rotation du secret d'une
+instance en service relève de l'exploitation et s'effectue depuis l'écran de profil.
+Ces quatre propriétés sont verrouillées par la suite `AdminAccountInitializerTest`
+(§8.11.1).
 
 
 
@@ -1916,10 +1940,11 @@ Le tableau 8.1 récapitule les suites.
 | `EquipmentServiceTest` | 8 | Unitaire | Invariant de stock du matériel |
 | `NotificationServiceTest` | 5 | Unitaire | Ciblage des destinataires |
 | `CustomUserDetailsTest` | 5 | Unitaire | Gel des comptes retraités et anciens |
+| `AdminAccountInitializerTest` | 5 | Unitaire | Amorçage du compte administrateur |
 | `BadRequestParamTest` | 4 | Intégration | Validation des paramètres de requête |
 | `MemberServiceTest` | 4 | Unitaire | Clôture des mandats à l'archivage d'un membre |
 | `MandateServiceTest` | 3 | Unitaire | Gouvernance : exclusion des titulaires archivés |
-| **Total** | **55** |  |  |
+| **Total** | **60** |  |  |
 
 
 ## Tests unitaires de la dérivation des rôles
@@ -1956,7 +1981,7 @@ de la logique métier, que la configuration de sécurité, la chaîne de filtres
 sérialisation JSON et le gestionnaire d'exceptions fonctionnent ensemble.
 
 L'exécution de ces suites a d'ailleurs révélé un défaut qu'aucun test unitaire n'aurait
-détecté, décrit en §8.10.1.
+détecté, décrit en §8.11.1.
 
 
 ## Tests d'autorisation
@@ -2001,7 +2026,7 @@ ancien n'est pas actif quelle que soit la valeur brute du champ correspondant en
 compte technique dépourvu de profil de membre reste utilisable ; un compte
 administrativement désactivé reste inactif indépendamment de son statut. La cohérence des
 transitions elles-mêmes — départ, retour, nouvelle période d'affiliation — a été
-validée par l'audit fonctionnel décrit en §8.10.
+validée par l'audit fonctionnel décrit en §8.11.
 
 `MemberServiceTest` verrouille la règle d'archivage : archiver un membre clôture tous
 les mandats qu'il détient encore, recalcule son rôle effectif, et ne réécrit aucune donnée
@@ -2036,7 +2061,27 @@ silencieuse d'un destinataire inconnu, l'absence d'envoi lorsqu'aucun mandat n'e
 et la déduplication d'une liste de destinataires.
 
 
-## Résultats des 55 tests
+## Tests de l'amorçage du compte administrateur
+
+
+`AdminAccountInitializerTest` protège le point le plus privilégié du système : la
+création automatique du premier administrateur. Trois tests vérifient qu'aucun compte
+n'est créé lorsque le secret d'amorçage est absent, lorsqu'il est trop court, ou lorsqu'un
+administrateur existe déjà — ce dernier cas garantissant qu'une instance en service ne
+voit jamais son compte réécrit. Un quatrième test vérifie que le compte effectivement
+créé ne stocke qu'une empreinte BCrypt du secret et porte l'indicateur de changement de
+mot de passe obligatoire.
+
+Le cinquième test mérite d'être distingué : il n'observe pas le comportement de la classe
+mais son *éligibilité*. Un contexte Spring minimal est démarré deux fois, sous le
+profil `dev` puis sous le profil `prod`, et l'on assure que le composant est
+enregistré dans le premier cas et absent dans le second. La restriction de profil est en
+effet ce qui empêche une production d'hériter d'un administrateur d'amorçage : la vérifier
+sur l'évaluation réelle des conditions vaut mieux que de se fier à la présence de
+l'annotation dans le source.
+
+
+## Résultats des 60 tests
 
 
 L'exécution complète, sur le commit final, donne le résultat reproduit
@@ -2047,9 +2092,9 @@ au tableau 8.2.
 
 | **Commande** | **Résultat** | **Détail** |
 | --- | --- | --- |
-| `mvn clean test` | **BUILD SUCCESS** | 55 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
+| `mvn clean test` | **BUILD SUCCESS** | 60 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
 | `mvn clean compile` | **BUILD SUCCESS** | Compilation du backend sans avertissement bloquant |
-| `npm run build` | **Succès** | 1 919 modules transformés |
+| `npm run build` | **Succès** | 1 923 modules transformés |
 | `npx oxlint` | **0 erreur** | 6 avertissements préexistants sur l'export de constantes |
 
 
@@ -2071,8 +2116,9 @@ et 47 endpoints de l'API, chaque page étant parcourue et chaque commande décle
 ### Défauts détectés et corrigés
 
 
-Cet audit a mis au jour cinq défauts réels, tous corrigés et, pour trois d'entre eux,
-verrouillés par un test.
+Cet audit, complété en fin de projet par une relecture de sécurité du code d'amorçage, a
+mis au jour six défauts réels, tous corrigés et, pour quatre d'entre eux, verrouillés par
+un test.
 
 
 **Dérive du rôle sur des comptes antérieurs.**  Des comptes créés avant
@@ -2118,7 +2164,29 @@ dont le titulaire est archivé n'est plus présenté comme en exercice. Les suit
 figure 6.6 montre l'état obtenu après correction : le poste de directeur,
 laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
 vérification finale, reportée au tableau 8.3, ne trouve plus aucun mandat actif
-rattaché à un membre archivé ou supprimé, et les 55 tests s'exécutent sans échec.
+rattaché à un membre archivé ou supprimé, et les 60 tests s'exécutent sans échec.
+
+
+**Compte administrateur d'amorçage à secret connu.**  Ce dernier défaut n'a pas été
+révélé par le parcours fonctionnel — rien ne s'y manifestait — mais par une relecture
+du code d'initialisation. La classe `AdminAccountInitializer`, qui crée le premier
+compte d'administrateur système sur une base vierge, présentait trois faiblesses
+cumulées : le mot de passe était une constante du code source suivi en gestion de version,
+le composant s'exécutait dans *tous* les profils — production comprise — et le
+compte ainsi créé n'était pas tenu de changer de mot de passe. Un déploiement sur une base
+neuve aurait donc reçu un administrateur système dont le secret était lisible dans le
+dépôt, et rien n'aurait invité à le renouveler. Ce constat contredisait directement
+l'affirmation du chapitre 7 selon laquelle aucune donnée
+d'authentification ne figure dans le code suivi.
+
+La correction, décrite au chapitre 7, restreint le composant au profil
+`dev`, externalise le secret dans une variable d'environnement sans valeur de repli,
+refuse un secret de moins de douze caractères et marque le compte créé comme devant
+changer de mot de passe. Le comportement préexistant qui méritait d'être conservé l'a été :
+un compte déjà présent n'est pas réécrit. La suite `AdminAccountInitializerTest`
+verrouille les cinq propriétés correspondantes, et le démarrage de l'application sur la
+base réelle a été rejoué après correction : le compte existant est laissé intact et son
+authentification reste acceptée.
 
 
 ### Résultats de la validation
@@ -2159,15 +2227,15 @@ le commit final.
 
 | **Backend** |  | **Frontend** |  |
 | --- | --- | --- | --- |
-| Entités JPA | 31 | Pages React | 21 |
+| Entités JPA | 30 | Pages React | 21 |
 | Services métier | 28 | Composants | 27 |
 | Contrôleurs REST | 22 | Modules de design system | 8 |
 | Repositories | 30 | Services d'appel API | 19 |
 | Énumérations métier | 10 |  |  |
 | Migrations Flyway | 3 |  |  |
 | Tables relationnelles | 30 |  |  |
-| Lignes de Java (sources) | 9 942 | Lignes de JavaScript / JSX | 13 471 |
-| Lignes de Java (tests) | 1 092 | Lignes SQL de migration | 750 |
+| Lignes de Java (sources) | 9 980 | Lignes de JavaScript / JSX | 13 471 |
+| Lignes de Java (tests) | 1 196 | Lignes SQL de migration | 750 |
 
 
 ## Correspondance avec le cahier des charges
@@ -2245,7 +2313,7 @@ dégrade l'expérience.
 
 
 **La validation ne se limite pas à la compilation.**  Les défauts décrits en
-§8.10.1 n'auraient été révélés ni par la compilation, ni par une lecture de
+§8.11.1 n'auraient été révélés ni par la compilation, ni par une lecture de
 code, ni par la vérification des codes de statut HTTP. Ils l'ont été par un parcours réel
 et par des tests d'intégration.
 
@@ -2263,7 +2331,7 @@ n'a pas été fait.
 
 
 **Aucune mesure de couverture de code.**  Aucun outil de couverture n'est configuré.
-Les 55 tests protègent les règles identifiées comme critiques, mais la proportion du code
+Les 60 tests protègent les règles identifiées comme critiques, mais la proportion du code
 exercée n'est pas connue et n'est pas estimée dans ce rapport.
 
 
@@ -2290,6 +2358,15 @@ correspondant est exposé, mais le client ne l'utilise pas de manière transpare
 
 **Client livré en un seul lot.**  Le paquet JavaScript n'est pas découpé en fragments
 chargés à la demande. Sur une connexion lente, le premier affichage en est pénalisé.
+
+
+**Valeur de repli de la clé de signature.**  Le fichier de configuration conserve
+une clé de démonstration utilisée à défaut de variable d'environnement. Elle est surchargée
+partout dans le projet et porte la mention `change-in-production`, mais un
+déploiement distrait hériterait d'une clé publique. La rendre obligatoire est une
+modification de deux lignes, repérée et non appliquée : elle touche la configuration des
+tests d'intégration, et le périmètre de la dernière passe de correction était limité au
+compte d'amorçage.
 
 
 **Historique de gestion de version à assainir.**  Comme exposé au
@@ -2338,9 +2415,9 @@ et vérifiées par un parcours complet de l'application.
 Le résultat se mesure sur trois plans. Sur le plan fonctionnel, dix-huit modules couvrent
 le cycle de vie des membres, la gouvernance, l'activité scientifique, les ressources
 matérielles et documentaires, la communication interne et le pilotage annuel. Sur le plan
-technique, le système compte 31 entités persistantes, 22 contrôleurs REST et 21 pages
-d'interface, soit environ 23 000 lignes de code applicatif. Sur le plan de la validation,
-55 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
+technique, le système compte 30 entités persistantes, 22 contrôleurs REST et 21 pages
+d'interface, soit environ 23 500 lignes de code applicatif. Sur le plan de la validation,
+60 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
 des routes et des rôles.
 
 La difficulté centrale du sujet — la séparation stricte entre le STATUT d'appartenance,
@@ -2518,7 +2595,7 @@ constitue, à ce titre, une base sur laquelle il est possible de construire.
 # Détail des tests automatisés
 
 
-Les 55 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+Les 60 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
 par `mvn clean test` se termine sans échec ni erreur.
 
 
@@ -2591,6 +2668,12 @@ par `mvn clean test` se termine sans échec ni erreur.
 | 53 | `anArchivedMembersMandateIsNotReportedAsInExercise` | Titulaire archivé exclu |
 | 54 | `mandatesOfLiveMembersAreStillReported` | Non-régression |
 | 55 | `endingAllMandatesOfAMemberClosesThemWithoutDeletingThem` | Clôture sans suppression |
+| {3}{@{}l}{ AdminAccountInitializerTest — amorçage de l'administrateur (5)} |  |  |
+| 56 | `noAccountIsSeededWhenNoBootstrapSecretIsConfigured` | Sans secret, aucun compte |
+| 57 | `noAccountIsSeededWhenTheBootstrapSecretIsTooWeak` | Secret trop court refusé |
+| 58 | `anExistingAdministratorIsNeverOverwritten` | Compte existant préservé |
+| 59 | `theSeededAdministratorIsHashedAndMustRotateItsPassword` | Hachage et rotation imposée |
+| 60 | `theComponentIsRegisteredInDevAndNowhereElse` | Profil `dev` uniquement |
 
 
 # Principaux endpoints de l'API
@@ -2705,13 +2788,14 @@ chapitre 8.
 #   backend/.env  :  DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD,
 #                    MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD,
 #                    JWT_SECRET, FILE_STORAGE_DIR
+#                    (optionnel) BOOTSTRAP_ADMIN_PASSWORD
 #   Le modele complet se trouve dans backend/.env.example
 
 # --- Backend : compilation et tests ---
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 55 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 60 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

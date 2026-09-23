@@ -16,15 +16,15 @@ le commit final.
 \toprule
 \textbf{Backend} & & \textbf{Frontend} & \\
 \midrule
-Entités JPA & 31 & Pages React & 21 \\
+Entités JPA & 30 & Pages React & 21 \\
 Services métier & 28 & Composants & 27 \\
 Contrôleurs REST & 22 & Modules de design system & 8 \\
 Repositories & 30 & Services d'appel API & 19 \\
 Énumérations métier & 10 & & \\
 Migrations Flyway & 3 & & \\
 Tables relationnelles & 30 & & \\
-Lignes de Java (sources) & 9\,942 & Lignes de JavaScript / JSX & 13\,471 \\
-Lignes de Java (tests) & 1\,092 & Lignes SQL de migration & 750 \\
+Lignes de Java (sources) & 9\,980 & Lignes de JavaScript / JSX & 13\,471 \\
+Lignes de Java (tests) & 1\,196 & Lignes SQL de migration & 750 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -118,7 +118,7 @@ des variables de couleur centralisées, ce qui rendrait l'ajout mécanique, mais
 n'a pas été fait.
 
 \paragraph{Aucune mesure de couverture de code.} Aucun outil de couverture n'est configuré.
-Les 55 tests protègent les règles identifiées comme critiques, mais la proportion du code
+Les 60 tests protègent les règles identifiées comme critiques, mais la proportion du code
 exercée n'est pas connue et n'est pas estimée dans ce rapport.
 
 \paragraph{Modules inégalement couverts par les tests.} Les discussions, les partenariats et
@@ -140,6 +140,14 @@ correspondant est exposé, mais le client ne l'utilise pas de manière transpare
 
 \paragraph{Client livré en un seul lot.} Le paquet JavaScript n'est pas découpé en fragments
 chargés à la demande. Sur une connexion lente, le premier affichage en est pénalisé.
+
+\paragraph{Valeur de repli de la clé de signature.} Le fichier de configuration conserve
+une clé de démonstration utilisée à défaut de variable d'environnement. Elle est surchargée
+partout dans le projet et porte la mention \code{change-in-production}, mais un
+déploiement distrait hériterait d'une clé publique. La rendre obligatoire est une
+modification de deux lignes, repérée et non appliquée : elle touche la configuration des
+tests d'intégration, et le périmètre de la dernière passe de correction était limité au
+compte d'amorçage.
 
 \paragraph{Historique de gestion de version à assainir.} Comme exposé au
 chapitre~\ref{ch:securite}, un identifiant de base de données a figuré dans un fichier

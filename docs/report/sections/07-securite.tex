@@ -52,12 +52,16 @@ Le tableau~\ref{tab:matrice} présente la matrice complète, relevée des annota
 et vérifiée par appels réels sur l'application en fonctionnement.
 
 \begin{landscape}
+% En mode paysage la hauteur de composition retombe à la largeur du bloc de texte :
+% l'interligne des 36 lignes est resserré pour que la matrice tienne sur une seule
+% page, sans page blanche intercalaire ni débordement dans la marge basse.
 \begin{table}[H]
 \centering
+\captionsetup{skip=3pt}
 \caption{Matrice des permissions par rôle applicatif ($\bullet$ = autorisé)}
 \label{tab:matrice}
 \footnotesize
-\renewcommand{\arraystretch}{1.02}
+\renewcommand{\arraystretch}{0.90}
 \begin{tabular}{@{}p{7.6cm}ccccccc@{}}
 \toprule
 \textbf{Opération} & \rotatebox{0}{\textbf{ADMIN}} & \textbf{DIR} & \textbf{V-DIR} & \textbf{CHEF} & \textbf{PERM} & \textbf{ASSO} & \textbf{DOCT} \\
@@ -195,11 +199,20 @@ entité et par acteur.
 
 \section{Gestion des secrets}
 
-Aucune donnée d'authentification ne figure dans le code source suivi en gestion de version.
-Les paramètres de connexion à la base, les identifiants de messagerie, la clé de signature
+Aucun identifiant réel ne figure dans le code source suivi en gestion de version. Les
+paramètres de connexion à la base, les identifiants de messagerie, la clé de signature
 des jetons et le répertoire de stockage sont lus depuis des variables d'environnement. Un
 fichier local, exclu du dépôt, les fournit en développement ; un fichier d'exemple ne
 contenant que des valeurs fictives documente les clés attendues.
+
+Une réserve doit être faite, car l'exactitude prime ici sur l'effet : le fichier de
+configuration conserve une \emph{valeur de repli} pour la clé de signature, chaîne de
+démonstration portant en toutes lettres la mention \code{change-in-production}. Elle est
+surchargée par la variable d'environnement dans tous les environnements du projet, mais
+elle s'appliquerait à un déploiement qui omettrait de la définir. Son retrait --- la
+variable devenant obligatoire, et le démarrage échouant bruyamment en son absence ---
+est identifié en~§\ref{sec:limites} et n'a pas été effectué : il modifierait la
+configuration des tests d'intégration, hors du périmètre de la correction menée ici.
 
 Cette externalisation a été mise en place en fin de projet, après le constat que des
 identifiants de base de données figuraient dans un fichier de configuration versionné. La
@@ -212,3 +225,18 @@ le dépôt et reste à la discrétion du propriétaire.
 Cet épisode constitue un enseignement méthodologique du projet : une configuration de
 développement est un fichier de code comme un autre, et doit être traitée comme tel dès le
 premier commit.
+
+\paragraph{Le cas particulier du compte d'amorçage.} Une base de données neuve ne contient
+aucun compte, et toutes les routes d'administration sont protégées : le tout premier
+administrateur système doit donc être créé par le programme lui-même. Ce privilège est le
+plus étendu du système et il est encadré par quatre garde-fous. Le composant d'amorçage
+est restreint au profil \code{dev}, de sorte qu'un déploiement de production n'obtient
+jamais un compte qu'il n'a pas explicitement créé. Le mot de passe est lu dans une variable
+d'environnement dépourvue de valeur de repli : en son absence, rien n'est créé plutôt
+qu'un compte à secret par défaut. Un secret de moins de douze caractères est refusé.
+Enfin le compte ainsi créé porte l'indicateur de changement de mot de passe obligatoire,
+comme tout compte provisionné par l'administration ou par l'acceptation d'une demande
+d'adhésion. Un compte déjà présent n'est jamais réécrit : la rotation du secret d'une
+instance en service relève de l'exploitation et s'effectue depuis l'écran de profil.
+Ces quatre propriétés sont verrouillées par la suite \code{AdminAccountInitializerTest}
+(§\ref{sec:defauts}).

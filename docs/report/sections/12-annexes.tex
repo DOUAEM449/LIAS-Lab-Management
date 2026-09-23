@@ -5,14 +5,14 @@
 \chapter{Détail des tests automatisés}
 \label{ann:tests}
 
-Les 55 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+Les 60 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
 par \code{mvn clean test} se termine sans échec ni erreur.
 
 % Les noms de méthode de test sont longs : on réduit la fonte du code dans cette
 % table seule, pour qu'aucun identifiant ne déborde sur la colonne voisine.
 \begingroup
 \renewcommand{\code}[1]{\texttt{\footnotesize #1}}
-\begin{longtable}{@{}p{0.5cm}p{10.3cm}p{4.9cm}@{}}
+\begin{longtable}{@{}p{0.5cm}p{9.9cm}p{4.4cm}@{}}
 \caption{Liste exhaustive des tests automatisés}\label{tab:listetests}\\
 \toprule
 \textbf{\#} & \textbf{Méthode de test} & \textbf{Règle vérifiée} \\
@@ -95,6 +95,13 @@ par \code{mvn clean test} se termine sans échec ni erreur.
 53 & \code{anArchivedMembersMandateIsNotReportedAsInExercise} & Titulaire archivé exclu \\
 54 & \code{mandatesOfLiveMembersAreStillReported} & Non-régression \\
 55 & \code{endingAllMandatesOfAMemberClosesThemWithoutDeletingThem} & Clôture sans suppression \\
+\addlinespace[1.4ex]
+\multicolumn{3}{@{}l}{\bfseries AdminAccountInitializerTest --- amorçage de l'administrateur (5)}\\
+56 & \code{noAccountIsSeededWhenNoBootstrapSecretIsConfigured} & Sans secret, aucun compte \\
+57 & \code{noAccountIsSeededWhenTheBootstrapSecretIsTooWeak} & Secret trop court refusé \\
+58 & \code{anExistingAdministratorIsNeverOverwritten} & Compte existant préservé \\
+59 & \code{theSeededAdministratorIsHashedAndMustRotateItsPassword} & Hachage et rotation imposée \\
+60 & \code{theComponentIsRegisteredInDevAndNowhereElse} & Profil \code{dev} uniquement \\
 \end{longtable}
 \endgroup
 
@@ -105,7 +112,7 @@ L'API expose 22 contrôleurs sous le préfixe \code{/api/v1}. Le
 tableau~\ref{tab:api} en présente les points d'entrée les plus significatifs ainsi que leur
 règle d'autorisation.
 
-\begin{longtable}{@{}p{1.5cm}p{6.4cm}p{6.1cm}@{}}
+\begin{longtable}{@{}p{2.8cm}p{6.4cm}p{5.6cm}@{}}
 \caption{Principaux endpoints de l'API REST}\label{tab:api}\\
 \toprule
 \textbf{Méthode} & \textbf{Chemin} & \textbf{Autorisation} \\
@@ -215,13 +222,14 @@ chapitre~\ref{ch:tests}.
 #   backend/.env  :  DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD,
 #                    MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD,
 #                    JWT_SECRET, FILE_STORAGE_DIR
+#                    (optionnel) BOOTSTRAP_ADMIN_PASSWORD
 #   Le modele complet se trouve dans backend/.env.example
 
 # --- Backend : compilation et tests ---
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 55 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 60 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

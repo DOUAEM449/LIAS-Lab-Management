@@ -36,7 +36,7 @@ les sources, l'usage réel de chaque spécification.
 \toprule
 \textbf{Spécification} & \textbf{Imports} & \textbf{Implémentation} & \textbf{Usage dans LIAS} \\
 \midrule
-Jakarta Persistence (JPA) & 224 & Hibernate~6.5, via Spring~Data~JPA & \code{@Entity}, \code{@Table}, \code{@Column}, \code{@ManyToOne}, \code{@Enumerated} sur les 31~entités ; JPQL dans les repositories \\
+Jakarta Persistence (JPA) & 224 & Hibernate~6.5, via Spring~Data~JPA & \code{@Entity}, \code{@Table}, \code{@Column}, \code{@ManyToOne}, \code{@Enumerated} sur les 30~entités ; JPQL dans les repositories \\
 Jakarta Bean Validation & 70 & Hibernate Validator & \code{@NotBlank}, \code{@NotNull}, \code{@Email}, \code{@Size}, \code{@Min} sur les DTO ; \code{@Valid} sur 35~paramètres de contrôleur \\
 Jakarta Servlet & 8 & Tomcat~10 embarqué & \code{HttpServletRequest}, \code{FilterChain} dans le filtre d'authentification et le gestionnaire d'erreurs \\
 Injection de dépendances & --- & Conteneur Spring (compatible JSR-330) & Injection par constructeur dans l'ensemble des services et contrôleurs \\
@@ -47,7 +47,7 @@ Gestion transactionnelle & --- & Spring \code{@Transactional} & Démarcation dé
 
 Trois points méritent d'être développés.
 
-\paragraph{La persistance est de la JPA, pas une abstraction propriétaire.} Les 31 entités
+\paragraph{La persistance est de la JPA, pas une abstraction propriétaire.} Les 30 entités
 du modèle sont annotées exclusivement avec l'API \code{jakarta.persistence}. Spring~Data
 n'ajoute qu'une couche de génération de requêtes au-dessus d'un \code{EntityManager}
 standard ; les entités elles-mêmes seraient déployables telles quelles sur un serveur
@@ -153,7 +153,7 @@ plutôt que de le taire. Le tableau~\ref{tab:ecarts} expose les écarts et leurs
 \midrule
 MySQL & PostgreSQL & Type \code{uuid} natif, contraintes \code{CHECK} expressives, hébergement managé disponible ; le cahier des charges n'impose pas de SGBD \\
 TypeScript & JavaScript (ES2022) & Le périmètre du module porte sur le backend ; le contrat d'interface est déjà typé côté serveur par les DTO Java \\
-Shadcn UI & Système de composants interne & Sept modules écrits pour le projet ; aucune dépendance externe à maintenir, cohérence visuelle entièrement maîtrisée \\
+Shadcn UI & Système de composants interne & Huit modules écrits pour le projet ; aucune dépendance externe à maintenir, cohérence visuelle entièrement maîtrisée \\
 Recharts & Composant \code{Chart.jsx} interne & Un seul type de graphique est nécessaire ; évite d'embarquer une bibliothèque complète pour un usage marginal \\
 Framer Motion & Transitions CSS & Les micro-interactions requises sont couvertes sans dépendance supplémentaire \\
 \bottomrule

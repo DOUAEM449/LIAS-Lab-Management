@@ -61,7 +61,7 @@ endpoint effectivement exposé et autorisé, et non à une intention.
 
 \begin{figure}[H]
 \centering
-\includegraphics[height=0.80\textheight,keepaspectratio]{\figpath/uml/01-use-case.png}
+\includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{\figpath/uml/01-use-case.png}
 \caption{Diagramme de cas d'utilisation du système LIAS}
 \label{fig:usecase}
 \end{figure}
@@ -127,10 +127,10 @@ une exigence non satisfaite y est déclarée comme telle et reprise dans les lim
 Sécurité & Satisfait & JWT signé HS512, BCrypt (coût 12), contrôle d'accès par rôle appliqué méthode par méthode, gel des comptes vérifié à chaque requête \\
 Architecture propre & Satisfait & 18 packages métier, séparation contrôleur~/~service~/~repository~/~DTO systématique \\
 API REST & Satisfait & 22 contrôleurs sous \code{/api/v1}, documentation OpenAPI générée \\
-Composants réutilisables & Satisfait & Système de composants interne (7 modules) réutilisé par les 21 pages \\
+Composants réutilisables & Satisfait & Système de composants interne (8 modules) réutilisé par les 21 pages \\
 Design responsive & Satisfait & Navigation en tiroir sous 1024~px, tables à défilement horizontal encapsulé \\
 Interface professionnelle & Satisfait & Identité visuelle unique appliquée à l'ensemble des écrans \\
-Maintenabilité & Satisfait & Découpage constant, 55 tests verrouillant les règles critiques \\
+Maintenabilité & Satisfait & Découpage constant, 60 tests verrouillant les règles critiques \\
 Performance & Partiel & \code{open-in-view} désactivé, pagination serveur, index SQL ; aucune campagne de charge menée \\
 Accessibilité & Partiel & Libellés accessibles sur les boutons-icônes, focus visible, fermeture clavier des modales ; pas d'audit WCAG formel \\
 Thème sombre & \textbf{Non satisfait} & Non implémenté --- limite assumée (§\ref{sec:limites}) \\

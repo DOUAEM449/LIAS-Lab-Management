@@ -36,11 +36,12 @@ Le tableau~\ref{tab:suites} récapitule les suites.
 \code{EquipmentServiceTest} & 8 & Unitaire & Invariant de stock du matériel \\
 \code{NotificationServiceTest} & 5 & Unitaire & Ciblage des destinataires \\
 \code{CustomUserDetailsTest} & 5 & Unitaire & Gel des comptes retraités et anciens \\
+\code{AdminAccountInitializerTest} & 5 & Unitaire & Amorçage du compte administrateur \\
 \code{BadRequestParamTest} & 4 & Intégration & Validation des paramètres de requête \\
 \code{MemberServiceTest} & 4 & Unitaire & Clôture des mandats à l'archivage d'un membre \\
 \code{MandateServiceTest} & 3 & Unitaire & Gouvernance : exclusion des titulaires archivés \\
 \midrule
-\textbf{Total} & \textbf{55} & & \\
+\textbf{Total} & \textbf{60} & & \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -146,7 +147,25 @@ de rôle. Les autres cas couvrent la persistance d'une notification non lue, l'i
 silencieuse d'un destinataire inconnu, l'absence d'envoi lorsqu'aucun mandat n'est pourvu,
 et la déduplication d'une liste de destinataires.
 
-\section{Résultats des 55 tests}
+\section{Tests de l'amorçage du compte administrateur}
+
+\code{AdminAccountInitializerTest} protège le point le plus privilégié du système : la
+création automatique du premier administrateur. Trois tests vérifient qu'aucun compte
+n'est créé lorsque le secret d'amorçage est absent, lorsqu'il est trop court, ou lorsqu'un
+administrateur existe déjà --- ce dernier cas garantissant qu'une instance en service ne
+voit jamais son compte réécrit. Un quatrième test vérifie que le compte effectivement
+créé ne stocke qu'une empreinte BCrypt du secret et porte l'indicateur de changement de
+mot de passe obligatoire.
+
+Le cinquième test mérite d'être distingué : il n'observe pas le comportement de la classe
+mais son \emph{éligibilité}. Un contexte Spring minimal est démarré deux fois, sous le
+profil \code{dev} puis sous le profil \code{prod}, et l'on assure que le composant est
+enregistré dans le premier cas et absent dans le second. La restriction de profil est en
+effet ce qui empêche une production d'hériter d'un administrateur d'amorçage : la vérifier
+sur l'évaluation réelle des conditions vaut mieux que de se fier à la présence de
+l'annotation dans le source.
+
+\section{Résultats des 60 tests}
 
 L'exécution complète, sur le commit final, donne le résultat reproduit
 au tableau~\ref{tab:resultats}.
@@ -160,9 +179,9 @@ au tableau~\ref{tab:resultats}.
 \toprule
 \textbf{Commande} & \textbf{Résultat} & \textbf{Détail} \\
 \midrule
-\code{mvn clean test} & \textbf{BUILD SUCCESS} & 55 tests exécutés, 0 échec, 0 erreur, 0 ignoré \\
+\code{mvn clean test} & \textbf{BUILD SUCCESS} & 60 tests exécutés, 0 échec, 0 erreur, 0 ignoré \\
 \code{mvn clean compile} & \textbf{BUILD SUCCESS} & Compilation du backend sans avertissement bloquant \\
-\code{npm run build} & \textbf{Succès} & 1\,919 modules transformés \\
+\code{npm run build} & \textbf{Succès} & 1\,923 modules transformés \\
 \code{npx oxlint} & \textbf{0 erreur} & 6 avertissements préexistants sur l'export de constantes \\
 \bottomrule
 \end{tabularx}
@@ -184,8 +203,9 @@ et 47 endpoints de l'API, chaque page étant parcourue et chaque commande décle
 \subsection{Défauts détectés et corrigés}
 \label{sec:defauts}
 
-Cet audit a mis au jour cinq défauts réels, tous corrigés et, pour trois d'entre eux,
-verrouillés par un test.
+Cet audit, complété en fin de projet par une relecture de sécurité du code d'amorçage, a
+mis au jour six défauts réels, tous corrigés et, pour quatre d'entre eux, verrouillés par
+un test.
 
 \paragraph{Dérive du rôle sur des comptes antérieurs.} Des comptes créés avant
 l'introduction du service de dérivation conservaient un rôle obsolète, le service n'étant
@@ -214,7 +234,7 @@ le convertisseur configuré par le contexte applicatif. Ce défaut illustre l'in
 tests d'intégration : le code de statut, seul élément observé jusqu'alors, était correct.
 
 \paragraph{Mandat actif conservé par un membre archivé.} L'archivage d'un membre
-(\code{MemberService.delete()}) se contentait de marquer la ligne comme supprimée, sans
+(\code{MemberService.\allowbreak delete()}) se contentait de marquer la ligne comme supprimée, sans
 clôturer les mandats en cours de l'intéressé, alors que la transition vers les statuts
 \emph{retraité} et \emph{ancien membre} le faisait déjà. Un membre archivé restait
 donc titulaire d'un mandat de directeur : les écrans de gouvernance, qui déduisent
@@ -226,7 +246,28 @@ dont le titulaire est archivé n'est plus présenté comme en exercice. Les suit
 figure~\ref{fig:gouvStruct} montre l'état obtenu après correction : le poste de directeur,
 laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
 vérification finale, reportée au tableau~\ref{tab:e2e}, ne trouve plus aucun mandat actif
-rattaché à un membre archivé ou supprimé, et les 55 tests s'exécutent sans échec.
+rattaché à un membre archivé ou supprimé, et les 60 tests s'exécutent sans échec.
+
+\paragraph{Compte administrateur d'amorçage à secret connu.} Ce dernier défaut n'a pas été
+révélé par le parcours fonctionnel --- rien ne s'y manifestait --- mais par une relecture
+du code d'initialisation. La classe \code{AdminAccountInitializer}, qui crée le premier
+compte d'administrateur système sur une base vierge, présentait trois faiblesses
+cumulées : le mot de passe était une constante du code source suivi en gestion de version,
+le composant s'exécutait dans \emph{tous} les profils --- production comprise --- et le
+compte ainsi créé n'était pas tenu de changer de mot de passe. Un déploiement sur une base
+neuve aurait donc reçu un administrateur système dont le secret était lisible dans le
+dépôt, et rien n'aurait invité à le renouveler. Ce constat contredisait directement
+l'affirmation du chapitre~\ref{ch:securite} selon laquelle aucune donnée
+d'authentification ne figure dans le code suivi.
+
+La correction, décrite au chapitre~\ref{ch:securite}, restreint le composant au profil
+\code{dev}, externalise le secret dans une variable d'environnement sans valeur de repli,
+refuse un secret de moins de douze caractères et marque le compte créé comme devant
+changer de mot de passe. Le comportement préexistant qui méritait d'être conservé l'a été :
+un compte déjà présent n'est pas réécrit. La suite \code{AdminAccountInitializerTest}
+verrouille les cinq propriétés correspondantes, et le démarrage de l'application sur la
+base réelle a été rejoué après correction : le compte existant est laissé intact et son
+authentification reste acceptée.
 
 \subsection{Résultats de la validation}
 
