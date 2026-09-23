@@ -1872,8 +1872,12 @@ s'applique à *tous* les profils : une valeur par défaut qui y figurerait serai
 active en production. La clé y est donc déclarée sans valeur de repli, et son absence
 arrête le démarrage. Trois contrôles sont appliqués avant que le premier jeton ne soit
 émis : la clé doit être présente, être un base64 décodable, et peser au moins 64 octets
-une fois décodée — faute de quoi la bibliothèque de signature retomberait
-silencieusement sur HS256 au lieu du HS512 annoncé plus haut. Le profil de test fournit
+une fois décodée. Ce dernier seuil tient à la façon dont l'algorithme est choisi : il
+n'est jamais nommé dans le code, il est déduit de la clé. Avec jjwt 0.12.6,
+`Keys.hmacShaKeyFor` refuse une clé de moins de 256 bits, retient HS256 de 256 à
+383 bits, HS384 de 384 à 511 bits, et HS512 à partir de 512 bits — soit exactement
+64 octets. Une clé de 32 à 63 octets ne provoquerait donc aucune erreur : elle ferait
+signer les jetons en HS256 ou HS384 au lieu du HS512 annoncé plus haut. Le profil de test fournit
 sa propre clé, sans valeur de secret et identifiée comme telle dans son contenu même.
 
 Ce point a été corrigé tardivement : il est décrit parmi les défauts relevés

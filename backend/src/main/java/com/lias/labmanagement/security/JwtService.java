@@ -26,8 +26,12 @@ import java.util.function.Function;
 public class JwtService {
 
     /**
-     * Taille minimale de la clé, en octets. HS512 signe sur 512 bits : en deçà,
-     * {@link Keys#hmacShaKeyFor} choisirait silencieusement HS256 ou HS384.
+     * Taille minimale de la clé, en octets. L'algorithme n'est jamais nommé ici :
+     * jjwt le déduit de la longueur de la clé. En 0.12.6,
+     * {@link Keys#hmacShaKeyFor} refuse une clé de moins de 256 bits, retient
+     * HS256 de 256 à 383 bits, HS384 de 384 à 511, et HS512 à partir de 512 bits,
+     * soit 64 octets. En deçà, les jetons seraient signés en HS256 ou HS384 sans
+     * qu'aucune erreur ne soit levée.
      */
     static final int MIN_KEY_BYTES = 64;
 
