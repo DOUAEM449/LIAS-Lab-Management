@@ -1,6 +1,7 @@
 package com.lias.labmanagement.administration.service;
 
 import com.lias.labmanagement.administration.dto.GlobalSearchResult;
+import com.lias.labmanagement.common.enums.RoleName;
 import com.lias.labmanagement.document.repository.DocumentRepository;
 import com.lias.labmanagement.equipment.repository.EquipmentRepository;
 import com.lias.labmanagement.event.repository.EventRepository;
@@ -34,12 +35,19 @@ public class GlobalSearchService {
     private final DocumentRepository documentRepository;
     private final EquipmentRepository equipmentRepository;
 
+    /**
+     * @param callerRole role of the person searching. Documents and equipment are internal
+     *                   modules (CdC §2.2.C): a caller who cannot open those modules must
+     *                   not be able to list their content from here either. Null counts as
+     *                   no access.
+     */
     @Transactional(readOnly = true)
-    public List<GlobalSearchResult> search(String query) {
+    public List<GlobalSearchResult> search(String query, RoleName callerRole) {
         List<GlobalSearchResult> results = new ArrayList<>();
         if (query == null || query.isBlank()) {
             return results;
         }
+        boolean internalModules = callerRole != null && callerRole.canAccessInternalModules();
         var page = PageRequest.of(0, MAX_RESULTS_PER_MODULE);
 
         memberRepository.search(null, null, query, page).forEach(m ->
@@ -51,11 +59,13 @@ public class GlobalSearchService {
         eventRepository.search(null, query, page).forEach(e ->
                 results.add(new GlobalSearchResult("EVENT", e.getId(), e.getTitle(), e.getType().name())));
 
-        documentRepository.search(null, query, page).forEach(d ->
-                results.add(new GlobalSearchResult("DOCUMENT", d.getId(), d.getTitle(), d.getCategory().name())));
+        if (internalModules) {
+            documentRepository.search(null, query, page).forEach(d ->
+                    results.add(new GlobalSearchResult("DOCUMENT", d.getId(), d.getTitle(), d.getCategory().name())));
 
-        equipmentRepository.search(query, page).forEach(eq ->
-                results.add(new GlobalSearchResult("EQUIPMENT", eq.getId(), eq.getName(), eq.getCategory())));
+            equipmentRepository.search(query, page).forEach(eq ->
+                    results.add(new GlobalSearchResult("EQUIPMENT", eq.getId(), eq.getName(), eq.getCategory())));
+        }
 
         return results;
     }

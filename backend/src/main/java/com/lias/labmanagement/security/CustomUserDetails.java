@@ -34,6 +34,10 @@ public class CustomUserDetails implements UserDetails {
     }
 
     public CustomUserDetails(User user, MemberStatus memberStatus) {
+        this(user, memberStatus, false);
+    }
+
+    public CustomUserDetails(User user, MemberStatus memberStatus, boolean archivedProfile) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPasswordHash();
@@ -42,7 +46,9 @@ public class CustomUserDetails implements UserDetails {
         this.memberStatus = memberStatus;
         // A RETIRED or FORMER member's account must be treated as frozen/disabled
         // regardless of the raw users.enabled flag (CdC §8: "Compte gelé"/"Compte désactivé").
-        this.enabled = user.isEnabled() && !isFrozenStatus(memberStatus);
+        // The same goes for an archived member: archiving withdraws the person from the
+        // laboratory, and their account must not outlive their profile.
+        this.enabled = user.isEnabled() && !isFrozenStatus(memberStatus) && !archivedProfile;
     }
 
     private static boolean isFrozenStatus(MemberStatus status) {

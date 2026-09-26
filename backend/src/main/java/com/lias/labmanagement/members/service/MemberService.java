@@ -36,6 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -111,10 +113,14 @@ public class MemberService {
         if (!ALLOWED_AVATAR_TYPES.contains(file.getContentType())) {
             throw new BadRequestException("Avatar must be a JPEG, PNG or WEBP image");
         }
+        // The declared type above comes from the client and proves nothing. The stored
+        // extension — which decides the type the browser is told when /files/public serves
+        // the file, without authentication — is taken from the bytes themselves.
+        String extension = imageExtensionFromContent(file);
         Member member = memberRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No member profile linked to this account"));
 
-        StoredFile stored = fileStorageService.store(file, "public/avatars");
+        StoredFile stored = fileStorageService.store(file, "public/avatars", extension);
         member.setPhotoUrl("/files/" + stored.relativePath());
         Member saved = memberRepository.save(member);
         auditService.record(AuditAction.UPDATE, "Member", saved.getId(), "Avatar updated");
@@ -198,8 +204,13 @@ public class MemberService {
 
     @Transactional
     public void restore(UUID id) {
-        Member member = memberRepository.findById(id)
+        // Not findById: @SQLRestriction("deleted = false") hides archived rows from it, so it
+        // could never find the member this method exists to bring back.
+        Member member = memberRepository.findByIdIncludingArchived(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Member", id));
+        if (!member.isDeleted()) {
+            return;
+        }
         member.restore();
         memberRepository.save(member);
         auditService.record(AuditAction.RESTORE, "Member", id, "Member restored");
@@ -330,6 +341,42 @@ public class MemberService {
         userRoleSyncService.syncForMember(member, RoleChangeSource.STATUS_CHANGE);
 
         auditService.record(AuditAction.STATUS_CHANGE, "Member", memberId, "Member returned to the laboratory");
+    }
+
+    /**
+     * Identifies a JPEG, PNG or WEBP image by its signature (first bytes) and returns the
+     * extension to store it under. Anything else is refused, whatever its declared type.
+     */
+    static String imageExtensionFromContent(MultipartFile file) {
+        byte[] head;
+        try (InputStream in = file.getInputStream()) {
+            head = in.readNBytes(12);
+        } catch (IOException e) {
+            throw new BadRequestException("Avatar could not be read");
+        }
+        if (startsWith(head, 0xFF, 0xD8, 0xFF)) {
+            return ".jpg";
+        }
+        if (startsWith(head, 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A)) {
+            return ".png";
+        }
+        if (startsWith(head, 'R', 'I', 'F', 'F') && head.length >= 12
+                && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P') {
+            return ".webp";
+        }
+        throw new BadRequestException("Avatar must be a JPEG, PNG or WEBP image");
+    }
+
+    private static boolean startsWith(byte[] data, int... signature) {
+        if (data.length < signature.length) {
+            return false;
+        }
+        for (int i = 0; i < signature.length; i++) {
+            if ((data[i] & 0xFF) != signature[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Member findMemberOrThrow(UUID id) {

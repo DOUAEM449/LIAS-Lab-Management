@@ -16,6 +16,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Stores uploaded files on local disk under a date-partitioned folder
@@ -30,19 +31,39 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileStorageService {
 
+    /** A dot followed by letters and digits only: nothing that can carry a path or a second dot. */
+    private static final Pattern SAFE_EXTENSION = Pattern.compile("\\.[A-Za-z0-9]{1,10}");
+
     private final FileStorageProperties properties;
 
+    /**
+     * Stores an upload, keeping the extension of the client's file name when it is a plain
+     * one (".pdf", ".docx"...) and dropping it otherwise.
+     */
     public StoredFile store(MultipartFile file, String category) {
+        String originalFileName = StringUtils.trimToEmpty(file != null ? file.getOriginalFilename() : null);
+        String extension = "";
+        int dotIndex = originalFileName.lastIndexOf('.');
+        if (dotIndex >= 0 && SAFE_EXTENSION.matcher(originalFileName.substring(dotIndex)).matches()) {
+            extension = originalFileName.substring(dotIndex);
+        }
+        return store(file, category, extension);
+    }
+
+    /**
+     * Stores an upload under an extension chosen by the caller from what the file really
+     * is, never from the name the client sent. Required wherever the file is served back
+     * without authentication: the extension decides the type the browser is told, and a
+     * client-chosen ".html" would be run as a page of the application's own origin.
+     */
+    public StoredFile store(MultipartFile file, String category, String extension) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Uploaded file must not be empty");
         }
-
-        String originalFileName = StringUtils.trimToEmpty(file.getOriginalFilename());
-        String extension = "";
-        int dotIndex = originalFileName.lastIndexOf('.');
-        if (dotIndex >= 0) {
-            extension = originalFileName.substring(dotIndex);
+        if (!extension.isEmpty() && !SAFE_EXTENSION.matcher(extension).matches()) {
+            throw new IllegalArgumentException("Unsafe file extension: " + extension);
         }
+        String originalFileName = StringUtils.trimToEmpty(file.getOriginalFilename());
 
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String storedFileName = UUID.randomUUID() + extension;

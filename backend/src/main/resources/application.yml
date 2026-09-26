@@ -75,7 +75,8 @@ app:
     # production. En son absence le démarrage échoue, ce qui est le comportement
     # voulu — mieux vaut un serveur qui refuse de démarrer qu'un serveur qui signe
     # ses jetons avec une clé publiée dans le dépôt.
-    # Générer : openssl rand -base64 72
+    # Générer, sur une seule ligne : openssl rand -base64 72 | tr -d '\r\n'
+    # (openssl coupe sa sortie à 64 caractères, et le décodeur refuse les sauts de ligne)
     secret: ${JWT_SECRET}
     access-token-expiration-ms: 3600000        # 1 hour
     refresh-token-expiration-ms: 604800000     # 7 days

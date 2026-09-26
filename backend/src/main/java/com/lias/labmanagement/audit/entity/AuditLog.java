@@ -40,6 +40,17 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuditLog {
 
+    /*
+     * Column widths, shared with AuditService: an audit row is written from values the
+     * caller does not control (an e-mail typed at login, a forwarded-for header), so every
+     * bounded column is truncated to these sizes before it reaches the database.
+     */
+    public static final int ACTOR_EMAIL_LENGTH = 190;
+    public static final int ENTITY_TYPE_LENGTH = 100;
+    public static final int ENTITY_ID_LENGTH = 100;
+    public static final int DETAILS_LENGTH = 500;
+    public static final int IP_ADDRESS_LENGTH = 64;
+
     @Id
     @UuidGenerator
     @Column(columnDefinition = "uuid")
@@ -48,17 +59,17 @@ public class AuditLog {
     @Column(name = "actor_id", columnDefinition = "uuid")
     private UUID actorId;
 
-    @Column(name = "actor_email", length = 190)
+    @Column(name = "actor_email", length = ACTOR_EMAIL_LENGTH)
     private String actorEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private AuditAction action;
 
-    @Column(name = "entity_type", nullable = false, length = 100)
+    @Column(name = "entity_type", nullable = false, length = ENTITY_TYPE_LENGTH)
     private String entityType;
 
-    @Column(name = "entity_id", length = 100)
+    @Column(name = "entity_id", length = ENTITY_ID_LENGTH)
     private String entityId;
 
     @Column(name = "old_value", columnDefinition = "TEXT")
@@ -67,10 +78,10 @@ public class AuditLog {
     @Column(name = "new_value", columnDefinition = "TEXT")
     private String newValue;
 
-    @Column(length = 500)
+    @Column(length = DETAILS_LENGTH)
     private String details;
 
-    @Column(name = "ip_address", length = 64)
+    @Column(name = "ip_address", length = IP_ADDRESS_LENGTH)
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)

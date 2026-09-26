@@ -57,6 +57,14 @@ class CustomUserDetailsTest {
     }
 
     @Test
+    void archivedMemberIsRefusedEvenThoughNoProfileIsVisible() {
+        // Same shape as a technical account (no visible profile, raw flag enabled), yet the
+        // profile exists and is archived: the person has left and must not get back in.
+        CustomUserDetails details = new CustomUserDetails(user(RoleName.PHD_STUDENT, true), null, true);
+        assertThat(details.isEnabled()).isFalse();
+    }
+
+    @Test
     void administrativelyDisabledAccountIsNotEnabledWhateverTheStatus() {
         CustomUserDetails details = new CustomUserDetails(user(RoleName.PERMANENT_MEMBER, false), MemberStatus.PERMANENT);
         assertThat(details.isEnabled()).isFalse();

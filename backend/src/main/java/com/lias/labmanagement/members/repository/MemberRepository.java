@@ -16,6 +16,25 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
 
     Optional<Member> findByUserId(UUID userId);
 
+    /*
+     * The two queries below are native on purpose. @SQLRestriction("deleted = false") adds
+     * its filter to every JPQL, derived and by-id query on Member, so no ordinary query can
+     * see an archived profile at all.
+     */
+
+    /**
+     * Whether this account belongs to an archived member profile. Without it, an archived
+     * member's account had no visible profile and passed for a technical one — which stays
+     * enabled — so archiving a member did not end their access.
+     */
+    @Query(value = "select count(*) from members m where m.user_id = :userId and m.deleted = true",
+            nativeQuery = true)
+    long countArchivedProfilesByUserId(@Param("userId") UUID userId);
+
+    /** Loads a member whether archived or not: the only way back from an archive. */
+    @Query(value = "select * from members m where m.id = :id", nativeQuery = true)
+    Optional<Member> findByIdIncludingArchived(@Param("id") UUID id);
+
     Optional<Member> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);

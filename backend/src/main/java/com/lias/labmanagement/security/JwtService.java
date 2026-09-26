@@ -58,7 +58,7 @@ public class JwtService {
             throw new IllegalStateException(
                     "app.jwt.secret n'est pas configure : definissez la variable "
                     + "d'environnement JWT_SECRET (base64, 64 octets minimum une fois decodee). "
-                    + "Generer : openssl rand -base64 72");
+                    + "Generer, sur une seule ligne : openssl rand -base64 72 | tr -d '\\r\\n'");
         }
         byte[] keyBytes;
         try {

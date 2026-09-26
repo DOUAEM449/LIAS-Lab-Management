@@ -31,6 +31,14 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lias_lab_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgrespassword
+      # Required since the JWT signing key lost its fallback value: without it the backend
+      # refuses to start. Set it in the shell or in a git-ignored .env next to this file
+      # (generate one with: openssl rand -base64 72 | tr -d '\r\n'). Compose stops with this message if
+      # it is missing, instead of starting a container that crashes.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - see README, section Configuration}
+      # Optional: seeds admin@lias.ma on this fresh database (12 characters minimum, change
+      # required at first sign-in). Left empty, no administrator account is created.
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy

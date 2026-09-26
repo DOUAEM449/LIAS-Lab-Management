@@ -1,6 +1,7 @@
 package com.lias.labmanagement.calendar.service;
 
 import com.lias.labmanagement.calendar.dto.CalendarItemResponse;
+import com.lias.labmanagement.common.enums.RoleName;
 import com.lias.labmanagement.event.entity.Event;
 import com.lias.labmanagement.event.repository.EventRepository;
 import com.lias.labmanagement.meeting.entity.Meeting;
@@ -25,10 +26,17 @@ public class CalendarService {
     private final EventRepository eventRepository;
     private final MeetingRepository meetingRepository;
 
+    /**
+     * @param callerRole role of the person viewing the calendar. Meetings belong to an
+     *                   internal module (CdC §2.2.C): they are left out for a caller who
+     *                   cannot open that module. Null counts as no access.
+     */
     @Transactional(readOnly = true)
-    public List<CalendarItemResponse> getItems(LocalDateTime from, LocalDateTime to) {
+    public List<CalendarItemResponse> getItems(LocalDateTime from, LocalDateTime to, RoleName callerRole) {
         List<Event> events = eventRepository.findByStartDateBetweenOrEndDateBetween(from, to, from, to);
-        List<Meeting> meetings = meetingRepository.findByMeetingDateBetween(from, to);
+        List<Meeting> meetings = callerRole != null && callerRole.canAccessInternalModules()
+                ? meetingRepository.findByMeetingDateBetween(from, to)
+                : List.of();
 
         Stream<CalendarItemResponse> eventItems = events.stream()
                 .map(e -> new CalendarItemResponse(e.getId(), "EVENT", e.getTitle(), e.getStartDate(), e.getEndDate(), e.getLocation()));

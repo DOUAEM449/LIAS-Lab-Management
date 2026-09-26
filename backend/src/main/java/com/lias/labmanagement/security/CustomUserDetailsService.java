@@ -26,6 +26,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         MemberStatus memberStatus = memberRepository.findByUserId(user.getId())
                 .map(com.lias.labmanagement.members.entity.Member::getCurrentStatus)
                 .orElse(null);
-        return new CustomUserDetails(user, memberStatus);
+        // No visible profile means either a technical account or an archived member; only the
+        // second must be refused. Asked only in that case, so a member costs no extra query.
+        boolean archivedProfile = memberStatus == null
+                && memberRepository.countArchivedProfilesByUserId(user.getId()) > 0;
+        return new CustomUserDetails(user, memberStatus, archivedProfile);
     }
 }
