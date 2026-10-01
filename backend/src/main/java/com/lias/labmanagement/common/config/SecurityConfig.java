@@ -4,6 +4,7 @@ import com.lias.labmanagement.security.JwtAuthenticationFilter;
 import com.lias.labmanagement.security.RestAccessDeniedHandler;
 import com.lias.labmanagement.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -42,6 +44,10 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
+
+    /** Comma-separated list of allowed browser origins (app.cors.allowed-origins). */
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/**",
@@ -105,7 +111,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Exact origins from configuration, never "*": the API answers credentialed requests
+        // (setAllowCredentials(true) below), and a wildcard there would let any site read
+        // authenticated responses. Override with the CORS_ORIGINS environment variable.
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(o -> !o.isEmpty()).toList();
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));

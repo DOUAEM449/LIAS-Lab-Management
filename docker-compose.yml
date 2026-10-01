@@ -39,6 +39,11 @@ services:
       # Optional: seeds admin@lias.ma on this fresh database (12 characters minimum, change
       # required at first sign-in). Left empty, no administrator account is created.
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      # Store uploads on the named volume below, so documents, CVs and avatars survive the
+      # container being rebuilt or recreated.
+      FILE_STORAGE_DIR: /app/uploads
+    volumes:
+      - backend_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,3 +51,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:

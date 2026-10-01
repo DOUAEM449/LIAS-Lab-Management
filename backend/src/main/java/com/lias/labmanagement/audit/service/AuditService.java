@@ -23,9 +23,8 @@ import java.time.Instant;
  * cannot be written never cancels that operation: any failure, including one raised at
  * commit time, is caught here and logged.
  * <p>
- * Every bounded column is truncated to its width first. Several values come straight from
- * the client — the e-mail typed at login, the {@code X-Forwarded-For} header — and an
- * oversized one used to make the audited request fail.
+ * Every bounded column is truncated to its width first: a client-supplied value such as the
+ * e-mail typed at login could otherwise overflow its column and make the audited request fail.
  */
 @Service
 @RequiredArgsConstructor
@@ -70,19 +69,6 @@ public class AuditService {
         return value.substring(0, maxLength);
     }
 
-    /**
-     * The client's address: the first hop of {@code X-Forwarded-For} when present, the
-     * socket address otherwise. The header lists one address per proxy crossed
-     * ("client, proxy1, proxy2"); only the first names the client, and the rest could
-     * overflow the column.
-     */
-    static String clientAddress(String forwardedFor, String remoteAddress) {
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return remoteAddress;
-    }
-
     private String serialize(Object value) {
         if (value == null) {
             return null;
@@ -109,7 +95,11 @@ public class AuditService {
                 return null;
             }
             HttpServletRequest request = attrs.getRequest();
-            return clientAddress(request.getHeader("X-Forwarded-For"), request.getRemoteAddr());
+            // The socket address only, never the client-supplied X-Forwarded-For: an audit
+            // trail must not record an address the caller can choose. Behind a reverse proxy,
+            // enable Spring's server.forward-headers-strategy with a trusted-proxy list so
+            // getRemoteAddr() returns the real client address safely.
+            return request.getRemoteAddr();
         } catch (Exception e) {
             return null;
         }

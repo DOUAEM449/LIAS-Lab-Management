@@ -42,8 +42,9 @@ public class NotificationController {
 
     @PostMapping("/{id}/read")
     @Operation(summary = "Mark a single notification as read")
-    public ApiResponse<Void> markAsRead(@PathVariable UUID id) {
-        service.markAsRead(id);
+    public ApiResponse<Void> markAsRead(@PathVariable UUID id,
+                                        @AuthenticationPrincipal CustomUserDetails currentUser) {
+        service.markAsRead(id, currentMemberId(currentUser));
         return ApiResponse.message("Notification marked as read");
     }
 

@@ -15,12 +15,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -114,5 +116,31 @@ class NotificationServiceTest {
                 NotificationType.EVENT_CREATED, "New event", "Event", UUID.randomUUID());
 
         verify(notificationRepository, times(1)).save(any(Notification.class));
+    }
+
+    @Test
+    void aMemberCanMarkTheirOwnNotificationAsRead() {
+        Member owner = member();
+        Notification n = Notification.builder().recipient(owner).read(false).build();
+        n.setId(UUID.randomUUID());
+        when(notificationRepository.findById(n.getId())).thenReturn(Optional.of(n));
+
+        service.markAsRead(n.getId(), owner.getId());
+
+        assertThat(n.isRead()).isTrue();
+        verify(notificationRepository).save(n);
+    }
+
+    @Test
+    void aMemberCannotMarkSomeoneElsesNotificationAsRead() {
+        Member owner = member();
+        Notification n = Notification.builder().recipient(owner).read(false).build();
+        n.setId(UUID.randomUUID());
+        when(notificationRepository.findById(n.getId())).thenReturn(Optional.of(n));
+
+        assertThatThrownBy(() -> service.markAsRead(n.getId(), UUID.randomUUID()))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThat(n.isRead()).isFalse();
+        verify(notificationRepository, never()).save(any());
     }
 }

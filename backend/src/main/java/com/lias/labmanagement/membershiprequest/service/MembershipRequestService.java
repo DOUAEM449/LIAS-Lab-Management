@@ -67,6 +67,24 @@ public class MembershipRequestService {
     private final NotificationService notificationService;
 
     @Transactional
+    /**
+     * The CV is uploaded by an anonymous applicant. It is restricted to a real PDF — checked
+     * by its signature ({@code %PDF-}), not the client-declared type — so the public
+     * submission endpoint cannot be used to plant arbitrary files.
+     */
+    private static void requirePdf(MultipartFile cv) {
+        byte[] head;
+        try (java.io.InputStream in = cv.getInputStream()) {
+            head = in.readNBytes(5);
+        } catch (java.io.IOException e) {
+            throw new BadRequestException("CV could not be read");
+        }
+        if (head.length < 5 || head[0] != '%' || head[1] != 'P' || head[2] != 'D'
+                || head[3] != 'F' || head[4] != '-') {
+            throw new BadRequestException("The CV must be a PDF file");
+        }
+    }
+
     public MembershipRequestResponse submit(MembershipRequestSubmission submission, MultipartFile cv) {
         if (userRepository.existsByEmailIgnoreCase(submission.email())) {
             throw new ConflictException("An account already exists with this email");
@@ -88,6 +106,7 @@ public class MembershipRequestService {
         MembershipRequest request = builder.build();
 
         if (cv != null && !cv.isEmpty()) {
+            requirePdf(cv);
             StoredFile stored = fileStorageService.store(cv, "membership-cv");
             request.setCvPath(stored.relativePath());
             request.setCvOriginalName(stored.originalFileName());

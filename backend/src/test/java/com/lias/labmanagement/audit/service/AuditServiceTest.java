@@ -50,7 +50,9 @@ class AuditServiceTest {
     @Test
     void clientSuppliedValuesAreBoundedToTheirColumns() {
         MockHttpServletRequest request = new MockHttpServletRequest();
+        // A spoofed X-Forwarded-For must be ignored; the recorded address is the socket one.
         request.addHeader("X-Forwarded-For", "203.0.113.7, " + "10.0.0.1, ".repeat(20));
+        request.setRemoteAddr("198.51.100.4");
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
         service().record(AuditAction.LOGIN_FAILED, "User", "a".repeat(300) + "@example.org", "d".repeat(900));
@@ -58,15 +60,9 @@ class AuditServiceTest {
         ArgumentCaptor<AuditLog> written = ArgumentCaptor.forClass(AuditLog.class);
         verify(writer).write(written.capture());
         AuditLog entry = written.getValue();
-        assertThat(entry.getIpAddress()).isEqualTo("203.0.113.7");
+        assertThat(entry.getIpAddress()).isEqualTo("198.51.100.4");
         assertThat(entry.getEntityId()).hasSize(AuditLog.ENTITY_ID_LENGTH);
         assertThat(entry.getDetails()).hasSize(AuditLog.DETAILS_LENGTH);
-    }
-
-    @Test
-    void theSocketAddressIsUsedWhenNoProxyHeaderIsPresent() {
-        assertThat(AuditService.clientAddress(null, "198.51.100.4")).isEqualTo("198.51.100.4");
-        assertThat(AuditService.clientAddress("  ", "198.51.100.4")).isEqualTo("198.51.100.4");
     }
 
     @Test

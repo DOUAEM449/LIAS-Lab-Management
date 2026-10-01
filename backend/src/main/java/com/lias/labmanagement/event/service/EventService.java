@@ -4,6 +4,7 @@ import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.AuditAction;
 import com.lias.labmanagement.common.enums.EventType;
 import com.lias.labmanagement.common.enums.NotificationType;
+import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.exception.ConflictException;
 import com.lias.labmanagement.common.exception.ResourceNotFoundException;
 import com.lias.labmanagement.common.storage.FileStorageService;
@@ -62,8 +63,16 @@ public class EventService {
                 .map(this::toResponse).toList();
     }
 
+    /** An event cannot end before it starts. Both dates are already @NotNull on the DTO. */
+    private static void validateDates(EventRequest request) {
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BadRequestException("Event end date must not be before its start date");
+        }
+    }
+
     @Transactional
     public EventResponse create(EventRequest request) {
+        validateDates(request);
         Event event = Event.builder()
                 .type(request.type())
                 .title(request.title())
@@ -99,6 +108,7 @@ public class EventService {
 
     @Transactional
     public EventResponse update(UUID id, EventRequest request) {
+        validateDates(request);
         Event event = findOrThrow(id);
         event.setType(request.type());
         event.setTitle(request.title());

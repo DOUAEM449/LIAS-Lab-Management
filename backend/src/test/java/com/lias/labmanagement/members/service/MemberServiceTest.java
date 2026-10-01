@@ -3,6 +3,8 @@ package com.lias.labmanagement.members.service;
 import com.lias.labmanagement.audit.service.AuditService;
 import com.lias.labmanagement.common.enums.MemberStatus;
 import com.lias.labmanagement.common.enums.RoleChangeSource;
+import com.lias.labmanagement.members.dto.ReturnAffiliationRequest;
+import com.lias.labmanagement.members.entity.AffiliationHistory;
 import com.lias.labmanagement.common.exception.BadRequestException;
 import com.lias.labmanagement.common.storage.FileStorageService;
 import com.lias.labmanagement.common.storage.StoredFile;
@@ -122,6 +124,30 @@ class MemberServiceTest {
      * origin, with a type derived from the file extension. An HTML page uploaded as an
      * "image" ran as a page of LIAS and could read the access token from local storage.
      */
+
+    @Test
+    void returningAnActiveMemberIsRejected() {
+        // member is PERMANENT (active) — see setUp
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> service.returnToLab(memberId,
+                new ReturnAffiliationRequest(LocalDate.now(), MemberStatus.PERMANENT), MemberStatus.PERMANENT))
+                .isInstanceOf(BadRequestException.class);
+        verify(affiliationHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void returningAFormerMemberOpensANewAffiliationPeriod() {
+        member.setCurrentStatus(MemberStatus.FORMER);
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        when(memberRepository.save(member)).thenReturn(member);
+
+        service.returnToLab(memberId,
+                new ReturnAffiliationRequest(LocalDate.now(), MemberStatus.PERMANENT), MemberStatus.PERMANENT);
+
+        verify(affiliationHistoryRepository).save(any(AffiliationHistory.class));
+        verify(userRoleSyncService).syncForMember(eq(member), any(RoleChangeSource.class));
+    }
 
     @Test
     void aPageDisguisedAsAnImageIsRefusedWhateverItsDeclaredType() {

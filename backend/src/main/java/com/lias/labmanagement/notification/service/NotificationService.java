@@ -15,6 +15,7 @@ import com.lias.labmanagement.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,8 +117,13 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAsRead(UUID id) {
+    public void markAsRead(UUID id, UUID callerMemberId) {
         notificationRepository.findById(id).ifPresent(n -> {
+            // A member may only mark their own notifications: the id is a guessable UUID and,
+            // without this check, anyone could flip the read flag on someone else's inbox.
+            if (n.getRecipient() == null || !n.getRecipient().getId().equals(callerMemberId)) {
+                throw new AccessDeniedException("You can only mark your own notifications as read");
+            }
             n.setRead(true);
             notificationRepository.save(n);
         });

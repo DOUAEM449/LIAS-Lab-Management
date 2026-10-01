@@ -311,6 +311,13 @@ public class MemberService {
     public void returnToLab(UUID memberId, ReturnAffiliationRequest request, MemberStatus reinstatedStatus) {
         Member member = findMemberOrThrow(memberId);
 
+        // Only someone who has actually left may return. Without this guard, calling it on an
+        // active member opens a second affiliation period, and leave() then fails at 500
+        // because two periods are left open.
+        if (member.getCurrentStatus() != MemberStatus.RETIRED && member.getCurrentStatus() != MemberStatus.FORMER) {
+            throw new BadRequestException("Only a retired or former member can return to the laboratory");
+        }
+
         AffiliationHistory newPeriod = AffiliationHistory.builder()
                 .member(member)
                 .startDate(request.returnDate())

@@ -4,6 +4,14 @@ spring:
     hibernate:
       ddl-auto: validate
 
+# The interactive API explorer is a development aid; it is turned off in production so the
+# full endpoint catalogue is not published to anonymous callers.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 logging:
   level:
     com.lias.labmanagement: INFO
