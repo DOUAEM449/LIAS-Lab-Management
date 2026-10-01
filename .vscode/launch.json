@@ -17,7 +17,7 @@
       "mainClass": "com.lias.labmanagement.LabManagementApplication",
       "projectName": "lab-management",
       "env": {
-        "MAIL_PASSWORD": "bnsc nbbb rfla pnyi"
+        "MAIL_PASSWORD": "${env:MAIL_PASSWORD}"
       }
     }
     ]

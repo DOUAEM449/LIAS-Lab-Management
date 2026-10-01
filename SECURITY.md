@@ -40,9 +40,27 @@ the **new** credential in `backend/.env` connects successfully, and the **old**
 credential is rejected with `password authentication failed`. The value still
 present in Git history is therefore a **dead credential**.
 
-Remaining, if ever used: a Gmail App Password for `MAIL_PASSWORD` should be
-revoked at <https://myaccount.google.com/apppasswords> (currently empty, so
-nothing to revoke).
+### 1b. Gmail App Password committed in `.vscode/launch.json` — ⚠️ ACTION REQUIRED (found 2026-10-01)
+
+A later security scan of the **tracked** working tree found a real Gmail App
+Password hard-coded as `MAIL_PASSWORD` in `.vscode/launch.json` (line 20). It is
+present in that file's Git history (one commit).
+
+Done automatically: the literal was replaced in the working tree with
+`"${env:MAIL_PASSWORD}"`, so it will no longer be committed going forward.
+
+**Still required of the project owner — the value itself is not neutralised by
+that edit:**
+
+1. **Revoke** the exposed App Password at
+   <https://myaccount.google.com/apppasswords> and generate a new one; set it only
+   through the `MAIL_PASSWORD` environment variable (or `backend/.env`).
+2. **Purge** it from Git history together with the Neon values (see §2 below) —
+   `.vscode/launch.json` must be added to the paths rewritten there.
+3. Consider adding `.vscode/` to `.gitignore` so editor run-configs never carry
+   secrets again.
+
+Until the App Password is revoked, treat it as an **active exposure**.
 
 ### 2. Purge the values from Git history — OPTIONAL hygiene (destructive)
 
