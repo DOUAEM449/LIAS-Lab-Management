@@ -144,7 +144,7 @@ container and do not survive its re-creation (see `AUDIT.md`, P2-8).
 ## Tests and checks
 
 ```bash
-cd backend && mvn test          # 83 tests
+cd backend && mvn test          # 91 tests
 cd frontend && npm run build    # production build
 cd frontend && npm run lint     # oxlint
 ```

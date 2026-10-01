@@ -12,7 +12,7 @@ transportent les données à l'entrée et à la sortie sans jamais exposer les e
 Cette dernière règle est importante : aucune entité n'est sérialisée directement en JSON.
 Elle évite deux écueils classiques --- la divulgation involontaire d'attributs sensibles et
 les initialisations paresseuses déclenchées pendant la sérialisation --- au prix d'une
-étape de conversion, prise en charge par MapStruct lorsqu'elle est répétitive.
+étape de conversion, assurée par des mappers écrits à la main (\code{MemberMapper}, \code{GovernanceMapper}).
 
 Le volume réalisé s'établit à 22 contrôleurs, 28 services, 30 repositories et 30 entités,
 soit environ 10~000 lignes de Java.

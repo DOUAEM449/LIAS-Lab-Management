@@ -21,10 +21,22 @@ le disque local, sans passer par la base. Aucun profil, compte ou contenu n'a é
 
 | Priorité | Définition | Nombre | État |
 |---|---|---|---|
-| **P0 — critique** | Faille exploitable, perte de traces ou d'accès, règle du cahier des charges contournée, fonction inopérante | 5 | **Corrigés** |
-| **P1 — élevé** | Risque réel mais conditionnel, ou défense en profondeur manquante | 6 | Ouverts |
-| **P2 — moyen** | Performance, robustesse, maintenabilité | 17 | Ouverts |
+| **P0 — critique** | Faille exploitable, perte de traces ou d'accès, règle du cahier des charges contournée, fonction inopérante | 5 | **5 corrigés** |
+| **P1 — élevé** | Risque réel mais conditionnel, ou défense en profondeur manquante | 6 | **5 corrigés, 1 ouvert** |
+| **P2 — moyen** | Performance, robustesse, maintenabilité | 17 | **5 corrigés, 12 ouverts** |
 | **P3 — faible** | Dette mineure, style | 7 | Ouverts |
+
+**Correctifs appliqués après la première passe** (en plus des 5 P0) : P1-2 (CV
+restreint au PDF), P1-3 (CORS restreint), P1-4 (IP d'audit sur la socket), P1-5
+(garde `returnToLab`), P1-6 (rapport/PPT synchronisés) ; P2-3 (Swagger coupé en
+prod), P2-4 (propriété sur `markAsRead`), P2-7 (mot de passe de base par défaut
+retiré), P2-8 (volume Docker pour les fichiers), P2-14 (dates d'événement
+validées). Soit **9 corrections de code/config** (P1-2/3/4/5 + P2-3/4/7/8/14),
+la synchronisation documentaire P1-6 étant comptée à part. **Restent ouverts** :
+P1-1 (anti-force-brute), 12 P2, 7 P3.
+
+Un secret a aussi été trouvé et neutralisé dans l'arbre de travail — voir
+§ « Secret découvert » plus bas et `SECURITY.md`.
 
 ---
 
@@ -180,7 +192,7 @@ la composition n'a pas pu être exécutée.** À vérifier avec `docker compose 
 | P1-3 | **CORS ouvert à toutes les origines, avec credentials.** La propriété `app.cors.allowed-origins` est déclarée mais jamais lue : l'exploitant croit avoir restreint les origines. Peu exploitable tant que le jeton passe par un en-tête, mais trompeur | `SecurityConfig` l. 108, 112 | Lire la propriété dans `corsConfigurationSource` |
 | P1-4 | **IP d'audit falsifiable.** Bornée depuis P0-3, elle reste fournie par le client : `X-Forwarded-For` est pris sans vérifier qu'il vient d'un proxy de confiance | `AuditService.clientAddress` | `server.forward-headers-strategy` et liste de proxies de confiance ; sinon `getRemoteAddr()` seul |
 | P1-5 | **Retour d'un membre sans garde.** `returnToLab` ouvre une période d'affiliation sans vérifier que le membre est parti ; appelé sur un membre actif, il en ouvre une seconde, et `leave()` échoue ensuite en 500 (`findByMemberIdAndEndDateIsNull` rend deux lignes). *Déduit du code, non exécuté* | `MemberService.returnToLab` (l. 311) | Refuser si le statut n'est pas RETIRED ou FORMER |
-| P1-6 | **Rapport et présentation inexacts sur le code.** « Toutes les entités héritent de `BaseEntity` » : 16 sur 30. « Conversion par MapStruct » : aucun `@Mapper`, les mappers sont écrits à la main. Et depuis cet audit : 83 tests au lieu de 66, 5 défauts critiques de plus | `docs/report/sections/03-conception.tex` l. 54, `04-technologies.tex` l. 105, `05-backend.tex` l. 15 | Corriger les phrases et les chiffres avant la soutenance |
+| P1-6 | **Rapport et présentation inexacts sur le code.** « Toutes les entités héritent de `BaseEntity` » : 16 sur 30. « Conversion par MapStruct » : aucun `@Mapper`, les mappers sont écrits à la main. Ces trois affirmations et le nombre de tests ont été **corrigés dans le rapport et le PPT** (91 tests, BaseEntity 16/30, MapStruct déclaré mais non utilisé) lors de la passe de synchronisation. | rapport + PPT | **Corrigé** |
 
 ---
 
@@ -260,7 +272,7 @@ Un audit doit aussi dire ce qui tient :
 
 | Contrôle | Résultat |
 |---|---|
-| `mvn clean package` | **BUILD SUCCESS — 83 tests, 0 échec** (66 avant l'audit) |
+| `mvn clean package` | **BUILD SUCCESS — 91 tests, 0 échec** (66 avant les audits) |
 | Tests nouveaux | 17, dont 5 vus en échec sur le code d'origine avant d'être corrigés |
 | `npm run build` | succès, 1 923 modules |
 | `npx oxlint` | 0 erreur, 6 avertissements préexistants |
@@ -282,14 +294,33 @@ Un audit doit aussi dire ce qui tient :
 
 ---
 
-## Impact sur le rapport et la présentation
+## Secret découvert dans l'arbre de travail (2026-10-01)
 
-Le rapport (`docs/report/`) et le support de soutenance **n'ont pas été modifiés** par cet
-audit. À mettre à jour :
+Un scan des fichiers **suivis par Git** a trouvé un mot de passe d'application Gmail en clair
+dans `.vscode/launch.json` (variable `MAIL_PASSWORD`, ligne 20), présent aussi dans
+l'historique Git (un commit). La valeur n'est **pas affichée** ici.
 
-- **66 → 83 tests**, 10 → 16 classes de test ;
-- les cinq défauts P0 ci-dessus, à ajouter à la liste des défauts détectés et corrigés
-  (§8.11.1) ;
-- l'affirmation sur l'audit en transaction indépendante (§3, §7, diapositive 11), **devenue
-  vraie** avec P0-3 ;
-- les deux affirmations toujours inexactes : P1-6.
+- **Fait** : le littéral a été remplacé dans l'arbre de travail par `"${env:MAIL_PASSWORD}"` ;
+  il ne sera plus committé.
+- **À faire par le propriétaire** (la valeur reste vivante tant que ce n'est pas fait) :
+  révoquer le mot de passe d'application sur <https://myaccount.google.com/apppasswords>,
+  le purger de l'historique Git (avec les identifiants Neon déjà documentés), et ajouter
+  `.vscode/` au `.gitignore`.
+
+Aucun autre littéral sensible dans les fichiers suivis : tout le reste est variable
+d'environnement, placeholder, valeur de test annoncée comme telle, ou mot de passe du
+conteneur Postgres local. Détails et procédure dans [`SECURITY.md`](SECURITY.md).
+
+## Impact sur le rapport et la présentation — ✅ appliqué (2026-10-01)
+
+Le rapport (`docs/report/`) et le support de soutenance ont été **synchronisés avec le code
+final** :
+
+- **66 → 91 tests**, 10 → 19 classes de test (tableau des suites reconstruit) ;
+- les cinq défauts P0 ajoutés au rapport (nouvelle sous-section « Audit de sécurité du code ») et au PPT ; les neuf corrections additionnelles y sont listées ;
+- l'affirmation sur l'audit en transaction indépendante est **devenue vraie** (P0-3) et le
+  texte la décrit désormais correctement ;
+- les deux affirmations inexactes sont corrigées : « BaseEntity » (16 entités sur 30) et
+  « MapStruct » (dépendance déclarée mais non utilisée, convertisseurs écrits à la main).
+
+Le PDF du rapport (86 pages) et le PPT (17 diapositives) ont été recompilés.

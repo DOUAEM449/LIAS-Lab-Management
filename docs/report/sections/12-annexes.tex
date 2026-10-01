@@ -5,15 +5,16 @@
 \chapter{Détail des tests automatisés}
 \label{ann:tests}
 
-Les 66 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
-par \code{mvn clean test} se termine sans échec ni erreur.
+La suite compte 91 tests répartis sur 19 classes (tableau~\ref{tab:suites}). Les tests
+ci-dessous, qui protègent les règles les plus structurantes, en constituent le noyau
+historique ; l'exécution complète par \code{mvn clean test} se termine sans échec ni erreur.
 
 % Les noms de méthode de test sont longs : on réduit la fonte du code dans cette
 % table seule, pour qu'aucun identifiant ne déborde sur la colonne voisine.
 \begingroup
 \renewcommand{\code}[1]{\texttt{\footnotesize #1}}
 \begin{longtable}{@{}p{0.5cm}p{9.9cm}p{4.4cm}@{}}
-\caption{Liste exhaustive des tests automatisés}\label{tab:listetests}\\
+\caption{Principaux tests automatisés (noyau de la suite)}\label{tab:listetests}\\
 \toprule
 \textbf{\#} & \textbf{Méthode de test} & \textbf{Règle vérifiée} \\
 \midrule
@@ -238,7 +239,7 @@ chapitre~\ref{ch:tests}.
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 66 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 91 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

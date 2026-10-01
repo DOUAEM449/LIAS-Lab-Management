@@ -110,7 +110,7 @@ BCrypt et un contrôle d'accès par rôle appliqué méthode par méthode. La tr
 assurée par un journal d'audit et quatre tables d'historique, conformément à la règle du
 cahier des charges selon laquelle aucune donnée n'est jamais perdue.
 
-La validation combine 66 tests automatisés (aucun échec) et un audit fonctionnel de bout
+La validation combine 91 tests automatisés (aucun échec) et un audit fonctionnel de bout
 en bout portant sur 21 routes et les 9 rôles du système. Les 21 sections du cahier des
 charges sont couvertes ; les limites résiduelles, notamment l'absence de thème sombre et
 de mesure de couverture de code, sont explicitement identifiées.
@@ -146,7 +146,7 @@ stateless security layer based on JWT, BCrypt and method-level role-based access
 Traceability relies on an audit journal and four history tables, in line with the
 specification rule that no data is ever lost.
 
-Validation combines 66 automated tests (no failures) with an end-to-end functional audit
+Validation combines 91 automated tests (no failures) with an end-to-end functional audit
 covering 21 routes and the 9 system roles. All 21 sections of the specification are
 covered; remaining limitations — notably the absence of a dark theme and of a measured
 code-coverage figure — are explicitly stated.
@@ -458,7 +458,7 @@ une exigence non satisfaite y est déclarée comme telle et reprise dans les lim
 | Composants réutilisables | Satisfait | Système de composants interne (8 modules) réutilisé par les 21 pages |
 | Design responsive | Satisfait | Navigation en tiroir sous 1024 px, tables à défilement horizontal encapsulé |
 | Interface professionnelle | Satisfait | Identité visuelle unique appliquée à l'ensemble des écrans |
-| Maintenabilité | Satisfait | Découpage constant, 66 tests verrouillant les règles critiques |
+| Maintenabilité | Satisfait | Découpage constant, 91 tests verrouillant les règles critiques |
 | Performance | Partiel | `open-in-view` désactivé, pagination serveur, index SQL ; aucune campagne de charge menée |
 | Accessibilité | Partiel | Libellés accessibles sur les boutons-icônes, focus visible, fermeture clavier des modales ; pas d'audit WCAG formel |
 | Thème sombre | **Non satisfait** | Non implémenté — limite assumée (§9.4) |
@@ -572,8 +572,8 @@ existante.
 
 Le modèle comporte 30 entités persistantes. Les représenter sur une seule planche aurait
 produit une figure illisible en format A4 ; le diagramme a donc été scindé en quatre vues
-cohérentes correspondant aux trois couches identifiées lors de l'analyse. Toutes les
-entités héritent d'une classe abstraite `BaseEntity` portant l'identifiant UUID, les
+cohérentes correspondant aux trois couches identifiées lors de l'analyse. Seize de ces trente
+entités — les racines métier — héritent d'une classe abstraite `BaseEntity` portant l'identifiant UUID, les
 métadonnées d'audit JPA (dates et auteurs de création et de modification), le numéro de
 version optimiste et les deux champs de suppression logique.
 
@@ -895,7 +895,7 @@ Le tableau 4.2 détaille la pile serveur.
 | PostgreSQL | 18 | SGBD relationnel |
 | Flyway | — | Versionnement du schéma (V1 à V3) |
 | jjwt | 0.12.6 | Génération et vérification des jetons JWT (HS512) |
-| MapStruct | 1.6.2 | Génération des convertisseurs entité → DTO |
+| MapStruct | 1.6.2 | Dépendance déclarée ; convertisseurs entité → DTO écrits à la main |
 | Lombok | — | Réduction du code répétitif des entités |
 | springdoc-openapi | 2.6.0 | Documentation interactive de l'API |
 | OpenPDF | 1.3.43 | Génération du rapport d'activité en PDF |
@@ -1015,7 +1015,7 @@ transportent les données à l'entrée et à la sortie sans jamais exposer les e
 Cette dernière règle est importante : aucune entité n'est sérialisée directement en JSON.
 Elle évite deux écueils classiques — la divulgation involontaire d'attributs sensibles et
 les initialisations paresseuses déclenchées pendant la sérialisation — au prix d'une
-étape de conversion, prise en charge par MapStruct lorsqu'elle est répétitive.
+étape de conversion, assurée par des mappers écrits à la main (`MemberMapper`, `GovernanceMapper`).
 
 Le volume réalisé s'établit à 22 contrôleurs, 28 services, 30 repositories et 30 entités,
 soit environ 10 000 lignes de Java.
@@ -1952,7 +1952,7 @@ Le tableau 8.1 récapitule les suites.
 | `MemberServiceTest` | 4 | Unitaire | Clôture des mandats à l'archivage d'un membre |
 | `MandateServiceTest` | 3 | Unitaire | Gouvernance : exclusion des titulaires archivés |
 | `JwtSigningKeyTest` | 6 | Unitaire | Clé de signature obligatoire et conforme à HS512 |
-| **Total** | **66** |  |  |
+| **Total** | **91** |  |  |
 
 
 ## Tests unitaires de la dérivation des rôles
@@ -2098,7 +2098,7 @@ repli pour la clé. C'est le garde-fou de la correction décrite en §8.11.1 —
 la régression redoutée n'est pas une erreur de code, c'est une ligne de YAML.
 
 
-## Résultats des 66 tests
+## Résultats des 91 tests
 
 
 L'exécution complète, sur le commit final, donne le résultat reproduit
@@ -2109,7 +2109,7 @@ au tableau 8.2.
 
 | **Commande** | **Résultat** | **Détail** |
 | --- | --- | --- |
-| `mvn clean test` | **BUILD SUCCESS** | 66 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
+| `mvn clean test` | **BUILD SUCCESS** | 91 tests exécutés, 0 échec, 0 erreur, 0 ignoré |
 | `mvn clean compile` | **BUILD SUCCESS** | Compilation du backend sans avertissement bloquant |
 | `npm run build` | **Succès** | 1 923 modules transformés |
 | `npx oxlint` | **0 erreur** | 6 avertissements préexistants sur l'export de constantes |
@@ -2181,7 +2181,7 @@ dont le titulaire est archivé n'est plus présenté comme en exercice. Les suit
 figure 6.6 montre l'état obtenu après correction : le poste de directeur,
 laissé sans titulaire par l'archivage, est explicitement présenté comme vacant. La
 vérification finale, reportée au tableau 8.3, ne trouve plus aucun mandat actif
-rattaché à un membre archivé ou supprimé, et les 66 tests s'exécutent sans échec.
+rattaché à un membre archivé ou supprimé, et les 91 tests s'exécutent sans échec.
 
 
 **Compte administrateur d'amorçage à secret connu.**  Ce dernier défaut n'a pas été
@@ -2371,7 +2371,7 @@ n'a pas été fait.
 
 
 **Aucune mesure de couverture de code.**  Aucun outil de couverture n'est configuré.
-Les 66 tests protègent les règles identifiées comme critiques, mais la proportion du code
+Les 91 tests protègent les règles identifiées comme critiques, mais la proportion du code
 exercée n'est pas connue et n'est pas estimée dans ce rapport.
 
 
@@ -2448,7 +2448,7 @@ le cycle de vie des membres, la gouvernance, l'activité scientifique, les resso
 matérielles et documentaires, la communication interne et le pilotage annuel. Sur le plan
 technique, le système compte 30 entités persistantes, 22 contrôleurs REST et 21 pages
 d'interface, soit environ 23 500 lignes de code applicatif. Sur le plan de la validation,
-66 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
+91 tests automatisés s'exécutent sans échec et un audit fonctionnel a porté sur l'ensemble
 des routes et des rôles.
 
 La difficulté centrale du sujet — la séparation stricte entre le STATUT d'appartenance,
@@ -2626,7 +2626,7 @@ constitue, à ce titre, une base sur laquelle il est possible de construire.
 # Détail des tests automatisés
 
 
-Les 66 tests ci-dessous constituent l'intégralité de la suite automatisée. Leur exécution
+La suite compte 91 tests répartis sur 19 classes ; les tests ci-dessous en constituent le noyau. Leur exécution
 par `mvn clean test` se termine sans échec ni erreur.
 
 
@@ -2834,7 +2834,7 @@ chapitre 8.
 cd backend
 set JAVA_HOME=<chemin du JDK 21>
 .maven\apache-maven-3.9.16\bin\mvn.cmd clean compile
-.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 66 tests
+.maven\apache-maven-3.9.16\bin\mvn.cmd clean test      # 91 tests
 
 # --- Backend : execution ---
 .maven\apache-maven-3.9.16\bin\mvn.cmd spring-boot:run

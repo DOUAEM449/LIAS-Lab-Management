@@ -50,10 +50,13 @@ existante.
 
 Le modèle comporte 30 entités persistantes. Les représenter sur une seule planche aurait
 produit une figure illisible en format A4 ; le diagramme a donc été scindé en quatre vues
-cohérentes correspondant aux trois couches identifiées lors de l'analyse. Toutes les
-entités héritent d'une classe abstraite \code{BaseEntity} portant l'identifiant UUID, les
-métadonnées d'audit JPA (dates et auteurs de création et de modification), le numéro de
-version optimiste et les deux champs de suppression logique.
+cohérentes correspondant aux trois couches identifiées lors de l'analyse. Seize de ces trente
+entités --- les racines métier --- héritent d'une classe abstraite \code{BaseEntity} portant
+l'identifiant UUID, les métadonnées d'audit JPA (dates et auteurs de création et de
+modification), le numéro de version optimiste et les deux champs de suppression logique.
+Les quatorze autres --- tables d'historique, tables de liaison et journal d'audit --- portent
+leur propre identifiant et ne connaissent pas la suppression logique : on n'y ajoute que
+des lignes, on n'en retire jamais.
 
 \subsection{Identité et gouvernance}
 
